@@ -2,8 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { WordmarkLogo } from "@/components/site/WordmarkLogo";
 
-const HERO_IMG =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuBhh0IU4ci8VvVDYf8PPws_f3dlHj3jrbosGa8is0ihowjKr27-CkAV7ZPKYZQzMRuYRKiuGNRrLvZqSI_BQ-XrX3x_1DqgqwRiSx0s5bHnbiZWwhKHkqS1-pAeKPdIy7iu80T649yZhjWt7pnCOClyuEJBVQlNk_pSeMmSjO_gleF45rl3iqVFh6zjghHMQgfDSFr64SvId-u6GqPfc0RhQ-iR06GJckUjCgGbBVEgKihYKWT1CzHYcimpxcrmi2nYT3pRzmF40B8z";
+const HERO_IMG = "/images/hero-neighborhood.png";
 
 const NEWS = [
   {
@@ -41,7 +40,7 @@ export default function HomePage() {
       <section className="relative w-full min-h-[870px] flex items-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <Image
-            alt="Modern upscale residential neighborhood with green lawns"
+            alt="Aerial view of the neighborhood at dusk, homes along a lake and tree-lined horizon"
             className="object-cover"
             src={HERO_IMG}
             fill
