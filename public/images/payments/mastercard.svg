@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 310" role="img" aria-label="Mastercard">
+  <rect width="500" height="310" rx="28" fill="#f6f6f6"/>
+  <!-- Scaled from proven 48×32 symbol geometry for crisp vectors at any size -->
+  <g transform="translate(17.5 0) scale(9.6875)">
+    <circle cx="19" cy="16" r="9" fill="#EB001B"/>
+    <circle cx="29" cy="16" r="9" fill="#F79E1B"/>
+    <path fill="#FF5F00" d="M24 10.2a8.9 8.9 0 0 1 0 11.6 8.9 8.9 0 0 1 0-11.6z"/>
+  </g>
+</svg>
