@@ -74,8 +74,17 @@ h4 {
 }
 
 .glass-panel {
+  background: rgba(247, 249, 255, 0.8);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+}
+
+.btn-gradient {
+  background: linear-gradient(135deg, #006973 0%, #5dd7e8 100%);
+}
+
+.hero-texture {
+  background: linear-gradient(135deg, #141b22 0%, #293037 100%);
 }
 
 .no-scrollbar::-webkit-scrollbar {

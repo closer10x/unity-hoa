@@ -80,17 +80,6 @@ export function SiteHeader() {
             })}
           </div>
           <div className="flex items-center gap-2 sm:gap-4 md:gap-6 min-w-0 shrink-0">
-            <div className="hidden lg:flex items-center bg-surface-container-high px-4 py-2 rounded-md">
-              <span className="material-symbols-outlined text-on-surface-variant text-sm mr-2">
-                search
-              </span>
-              <input
-                className="bg-transparent border-none text-sm focus:ring-0 p-0 text-on-surface-variant w-32 placeholder:text-on-surface-variant/70"
-                placeholder="Search..."
-                type="search"
-                aria-label="Search site"
-              />
-            </div>
             <Link
               href="/payment"
               className="bg-secondary-fixed-dim text-on-secondary-fixed px-3 py-2.5 sm:px-6 rounded-md font-semibold text-sm transition-all hover:opacity-90 shadow-sm whitespace-nowrap shrink-0"
@@ -122,17 +111,6 @@ export function SiteHeader() {
             aria-label="Mobile"
           >
             <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex flex-col gap-4">
-              <div className="flex items-center bg-surface-container-high px-4 py-2 rounded-md">
-                <span className="material-symbols-outlined text-on-surface-variant text-sm mr-2 shrink-0">
-                  search
-                </span>
-                <input
-                  className="bg-transparent border-none text-sm focus:ring-0 p-0 text-on-surface-variant w-full min-w-0 placeholder:text-on-surface-variant/70"
-                  placeholder="Search..."
-                  type="search"
-                  aria-label="Search site"
-                />
-              </div>
               <ul className="flex flex-col gap-1">
                 {NAV.map(({ href, label }, i) => {
                   const active = isNavActive(href, pathname);

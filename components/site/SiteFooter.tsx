@@ -161,6 +161,12 @@ export function SiteFooter() {
           >
             Accessibility
           </Link>
+          <Link
+            className="text-[10px] uppercase font-bold text-slate-400 hover:text-secondary transition-colors"
+            href="/admin"
+          >
+            Admin login
+          </Link>
         </div>
       </div>
     </footer>
