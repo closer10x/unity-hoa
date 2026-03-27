@@ -1,7 +1,10 @@
 const MAX_NAME_LEN = 100;
 const MAX_UNIT_LEN = 100;
 const MAX_PHONE_LEN = 40;
-/** Stripe metadata values are limited (typically 500 chars). */
+/**
+ * Stripe metadata limits (see https://docs.stripe.com/metadata ):
+ * up to 50 keys, key max 40 chars, value max 500 chars; string values only.
+ */
 const MAX_STRIPE_META_VALUE = 500;
 
 export type CheckoutPayerInput = {

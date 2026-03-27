@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { PaymentCheckoutForm } from "@/components/payment/PaymentCheckoutForm";
+import {
+  PaymentCheckoutForm,
+  type PaymentCheckoutDefaults,
+} from "@/components/payment/PaymentCheckoutForm";
 import { WordmarkLogo } from "@/components/site/WordmarkLogo";
 import { isSupabaseAuthConfigured } from "@/lib/supabase/keys";
 import { createSupabaseServerClient } from "@/lib/supabase/server-user";
@@ -19,11 +22,25 @@ type PageProps = {
   searchParams?: Promise<{ canceled?: string }>;
 };
 
+function splitDisplayName(displayName: string | null | undefined): {
+  firstName: string;
+  lastName: string;
+} {
+  if (typeof displayName !== "string") {
+    return { firstName: "", lastName: "" };
+  }
+  const t = displayName.trim();
+  if (!t) return { firstName: "", lastName: "" };
+  const parts = t.split(/\s+/);
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+}
+
 export default async function PaymentPage({ searchParams }: PageProps) {
   const sp = searchParams instanceof Promise ? await searchParams : searchParams;
   const canceled = sp?.canceled === "1";
 
-  let unitLot: string | null = null;
+  let checkoutDefaults: PaymentCheckoutDefaults = {};
   if (isSupabaseAuthConfigured()) {
     try {
       const supabase = await createSupabaseServerClient();
@@ -33,15 +50,29 @@ export default async function PaymentPage({ searchParams }: PageProps) {
       if (user) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("unit_lot")
+          .select("unit_lot, display_name, phone")
           .eq("id", user.id)
           .maybeSingle();
-        const raw = profile?.unit_lot;
-        unitLot =
-          typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : null;
+        const names = splitDisplayName(profile?.display_name);
+        const unitRaw = profile?.unit_lot;
+        const unitNumber =
+          typeof unitRaw === "string" && unitRaw.trim().length > 0
+            ? unitRaw.trim()
+            : undefined;
+        const phoneRaw = profile?.phone;
+        const phone =
+          typeof phoneRaw === "string" && phoneRaw.trim().length > 0
+            ? phoneRaw.trim()
+            : undefined;
+        checkoutDefaults = {
+          firstName: names.firstName,
+          lastName: names.lastName,
+          ...(unitNumber ? { unitNumber } : {}),
+          ...(phone ? { phone } : {}),
+        };
       }
     } catch {
-      unitLot = null;
+      checkoutDefaults = {};
     }
   }
 
@@ -96,19 +127,17 @@ export default async function PaymentPage({ searchParams }: PageProps) {
               </p>
               <div className="space-y-1">
                 <p className="font-headline text-lg font-semibold text-on-surface">
-                  Your unit / lot
+                  Who is paying
                 </p>
-                {unitLot ? (
-                  <p className="text-base font-medium text-on-surface">{unitLot}</p>
-                ) : (
-                  <p className="text-sm text-on-surface-variant">
-                    Sign in with your resident account to see the unit or lot on
-                    file. You can update it in your profile settings if needed.
-                  </p>
-                )}
+                <p className="text-sm text-on-surface-variant">
+                  Enter or confirm your name, unit or account number, and optional
+                  phone on the form. Those details are saved with your payment
+                  and sent to Stripe as metadata for receipts and reconciliation.
+                </p>
                 <p className="pt-2 text-sm text-on-surface-variant">
-                  Enter your payment amount in the secure form—matching uses your
-                  signed-in profile, not an account number on this page.
+                  Sign in with your resident account to pre-fill from your
+                  profile when available; you can still edit before continuing to
+                  Stripe.
                 </p>
               </div>
               <div className="flex items-center gap-2 border-t border-outline-variant/15 pt-6 text-sm font-semibold text-on-surface-variant">
@@ -124,7 +153,10 @@ export default async function PaymentPage({ searchParams }: PageProps) {
           </div>
 
           <div className="w-full min-w-0 lg:col-span-7">
-            <PaymentCheckoutForm canceled={canceled} />
+            <PaymentCheckoutForm
+              canceled={canceled}
+              defaults={checkoutDefaults}
+            />
           </div>
         </div>
       </main>

@@ -1,4 +1,3 @@
-import { getSupabaseUrl } from "@/lib/supabase/keys";
 import { isTableMissingFromApi } from "@/lib/supabase/is-table-missing-from-api";
 import {
   createServiceClient,
@@ -30,34 +29,6 @@ export async function loadAdminNotificationsForHeader(
     return { items: [], unreadCount: 0 };
   }
   const client = createServiceClient();
-
-  // #region agent log
-  {
-    const raw = getSupabaseUrl();
-    let urlHost: string | null = null;
-    try {
-      urlHost = raw ? new URL(raw).host : null;
-    } catch {
-      urlHost = "invalid_url";
-    }
-    fetch("http://127.0.0.1:7297/ingest/96803dcb-0174-4956-a879-376da8f573e0", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "5802bc",
-      },
-      body: JSON.stringify({
-        sessionId: "5802bc",
-        runId: "pre-fix",
-        hypothesisId: "H3",
-        location: "load.ts:loadAdminNotificationsForHeader",
-        message: "notifications header supabase target",
-        data: { urlHost, client: "createServiceClient" },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-  }
-  // #endregion
 
   await syncDueWorkOrderNotifications(client);
 

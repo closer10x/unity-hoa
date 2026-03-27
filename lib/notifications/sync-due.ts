@@ -16,25 +16,6 @@ export async function syncDueWorkOrderNotifications(
   const now = new Date().toISOString();
   const soonUntil = addHours(now, 24);
 
-  // #region agent log
-  fetch("http://127.0.0.1:7297/ingest/96803dcb-0174-4956-a879-376da8f573e0", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "5802bc",
-    },
-    body: JSON.stringify({
-      sessionId: "5802bc",
-      runId: "pre-fix",
-      hypothesisId: "H1-H5",
-      location: "sync-due.ts:syncDueWorkOrderNotifications:entry",
-      message: "sync due work orders start",
-      data: { table: "work_orders" },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-
   const { data: overdueRows, error: oErr } = await client
     .from("work_orders")
     .select("id, title, due_at, work_order_number")
@@ -46,51 +27,8 @@ export async function syncDueWorkOrderNotifications(
     if (!isTableMissingFromApi(oErr, "work_orders")) {
       console.error("syncDue overdue:", oErr.message);
     }
-    // #region agent log
-    fetch("http://127.0.0.1:7297/ingest/96803dcb-0174-4956-a879-376da8f573e0", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "5802bc",
-      },
-      body: JSON.stringify({
-        sessionId: "5802bc",
-        runId: "post-fix",
-        hypothesisId: "H1",
-        location: "sync-due.ts:overdue query",
-        message: "work_orders overdue select failed",
-        data: {
-          code: oErr.code ?? null,
-          message: oErr.message ?? null,
-          details: oErr.details ?? null,
-          hint: oErr.hint ?? null,
-          suppressedConsoleError: isTableMissingFromApi(oErr, "work_orders"),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     return;
   }
-
-  // #region agent log
-  fetch("http://127.0.0.1:7297/ingest/96803dcb-0174-4956-a879-376da8f573e0", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "5802bc",
-    },
-    body: JSON.stringify({
-      sessionId: "5802bc",
-      runId: "pre-fix",
-      hypothesisId: "H1",
-      location: "sync-due.ts:overdue query",
-      message: "work_orders overdue select ok",
-      data: { rowCount: overdueRows?.length ?? 0 },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
 
   for (const row of overdueRows ?? []) {
     const r = row as {

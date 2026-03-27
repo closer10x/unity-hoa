@@ -4,11 +4,23 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
-type Props = {
-  canceled?: boolean;
+export type PaymentCheckoutDefaults = {
+  firstName?: string;
+  lastName?: string;
+  unitNumber?: string;
+  phone?: string;
 };
 
-export function PaymentCheckoutForm({ canceled }: Props) {
+type Props = {
+  canceled?: boolean;
+  defaults?: PaymentCheckoutDefaults;
+};
+
+export function PaymentCheckoutForm({ canceled, defaults }: Props) {
+  const [firstName, setFirstName] = useState(defaults?.firstName ?? "");
+  const [lastName, setLastName] = useState(defaults?.lastName ?? "");
+  const [unitNumber, setUnitNumber] = useState(defaults?.unitNumber ?? "");
+  const [phone, setPhone] = useState(defaults?.phone ?? "");
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +34,13 @@ export function PaymentCheckoutForm({ canceled }: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({
+          amount,
+          firstName,
+          lastName,
+          unitNumber,
+          phone,
+        }),
       });
       const data = (await res.json()) as { url?: string; error?: string };
       if (!res.ok) {
@@ -63,13 +81,13 @@ export function PaymentCheckoutForm({ canceled }: Props) {
           Payment details
         </h2>
         <p className="mt-1 text-sm text-on-surface-variant">
-          Enter your amount here; you&apos;ll finish on Stripe&apos;s secure
-          page. Your{" "}
+          Enter your name, unit or account number, and amount. We pass those
+          details to Stripe with your payment; you&apos;ll finish on
+          Stripe&apos;s secure page. Your{" "}
           <span className="font-semibold text-on-surface">
             payment confirmation email
           </span>{" "}
-          from Stripe includes the full receipt, line items, and references—same
-          details that may appear on your card or bank statement.
+          from Stripe includes the full receipt and references.
         </p>
       </div>
 
@@ -115,7 +133,10 @@ export function PaymentCheckoutForm({ canceled }: Props) {
               <span className="shrink-0 font-headline font-semibold text-primary">
                 1.
               </span>
-              <span>Enter the amount you are paying below.</span>
+              <span>
+                Confirm your name and unit or account number (pre-filled from
+                your profile when available), then enter the amount.
+              </span>
             </li>
             <li className="flex gap-3">
               <span className="shrink-0 font-headline font-semibold text-primary">
@@ -123,9 +144,8 @@ export function PaymentCheckoutForm({ canceled }: Props) {
               </span>
               <span>
                 Continue to Stripe and pay with card or, when available, link a
-                US bank account for ACH. We match your payment to your signed-in
-                resident profile and unit on file—no HOA account number is
-                required on this screen.
+                US bank account for ACH. Your HOA details are stored with this
+                payment and attached in Stripe for reconciliation.
               </span>
             </li>
           </ol>
@@ -138,6 +158,84 @@ export function PaymentCheckoutForm({ canceled }: Props) {
       </details>
 
       <form className="flex flex-1 flex-col space-y-6" onSubmit={startCheckout}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-3">
+            <label
+              htmlFor="payment-first-name"
+              className="text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant"
+            >
+              First name
+            </label>
+            <input
+              id="payment-first-name"
+              name="firstName"
+              type="text"
+              autoComplete="given-name"
+              required
+              className="w-full rounded-xl border border-outline-variant/25 bg-surface-container-high/60 px-4 py-3.5 text-on-surface outline-none ring-0 transition-shadow focus:border-secondary/50 focus:ring-2 focus:ring-secondary/25"
+              value={firstName}
+              onChange={(ev) => setFirstName(ev.target.value)}
+            />
+          </div>
+          <div className="space-y-3">
+            <label
+              htmlFor="payment-last-name"
+              className="text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant"
+            >
+              Last name
+            </label>
+            <input
+              id="payment-last-name"
+              name="lastName"
+              type="text"
+              autoComplete="family-name"
+              required
+              className="w-full rounded-xl border border-outline-variant/25 bg-surface-container-high/60 px-4 py-3.5 text-on-surface outline-none ring-0 transition-shadow focus:border-secondary/50 focus:ring-2 focus:ring-secondary/25"
+              value={lastName}
+              onChange={(ev) => setLastName(ev.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <label
+            htmlFor="payment-unit"
+            className="text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant"
+          >
+            Unit or account number
+          </label>
+          <input
+            id="payment-unit"
+            name="unitNumber"
+            type="text"
+            autoComplete="off"
+            required
+            className="w-full rounded-xl border border-outline-variant/25 bg-surface-container-high/60 px-4 py-3.5 text-on-surface outline-none ring-0 transition-shadow focus:border-secondary/50 focus:ring-2 focus:ring-secondary/25"
+            placeholder="e.g. 1204 or A-14"
+            value={unitNumber}
+            onChange={(ev) => setUnitNumber(ev.target.value)}
+          />
+        </div>
+
+        <div className="space-y-3">
+          <label
+            htmlFor="payment-phone"
+            className="text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant"
+          >
+            Phone <span className="font-normal normal-case">(optional)</span>
+          </label>
+          <input
+            id="payment-phone"
+            name="phone"
+            type="tel"
+            autoComplete="tel"
+            className="w-full rounded-xl border border-outline-variant/25 bg-surface-container-high/60 px-4 py-3.5 text-on-surface outline-none ring-0 transition-shadow focus:border-secondary/50 focus:ring-2 focus:ring-secondary/25"
+            placeholder="For payment questions only"
+            value={phone}
+            onChange={(ev) => setPhone(ev.target.value)}
+          />
+        </div>
+
         <div className="space-y-3">
           <label
             htmlFor="payment-amount"
