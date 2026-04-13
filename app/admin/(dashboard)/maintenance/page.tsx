@@ -24,11 +24,11 @@ function parseStatus(raw: string | undefined): WorkOrderStatus | "all" {
 }
 
 type PageProps = {
-  searchParams?: Promise<{ status?: string }> | { status?: string };
+  searchParams?: Promise<{ status?: string }>;
 };
 
 export default async function AdminMaintenancePage({ searchParams }: PageProps) {
-  const sp = searchParams instanceof Promise ? await searchParams : searchParams;
+  const sp = searchParams ? await searchParams : undefined;
   const filterStatus = parseStatus(sp?.status);
 
   if (!isSupabaseConfigured()) {
