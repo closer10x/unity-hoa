@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
+import { formatNextDuesFirstOfMonthLong } from "@/lib/format/next-dues-cycle";
+import { MAINTENANCE_REQUEST_PUBLIC_HREF } from "@/lib/maintenance-request/options";
+
 export const metadata: Metadata = {
   title: "Resident Services Hub",
 };
@@ -9,8 +12,8 @@ export const metadata: Metadata = {
 const PAY_CARD_TEXTURE =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuD-2jhNr2NgGolsRPCkVR2LhJk9vMJ1zmUvwIaP0SZJhhg2Gt2_R5Kb3ytiZQUKE_pDVYbgS2mQxKsmETxGqekORizOoAuBf-sncJ4jrluJFCHF4hE_CSKsHJ_L7GhfVVF-DUSBVqzHGkv9HW34xBOylpMAL4iIMhcwD5Q5NUP8lP526LCwq6gQ8GxqlBv2pKRYCvbPma6_9nXXZzL9kPC-UbV8DeV-tNfE1XnkzzaRcmU-xdSxjUVvTt822l5M-FtdxGREjIpwlvNL";
 
-const MAP_IMG =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuD_-nw5VETzhjzHIpZTM2XwU0CkORbBATkxEf7oOVFgXefY8RqMjDKMOQwV9kEFUzT9yZUbCMiCxLrC2kXSh2uAoSvZdLSuKoDDnBDmZfgx0T4852xIKE9JOBylGPTCg2GxuLbBGNlnLTNuk_C3-RrrYFwjUTq9yp5a1RTXyxu0oecOUJFHNco8ZaGVQJxs4ZMX2UWJBn7xKDCMLtljvbFUZkhBDOmEPYgdQgjw5ZFxtcP43Q9rtST-lWB2MEfgMoFwADgXEAG-8vgl";
+/** Set to true to show the Community Directory card again. */
+const SHOW_COMMUNITY_DIRECTORY_CARD = false;
 
 export default function ServicesPage() {
   return (
@@ -44,15 +47,12 @@ export default function ServicesPage() {
                   Next Dues Cycle
                 </span>
               </div>
-              <h3 className="font-headline text-2xl font-bold text-primary mb-2">
-                October 1st, 2024
+              <h3
+                className="font-headline text-2xl font-bold text-primary"
+                suppressHydrationWarning
+              >
+                {formatNextDuesFirstOfMonthLong()}
               </h3>
-              <div className="bg-tertiary-fixed px-3 py-1 rounded-full inline-flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-on-tertiary-fixed" />
-                <span className="text-[11px] font-bold uppercase tracking-wider text-on-tertiary-fixed">
-                  Status: Paid
-                </span>
-              </div>
             </div>
           </div>
         </div>
@@ -97,6 +97,7 @@ export default function ServicesPage() {
             className="absolute inset-0 w-full h-full object-cover opacity-10 mix-blend-overlay pointer-events-none"
             src={PAY_CARD_TEXTURE}
             fill
+            priority
             sizes="(min-width: 1024px) 66vw, 100vw"
           />
         </div>
@@ -123,7 +124,7 @@ export default function ServicesPage() {
             </p>
           </div>
           <Link
-            href="/contact"
+            href={MAINTENANCE_REQUEST_PUBLIC_HREF}
             className="text-secondary font-bold text-sm inline-flex items-center gap-2 group"
           >
             Submit a Request
@@ -165,34 +166,36 @@ export default function ServicesPage() {
           </a>
         </div>
 
-        <div className="bg-surface-container-lowest p-10 rounded-xl flex flex-col justify-between hover:bg-surface-container-low transition-colors duration-300">
-          <div>
-            <div className="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center mb-8">
-              <span
-                className="material-symbols-outlined text-secondary"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                groups
-              </span>
+        {SHOW_COMMUNITY_DIRECTORY_CARD ? (
+          <div className="bg-surface-container-lowest p-10 rounded-xl flex flex-col justify-between hover:bg-surface-container-low transition-colors duration-300">
+            <div>
+              <div className="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center mb-8">
+                <span
+                  className="material-symbols-outlined text-secondary"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  groups
+                </span>
+              </div>
+              <h2 className="font-headline text-2xl font-bold text-primary mb-3">
+                Community Directory
+              </h2>
+              <p className="text-on-surface-variant text-sm leading-relaxed mb-6">
+                Connect with your neighbors and HOA board members through our
+                private directory.
+              </p>
             </div>
-            <h2 className="font-headline text-2xl font-bold text-primary mb-3">
-              Community Directory
-            </h2>
-            <p className="text-on-surface-variant text-sm leading-relaxed mb-6">
-              Connect with your neighbors and HOA board members through our
-              private directory.
-            </p>
+            <Link
+              href="/contact"
+              className="text-secondary font-bold text-sm inline-flex items-center gap-2 group"
+            >
+              Explore Directory
+              <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
+                east
+              </span>
+            </Link>
           </div>
-          <Link
-            href="/contact"
-            className="text-secondary font-bold text-sm inline-flex items-center gap-2 group"
-          >
-            Explore Directory
-            <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
-              east
-            </span>
-          </Link>
-        </div>
+        ) : null}
 
         <div className="bg-surface-container-lowest p-10 rounded-xl flex flex-col justify-between hover:bg-surface-container-low transition-colors duration-300">
           <div>
@@ -221,60 +224,6 @@ export default function ServicesPage() {
               east
             </span>
           </a>
-        </div>
-      </section>
-
-      <section
-        id="map"
-        className="scroll-mt-28 bg-surface-container-low rounded-2xl p-12 mb-24"
-      >
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <h2 className="font-headline text-3xl font-bold text-primary mb-6">
-              Community Map
-            </h2>
-            <p className="text-on-surface-variant mb-8 leading-relaxed">
-              Navigate our grounds with ease. Locate visitor parking, recreation
-              facilities, and utility access points throughout the 40-acre
-              estate.
-            </p>
-            <div className="space-y-4">
-              <div className="flex items-center gap-4 p-4 bg-surface-container-lowest rounded-lg">
-                <span className="material-symbols-outlined text-secondary">
-                  local_parking
-                </span>
-                <span className="text-sm font-medium text-primary">
-                  Guest Parking Zones
-                </span>
-              </div>
-              <div className="flex items-center gap-4 p-4 bg-surface-container-lowest rounded-lg">
-                <span className="material-symbols-outlined text-secondary">
-                  pool
-                </span>
-                <span className="text-sm font-medium text-primary">
-                  Wellness &amp; Pool Center
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="relative aspect-square md:aspect-video lg:aspect-square bg-surface-container-highest rounded-xl overflow-hidden shadow-2xl shadow-primary/5 min-h-[280px]">
-            <Image
-              alt="Minimalist architectural site plan of an estate"
-              className="object-cover grayscale contrast-125 opacity-80"
-              src={MAP_IMG}
-              fill
-              sizes="(min-width: 1024px) 40vw, 100vw"
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <button
-                type="button"
-                className="bg-white text-primary px-6 py-3 rounded-full font-bold text-sm shadow-xl hover:scale-105 transition-transform flex items-center gap-2"
-              >
-                <span className="material-symbols-outlined">zoom_in</span>
-                Interact with Map
-              </button>
-            </div>
-          </div>
         </div>
       </section>
 

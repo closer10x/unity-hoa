@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+
+import { getPublicDuesDisplay } from "@/app/admin/(dashboard)/hoa/actions";
 import {
   PaymentCheckoutForm,
   type PaymentCheckoutDefaults,
 } from "@/components/payment/PaymentCheckoutForm";
+import { PaymentBillingSummary } from "@/components/payment/payment-billing-summary";
 import { WordmarkLogo } from "@/components/site/WordmarkLogo";
 import { isSupabaseAuthConfigured } from "@/lib/supabase/keys";
+import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server-user";
 
 export const metadata: Metadata = {
@@ -76,11 +80,26 @@ export default async function PaymentPage({ searchParams }: PageProps) {
     }
   }
 
+  const publicDues = isSupabaseConfigured() ? await getPublicDuesDisplay() : null;
+
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-outline-variant/15 bg-surface-container-high/85 backdrop-blur-md shadow-[0_8px_24px_rgba(20,27,34,0.06)]">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4 sm:px-8">
-          <div className="flex min-w-0 items-center gap-4">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+            <Link
+              href="/"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold text-secondary transition-colors hover:bg-secondary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-high"
+              aria-label="Back to home"
+            >
+              <span
+                className="material-symbols-outlined text-[1.25rem] leading-none"
+                aria-hidden
+              >
+                arrow_back
+              </span>
+              Back
+            </Link>
             <WordmarkLogo
               href="/"
               variant="onLight"
@@ -153,6 +172,7 @@ export default async function PaymentPage({ searchParams }: PageProps) {
           </div>
 
           <div className="w-full min-w-0 lg:col-span-7">
+            {publicDues ? <PaymentBillingSummary dues={publicDues} /> : null}
             <PaymentCheckoutForm
               canceled={canceled}
               defaults={checkoutDefaults}

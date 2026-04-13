@@ -626,6 +626,82 @@ alter table public.resident_payments
   add column if not exists payer_phone text;
 
 -- =============================================================================
+-- 20260331140000_finance_transactions_customer_fields.sql
+-- =============================================================================
+
+alter table public.finance_transactions
+  add column if not exists unit_no text;
+
+alter table public.finance_transactions
+  add column if not exists customer_first_name text;
+
+alter table public.finance_transactions
+  add column if not exists customer_last_name text;
+
+-- =============================================================================
+-- 20260331150000_profiles_unit_lot_repair.sql
+-- =============================================================================
+
+alter table public.profiles
+  add column if not exists unit_lot text;
+
+-- =============================================================================
+-- 20260331200000_hoa_dashboard_billing.sql
+-- =============================================================================
+
+alter table public.hoa_dashboard_metrics
+  add column if not exists total_units int
+    check (total_units is null or total_units >= 0);
+
+alter table public.hoa_dashboard_metrics
+  add column if not exists hoa_fee_amount_cents bigint
+    check (hoa_fee_amount_cents is null or hoa_fee_amount_cents >= 0);
+
+alter table public.hoa_dashboard_metrics
+  add column if not exists hoa_due_day_of_month smallint
+    check (
+      hoa_due_day_of_month is null
+      or (hoa_due_day_of_month >= 1 and hoa_due_day_of_month <= 28)
+    );
+
+alter table public.hoa_dashboard_metrics
+  add column if not exists dues_frequency text
+    check (
+      dues_frequency is null
+      or dues_frequency in ('monthly', 'quarterly', 'annual', 'custom')
+    );
+
+alter table public.hoa_dashboard_metrics
+  add column if not exists dues_schedule_note text;
+
+alter table public.hoa_dashboard_metrics
+  add column if not exists payment_methods_note text;
+
+alter table public.hoa_dashboard_metrics
+  add column if not exists late_fee_policy_note text;
+
+-- =============================================================================
+-- 20260401000000_resident_payments_paid_at.sql
+-- =============================================================================
+
+alter table public.resident_payments
+  add column if not exists paid_at timestamptz;
+
+-- =============================================================================
+-- 20260402000000_profile_avatars.sql
+-- =============================================================================
+
+alter table public.profiles
+  add column if not exists avatar_path text;
+
+comment on column public.profiles.avatar_path is
+  'Object path in profile-avatars bucket; app issues signed URLs for display';
+
+insert into storage.buckets (id, name, public)
+values ('profile-avatars', 'profile-avatars', false)
+on conflict (id) do nothing;
+
+-- =============================================================================
 -- After migrations: existing Auth users need a profiles row (trigger only runs on new signups)
 -- =============================================================================
 

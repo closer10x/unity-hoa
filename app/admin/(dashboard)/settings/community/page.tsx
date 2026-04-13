@@ -35,8 +35,13 @@ export default async function CommunitySettingsPage() {
         </Link>
         <h1 className="text-2xl font-headline font-bold text-on-surface mb-2">Community profile</h1>
         <p className="text-sm text-on-surface-variant">
-          These values power the admin dashboard headline cards and community pulse. Financial ledger
-          lines are managed on the Finances page.
+          These values power the admin dashboard headline cards and community pulse. Manual finance
+          entries are managed on the Finances page. HOA fee, due dates, unit count, and payment
+          instructions are under{" "}
+          <Link href="/admin/finances?tab=billing" className="font-semibold text-secondary hover:underline">
+            Finances → Billing settings
+          </Link>
+          .
         </p>
       </div>
 

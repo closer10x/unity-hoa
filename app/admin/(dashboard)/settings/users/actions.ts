@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getServiceClientForAdmin } from "@/lib/auth/admin-service";
+import { requireAdminUser } from "@/lib/auth/require-admin";
 import { rethrowIfRedirect } from "@/lib/auth/rethrow-redirect";
 import type { ProfileRole } from "@/lib/types/settings";
 
@@ -93,6 +94,33 @@ export async function createPortalUser(
       if (upErr) {
         return { error: upErr.message };
       }
+    }
+
+    revalidatePath("/admin/settings/users");
+    return { ok: true };
+  } catch (e) {
+    rethrowIfRedirect(e);
+    return { error: e instanceof Error ? e.message : "Unknown error" };
+  }
+}
+
+export async function deletePortalUser(
+  userId: string,
+): Promise<{ ok: true } | { error: string }> {
+  try {
+    const { user } = await requireAdminUser();
+    const id = userId.trim();
+    if (!id) {
+      return { error: "User id is required" };
+    }
+    if (id === user.id) {
+      return { error: "You cannot remove your own account" };
+    }
+
+    const service = await getServiceClientForAdmin();
+    const { error } = await service.auth.admin.deleteUser(id);
+    if (error) {
+      return { error: error.message };
     }
 
     revalidatePath("/admin/settings/users");

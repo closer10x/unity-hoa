@@ -45,35 +45,41 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  const supabase = createServerClient(url, anonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
+  try {
+    const supabase = createServerClient(url, anonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value),
+          );
+          supabaseResponse = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options),
+          );
+        },
       },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value),
-        );
-        supabaseResponse = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options),
-        );
-      },
-    },
-  });
+    });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (isAdminArea && !isAdminLogin && !user) {
-    return redirectPreservingSupabaseCookies(
-      request,
-      supabaseResponse,
-      "/admin/login",
-      { next: normalizeAdminNext(pathname) },
-    );
+    if (isAdminArea && !isAdminLogin && !user) {
+      return redirectPreservingSupabaseCookies(
+        request,
+        supabaseResponse,
+        "/admin/login",
+        { next: normalizeAdminNext(pathname) },
+      );
+    }
+
+    return supabaseResponse;
+  } catch {
+    // Fail open: avoid middleware throwing when Supabase is unreachable (DNS/offline).
+    // Admin routes still enforce auth in RSC via requireAdminUser.
+    return NextResponse.next({ request });
   }
-
-  return supabaseResponse;
 }

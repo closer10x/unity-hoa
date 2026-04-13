@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 
+import { OfficeStatusBanner } from "@/components/marketing/office-status-banner";
+
 export const metadata: Metadata = {
   title: "Contact Us",
 };
@@ -119,9 +121,9 @@ export default function ContactPage() {
                       Unity Grid Management Office
                     </p>
                     <p className="text-sm text-on-surface-variant">
-                      4400 Heritage Parkway, Suite 102
+                      7880 Morrison Road
                       <br />
-                      Westover Hills, TX 78701
+                      Katy, Texas 77493
                     </p>
                   </div>
                 </div>
@@ -134,7 +136,7 @@ export default function ContactPage() {
                   <div>
                     <p className="text-sm font-bold text-on-surface">Phone</p>
                     <p className="text-sm text-on-surface-variant">
-                      (512) 555-0198
+                      713-208-3539
                     </p>
                   </div>
                 </div>
@@ -147,24 +149,14 @@ export default function ContactPage() {
                   <div>
                     <p className="text-sm font-bold text-on-surface">Email</p>
                     <p className="text-sm text-on-surface-variant">
-                      concierge@editorialestate.com
+                      info@sofilakes.com
                     </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-tertiary-fixed p-6 rounded-xl flex items-center justify-between gap-4">
-              <div>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-on-tertiary-fixed-variant block mb-1">
-                  Current Status
-                </span>
-                <p className="text-on-tertiary-fixed font-bold text-lg">
-                  Office is Open
-                </p>
-              </div>
-              <div className="h-3 w-3 rounded-full bg-secondary animate-pulse shrink-0" />
-            </div>
+            <OfficeStatusBanner />
 
             <div
               id="emergency"
@@ -180,9 +172,9 @@ export default function ContactPage() {
               </p>
               <a
                 className="text-secondary-fixed font-bold text-xl hover:underline"
-                href="tel:5125550911"
+                href="tel:7132083539"
               >
-                (512) 555-0911
+                713-208-3539
               </a>
             </div>
           </div>

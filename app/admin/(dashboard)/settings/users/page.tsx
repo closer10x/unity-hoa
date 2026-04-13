@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { PortalUsersManager } from "@/components/portal/settings/portal-users-manager";
+import { requireAdminUser } from "@/lib/auth/require-admin";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 
 import { listPortalUsers } from "./actions";
@@ -30,12 +31,17 @@ export default async function SettingsUsersPage() {
     );
   }
 
+  const session = await requireAdminUser();
+
   return (
     <div className="space-y-2">
       <h2 className="font-headline text-lg font-bold text-on-surface">
         Portal users
       </h2>
-      <PortalUsersManager initial={res.items} />
+      <PortalUsersManager
+        initial={res.items}
+        currentUserId={session.user.id}
+      />
     </div>
   );
 }

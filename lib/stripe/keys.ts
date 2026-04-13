@@ -33,3 +33,9 @@ export function isStripeConfigured(): boolean {
 export function isStripeWebhookConfigured(): boolean {
   return Boolean(getStripeSecretKey() && getStripeWebhookSecret());
 }
+
+/** True when secret key is a Stripe test key (`sk_test_…`). */
+export function isStripeTestMode(): boolean {
+  const k = getStripeSecretKey();
+  return typeof k === "string" && k.startsWith("sk_test_");
+}

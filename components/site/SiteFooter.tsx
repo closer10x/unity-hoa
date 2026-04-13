@@ -1,4 +1,6 @@
 import Link from "next/link";
+
+import { MAINTENANCE_REQUEST_PUBLIC_HREF } from "@/lib/maintenance-request/options";
 import { WordmarkLogo } from "./WordmarkLogo";
 
 export function SiteFooter() {
@@ -60,6 +62,14 @@ export function SiteFooter() {
           </h4>
           <ul className="space-y-2">
             <li>
+              <Link
+                className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:translate-x-1 transition-transform duration-200 block"
+                href="/payment"
+              >
+                Payment Portal
+              </Link>
+            </li>
+            <li>
               <a
                 className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:translate-x-1 transition-transform duration-200 block"
                 href="#"
@@ -78,17 +88,9 @@ export function SiteFooter() {
             <li>
               <Link
                 className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:translate-x-1 transition-transform duration-200 block"
-                href="/services#maintenance"
+                href={MAINTENANCE_REQUEST_PUBLIC_HREF}
               >
                 Maintenance Request
-              </Link>
-            </li>
-            <li>
-              <Link
-                className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:translate-x-1 transition-transform duration-200 block"
-                href="/services#map"
-              >
-                Community Map
               </Link>
             </li>
             <li>
@@ -115,7 +117,7 @@ export function SiteFooter() {
             </a>
             <a
               className="w-10 h-10 bg-surface-container flex items-center justify-center rounded-full hover:bg-secondary hover:text-white transition-all"
-              href="mailto:concierge@editorialestate.com"
+              href="mailto:info@sofilakes.com"
               aria-label="Email"
             >
               <span className="material-symbols-outlined text-lg">
@@ -144,7 +146,10 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-slate-200 dark:border-slate-800 w-full px-8 py-8 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p
+          className="text-xs text-slate-500 dark:text-slate-400"
+          suppressHydrationWarning
+        >
           © {new Date().getFullYear()} Unity Grid Management. All rights
           reserved.
         </p>

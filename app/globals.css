@@ -12,7 +12,8 @@
   --color-secondary-container: #76eeff;
   --color-outline: #75777b;
   --color-surface-container: #e8eef8;
-  --color-secondary-fixed-dim: #5dd7e8;
+  /* Brand cyan (Unity Grid mark); pairs with lime accents in raster logo */
+  --color-secondary-fixed-dim: #00b4d8;
   --color-error: #ba1a1a;
   --color-secondary-fixed: #93f1ff;
   --color-outline-variant: #c5c6cb;
@@ -89,4 +90,19 @@ h4 {
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+@keyframes maint-request-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.maint-request-dialog-panel {
+  animation: maint-request-dialog-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }

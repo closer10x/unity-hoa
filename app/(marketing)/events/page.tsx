@@ -318,8 +318,8 @@ export default function EventsPage() {
               Experience the Estate Lifestyle
             </h2>
             <p className="text-white/70 max-w-2xl mx-auto mb-10 text-lg">
-              Detailed maps, maintenance schedules, and reservation forms are
-              available via the resident-only portal.
+              Maintenance schedules, payment options, and reservation forms are
+              available via the resident services hub.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Link
@@ -329,10 +329,10 @@ export default function EventsPage() {
                 Enter Resident Portal
               </Link>
               <Link
-                href="/services#map"
+                href="/services"
                 className="border border-white/20 text-white px-8 py-3 rounded font-bold hover:bg-white/10 transition-all"
               >
-                View Neighborhood Map
+                View resident services
               </Link>
             </div>
           </div>

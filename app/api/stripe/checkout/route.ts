@@ -4,6 +4,7 @@ import {
   parseCheckoutPayer,
   stripePayerMetadata,
 } from "@/lib/payments/checkout-payer";
+import { validateCheckoutUnitAgainstProfile } from "@/lib/payments/checkout-unit-policy";
 import { parseAmountToCents } from "@/lib/payments/parse-amount";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requireServiceSupabase } from "@/lib/supabase/service";
@@ -70,6 +71,20 @@ export async function POST(request: Request) {
 
   if (authError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { data: profileRow } = await supabaseUser
+    .from("profiles")
+    .select("unit_lot")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const unitPolicy = validateCheckoutUnitAgainstProfile(
+    payer.unitNumber,
+    profileRow?.unit_lot,
+  );
+  if (!unitPolicy.ok) {
+    return NextResponse.json({ error: unitPolicy.error }, { status: 400 });
   }
 
   const service = requireServiceSupabase();

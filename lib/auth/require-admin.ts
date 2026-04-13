@@ -7,6 +7,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server-user";
 export type AdminProfile = {
   role: string;
   display_name: string | null;
+  avatar_path: string | null;
 };
 
 export type AdminSession = {
@@ -30,33 +31,30 @@ export const requireAdminUser = cache(async (): Promise<AdminSession> => {
     redirect("/admin/login");
   }
 
+  // Use * so DBs missing newer columns (e.g. avatar_path) still return a row;
+  // explicit column lists make PostgREST error and caused login ↔ /admin redirect loops.
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("role")
+    .select("*")
     .eq("id", user.id)
     .maybeSingle();
-
-  let displayName: string | null = null;
-  const displayRes = await supabase
-    .from("profiles")
-    .select("display_name")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!displayRes.error && displayRes.data) {
-    displayName =
-      (displayRes.data as { display_name: string | null }).display_name ?? null;
-  }
 
   if (profileError || !profile || profile.role !== "admin") {
     redirect("/admin/login?error=forbidden");
   }
 
+  const row = profile as {
+    role: string;
+    display_name?: string | null;
+    avatar_path?: string | null;
+  };
+
   return {
     user: { id: user.id, email: user.email },
     profile: {
-      role: profile.role,
-      display_name: displayName,
+      role: row.role,
+      display_name: row.display_name ?? null,
+      avatar_path: row.avatar_path ?? null,
     },
     supabase,
   };

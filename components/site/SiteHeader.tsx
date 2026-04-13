@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { WordmarkLogo } from "./WordmarkLogo";
 
 const NAV = [
@@ -30,9 +30,48 @@ export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const firstLinkRef = useRef<HTMLAnchorElement>(null);
 
-  useEffect(() => {
-    queueMicrotask(() => setMenuOpen(false));
+  useLayoutEffect(() => {
+    // #region agent log
+    fetch("http://127.0.0.1:7345/ingest/a72712c2-d85b-4bc4-86c4-3918f25ed1bb", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "5f63f3",
+      },
+      body: JSON.stringify({
+        sessionId: "5f63f3",
+        runId: "post-fix",
+        location: "SiteHeader.tsx:useLayoutEffect",
+        message: "header_pathname_layout",
+        hypothesisId: "B",
+        data: { pathname, menuOpenBefore: menuOpen },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+    setMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    // #region agent log
+    fetch("http://127.0.0.1:7345/ingest/a72712c2-d85b-4bc4-86c4-3918f25ed1bb", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "5f63f3",
+      },
+      body: JSON.stringify({
+        sessionId: "5f63f3",
+        runId: "post-fix",
+        location: "SiteHeader.tsx:useEffect[pathname]",
+        message: "header_pathname_effect",
+        hypothesisId: "E",
+        data: { pathname, menuOpen },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [pathname, menuOpen]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -66,6 +105,7 @@ export function SiteHeader() {
             <WordmarkLogo
               href="/"
               variant="onLight"
+              priority
               className="text-base sm:text-xl font-bold"
             />
           </div>
@@ -85,7 +125,7 @@ export function SiteHeader() {
               className="bg-secondary-fixed-dim text-on-secondary-fixed px-3 py-2.5 sm:px-6 rounded-md font-semibold text-sm transition-all hover:opacity-90 shadow-sm whitespace-nowrap shrink-0"
             >
               <span className="sm:hidden">Portal</span>
-              <span className="hidden sm:inline">Resident Portal</span>
+              <span className="hidden sm:inline">Payment Portal</span>
             </Link>
             <button
               type="button"

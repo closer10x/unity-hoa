@@ -5,18 +5,39 @@ import { useEffect, useState } from "react";
 
 import {
   createPortalUser,
+  deletePortalUser,
   type ListedAuthUser,
 } from "@/app/admin/(dashboard)/settings/users/actions";
 
 type Props = {
   initial: ListedAuthUser[];
+  currentUserId: string;
 };
 
-export function PortalUsersManager({ initial }: Props) {
+function TrashIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      className={className}
+      aria-hidden
+    >
+      <path
+        fillRule="evenodd"
+        d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.882a.75.75 0 0 0-1.06.053l-.5.556a.75.75 0 1 0 1.11 1.01l.234-.26v7.126a.75.75 0 0 0 1.5 0V12.5h1.5v3.867a.75.75 0 0 0 1.5 0V9.242l.234.26a.75.75 0 1 0 1.11-1.01l-.5-.556a.75.75 0 0 0-1.06-.053l-.72.8V8.25a.75.75 0 0 0-1.5 0v1.433l-.72-.8Z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
+export function PortalUsersManager({ initial, currentUserId }: Props) {
   const router = useRouter();
   const [items, setItems] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     setItems(initial);
@@ -34,6 +55,26 @@ export function PortalUsersManager({ initial }: Props) {
       return;
     }
     e.currentTarget.reset();
+    router.refresh();
+  }
+
+  async function onDelete(userId: string, email: string | undefined) {
+    const label = email?.trim() || "this user";
+    if (
+      !confirm(
+        `Remove portal account ${label}? They will no longer be able to sign in.`,
+      )
+    ) {
+      return;
+    }
+    setDeletingId(userId);
+    setError(null);
+    const r = await deletePortalUser(userId);
+    setDeletingId(null);
+    if ("error" in r) {
+      setError(r.error);
+      return;
+    }
     router.refresh();
   }
 
@@ -116,13 +157,16 @@ export function PortalUsersManager({ initial }: Props) {
                 <th className="px-4 py-3 font-semibold">Email</th>
                 <th className="px-4 py-3 font-semibold">Role</th>
                 <th className="px-4 py-3 font-semibold">Created</th>
+                <th className="px-4 py-3 w-14 font-semibold">
+                  <span className="sr-only">Remove user</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {items.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={3}
+                    colSpan={4}
                     className="px-4 py-8 text-center text-on-surface-variant"
                   >
                     No users yet.
@@ -140,6 +184,23 @@ export function PortalUsersManager({ initial }: Props) {
                     <td className="px-4 py-3 capitalize">{u.role}</td>
                     <td className="px-4 py-3 text-on-surface-variant">
                       {new Date(u.created_at).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {u.id === currentUserId ? (
+                        <span className="text-on-surface-variant text-xs">
+                          —
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={deletingId === u.id}
+                          onClick={() => onDelete(u.id, u.email)}
+                          className="inline-flex items-center justify-center rounded-lg p-2 text-error hover:bg-error/10 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary"
+                          aria-label={`Remove portal user ${u.email ?? u.id}`}
+                        >
+                          <TrashIcon className="size-5" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

@@ -20,6 +20,7 @@ export type ResidentPaymentAdminRow = {
   payer_phone: string | null;
   created_at: string;
   updated_at: string;
+  paid_at: string | null;
 };
 
 export type StripeWebhookEventRow = {

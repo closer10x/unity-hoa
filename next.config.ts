@@ -10,7 +10,28 @@ const supabaseHost = (() => {
   }
 })();
 
+function stringWatchIgnores(prev: unknown): string[] {
+  if (prev == null) return [];
+  if (typeof prev === "string" && prev.length > 0) return [prev];
+  if (Array.isArray(prev)) {
+    return prev.filter(
+      (x): x is string => typeof x === "string" && x.length > 0,
+    );
+  }
+  return [];
+}
+
 const nextConfig: NextConfig = {
+  webpack: (config, { dev }) => {
+    if (dev) {
+      const prevIgnored = config.watchOptions?.ignored;
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: [...stringWatchIgnores(prevIgnored), "**/.cursor/**"],
+      };
+    }
+    return config;
+  },
   images: {
     remotePatterns: [
       {

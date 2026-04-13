@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import type { FinanceMonthBucket } from "@/app/admin/(dashboard)/hoa/actions";
+import { formatAssessmentLine, formatDuesScheduleLine } from "@/lib/community/billing-display";
 import { formatUsdCompactFromCents, formatUsdFromCents } from "@/lib/format/money";
 import type { AnnouncementRow } from "@/lib/types/community";
 import type { HoaDashboardMetricsRow } from "@/lib/types/community";
@@ -56,6 +57,8 @@ export function AdminDashboardView({
   const pulse =
     metrics.pulse_note?.trim() ||
     `Resident satisfaction is currently at ${metrics.satisfaction_pct}%. The highest rated area this month was "Grounds Maintenance".`;
+  const billingAssessment = formatAssessmentLine(metrics);
+  const billingSchedule = formatDuesScheduleLine(metrics);
 
   const maxAbs = Math.max(...chart.map((c) => Math.abs(c.netCents)), 1);
 
@@ -96,6 +99,16 @@ export function AdminDashboardView({
             <p className="text-xs text-on-surface-variant mt-2">
               {metrics.fiscal_period_label ?? "Current fiscal period"}
             </p>
+            {billingAssessment != null || billingSchedule != null ? (
+              <p className="text-xs text-on-surface mt-2 pt-2 border-t border-outline-variant/10 leading-relaxed">
+                {[billingAssessment, billingSchedule].filter(Boolean).join(" · ")}
+                <span className="block text-on-surface-variant mt-1">
+                  <Link href="/admin/finances?tab=billing" className="font-semibold text-secondary hover:underline">
+                    Edit billing settings
+                  </Link>
+                </span>
+              </p>
+            ) : null}
           </div>
           <div className="bg-surface-container-lowest p-8 rounded-xl shadow-sm flex flex-col justify-between border-l-4 border-tertiary-fixed-dim min-h-[160px]">
             <span className="text-on-surface-variant font-label text-xs uppercase tracking-[0.1em] font-semibold">
@@ -359,7 +372,7 @@ export function AdminDashboardView({
             </h3>
             <div className="space-y-3">
               {[
-                ["/admin/finances", "receipt_long", "Finances & ledger"],
+                ["/admin/finances", "receipt_long", "Finances"],
                 ["/admin/settings/employees", "group_add", "Team & assignments"],
                 ["/admin/events/new", "event_available", "Post community event"],
               ].map(([href, icon, label]) => (

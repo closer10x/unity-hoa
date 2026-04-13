@@ -4,6 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { AdminNotificationsBell } from "@/components/portal/admin-notifications-bell";
+import type { AdminNotificationHeaderPayload } from "@/lib/notifications/load";
+
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: "dashboard" },
   { href: "/admin/finances", label: "Finances", icon: "payments" },
@@ -21,27 +24,36 @@ const NAV = [
 const AVATAR =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuAKyeRcbbbK86lsnDXruJxGcVfTZgNV-NvXH3Grz3LJoliD1T8pdrShWEeHo2xtvHOkNGpGq0L-BaeK0C96Xdy8YVu_PcMtB4S7ndocsW8MyTDtT-O5te1F4WXPOig0ePEnel_nv7dvzQ_G1rOSsTRlivN5xdH5YnhtZu81w9LqKMPX4tkeSTQ8Bu_-PFFNqyE5jazQHBoCfUFCKQnXhY5w6YJnxIEUftrnl8rYn2xk2Sh3f9pAlRt2XbrT4IKb30AbKiIoYu_VbFZ6";
 
-export function AdminSidebar() {
+type SidebarProps = {
+  notifications: AdminNotificationHeaderPayload;
+};
+
+export function AdminSidebar({ notifications }: SidebarProps) {
   const pathname = usePathname();
 
   return (
     <aside className="hidden md:flex flex-col gap-2 p-6 h-full min-h-screen w-64 fixed left-0 top-0 bg-slate-50 dark:bg-slate-950 z-40">
-      <div className="mb-10 flex items-center gap-3">
-        <div className="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center text-secondary-fixed-dim">
-          <span
-            className="material-symbols-outlined"
-            style={{ fontVariationSettings: "'FILL' 1" }}
-          >
-            grid_view
-          </span>
+      <div className="mb-10 flex items-start justify-between gap-2">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 shrink-0 bg-primary-container rounded-lg flex items-center justify-center text-secondary-fixed-dim">
+            <span
+              className="material-symbols-outlined"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              grid_view
+            </span>
+          </div>
+          <div className="min-w-0">
+            <h1 className="font-[Manrope] text-lg font-bold text-slate-900 dark:text-white">
+              Unity Management
+            </h1>
+            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">
+              Community Admin
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="font-[Manrope] text-lg font-bold text-slate-900 dark:text-white">
-            Unity Management
-          </h1>
-          <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">
-            Community Admin
-          </p>
+        <div className="shrink-0 pt-0.5">
+          <AdminNotificationsBell initial={notifications} />
         </div>
       </div>
       <nav className="flex-1 flex flex-col gap-1">
@@ -50,7 +62,8 @@ export function AdminSidebar() {
             href === "/admin"
               ? pathname === "/admin"
               : href === "/admin/settings"
-                ? pathname === "/admin/settings"
+                ? pathname === "/admin/settings" ||
+                  pathname.startsWith("/admin/settings/")
                 : pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link

@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { normalizeAdminNext } from "@/lib/admin/normalize-admin-next";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/keys";
 
 export async function GET(request: NextRequest) {
@@ -8,13 +9,12 @@ export async function GET(request: NextRequest) {
   const anonKey = getSupabaseAnonKey();
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/admin";
+  const nextRaw = searchParams.get("next") ?? "/admin";
+  const redirectTarget = normalizeAdminNext(nextRaw);
 
   if (!url || !anonKey) {
     return NextResponse.redirect(`${origin}/admin/login?error=config`);
   }
-
-  const redirectTarget = next.startsWith("/") ? next : `/${next}`;
 
   if (!code) {
     return NextResponse.redirect(`${origin}/admin/login?error=auth`);

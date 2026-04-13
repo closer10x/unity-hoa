@@ -51,6 +51,10 @@ export async function addFinanceTransaction(formData: FormData): Promise<void> {
   if (!description) throw new Error("Description is required");
   const cents = parseDollarsToCents(String(formData.get("amount_dollars") ?? ""));
   if (cents == null || cents <= 0) throw new Error("Enter a valid amount");
+  const unitNo = String(formData.get("unit_no") ?? "").trim();
+  if (!unitNo) throw new Error("Resident unit is required");
+  const customerFirstName = String(formData.get("customer_first_name") ?? "").trim() || null;
+  const customerLastName = String(formData.get("customer_last_name") ?? "").trim() || null;
 
   const { error } = await supabase.from("finance_transactions").insert({
     occurred_on: occurred_on || undefined,
@@ -60,6 +64,9 @@ export async function addFinanceTransaction(formData: FormData): Promise<void> {
     amount_cents: cents,
     entered_by_user_id: session.user.id,
     entered_by_name: ledgerEnteredByLabel(session),
+    unit_no: unitNo,
+    customer_first_name: customerFirstName,
+    customer_last_name: customerLastName,
   });
   if (error) throw new Error(error.message);
   revalidatePath("/admin/finances");

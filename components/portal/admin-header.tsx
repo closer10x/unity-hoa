@@ -1,20 +1,24 @@
 import Image from "next/image";
-import Link from "next/link";
 
 import { signOutAdmin } from "@/app/admin/(dashboard)/sign-out-action";
-import { AdminNotificationsBell } from "@/components/portal/admin-notifications-bell";
-import type { AdminNotificationHeaderPayload } from "@/lib/notifications/load";
-
-const AVATAR =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuD4uNQFG_uDNaEUK1fP1sB4yGWV0uKkc06Mq6i5mpB6_I1mJJBndpoFugdXbVIwsEyAO9FPthcrVMdaMtrbR0qYjB05MFPenWqMlAM2BYiSSX7nQkznrv9HtwbJYc5dUfW8Hp7wZqBxi677dDEahpMIUSxCNtSG4xhfsRReXe6QMn-Z-iY0mz1Lhal8_R3YmPj5OJtNwvcXAdSGLgnl4ZkOVFPRzbKGOHPwEHuK6yAW4elJEC0B0y9F7WJw4wiczNIQZmTQ__DRTlum";
 
 type Props = {
   email?: string;
   displayName?: string;
-  notifications: AdminNotificationHeaderPayload;
+  /** Signed storage URL; omit to show initial fallback */
+  avatarUrl?: string;
 };
 
-export function AdminHeader({ email, displayName, notifications }: Props) {
+function AvatarFallback({ label }: { label: string }) {
+  const ch = label.trim().charAt(0).toUpperCase() || "?";
+  return (
+    <span className="flex w-full h-full items-center justify-center bg-secondary/15 text-secondary text-[11px] font-bold">
+      {ch}
+    </span>
+  );
+}
+
+export function AdminHeader({ email, displayName, avatarUrl }: Props) {
   const label = displayName?.trim() || email || "Admin";
 
   return (
@@ -33,14 +37,6 @@ export function AdminHeader({ email, displayName, notifications }: Props) {
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <AdminNotificationsBell initial={notifications} />
-        <Link
-          href="/admin/settings"
-          className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500"
-          aria-label="Settings"
-        >
-          <span className="material-symbols-outlined">settings</span>
-        </Link>
         <form action={signOutAdmin}>
           <button
             type="submit"
@@ -59,14 +55,19 @@ export function AdminHeader({ email, displayName, notifications }: Props) {
             </span>
           ) : null}
         </div>
-        <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/20 shrink-0">
-          <Image
-            className="w-full h-full object-cover"
-            alt=""
-            src={AVATAR}
-            width={32}
-            height={32}
-          />
+        <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/20 shrink-0 bg-surface-container-highest">
+          {avatarUrl ? (
+            <Image
+              className="w-full h-full object-cover"
+              alt={`${label} profile photo`}
+              src={avatarUrl}
+              width={32}
+              height={32}
+              unoptimized
+            />
+          ) : (
+            <AvatarFallback label={label} />
+          )}
         </div>
       </div>
     </header>

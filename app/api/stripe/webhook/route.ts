@@ -21,6 +21,10 @@ function paymentIntentId(
   return null;
 }
 
+function paidAtFromStripeEvent(event: Stripe.Event): string {
+  return new Date(event.created * 1000).toISOString();
+}
+
 export async function POST(request: Request) {
   if (!isStripeWebhookConfigured()) {
     return NextResponse.json(
@@ -75,30 +79,75 @@ export async function POST(request: Request) {
         const intentId = paymentIntentId(session);
         const nextStatus =
           session.payment_status === "paid" ? "paid" : "processing";
-        const { error } = await service
-          .from("resident_payments")
-          .update({
-            status: nextStatus,
-            stripe_payment_intent_id: intentId,
-          })
-          .eq("stripe_checkout_session_id", session.id);
-        if (error) {
-          console.error("checkout.session.completed update:", error);
+        const paidAtIso = paidAtFromStripeEvent(event);
+        if (nextStatus === "paid") {
+          const { data: row, error: selErr } = await service
+            .from("resident_payments")
+            .select("id, paid_at")
+            .eq("stripe_checkout_session_id", session.id)
+            .maybeSingle();
+          if (selErr) {
+            console.error("checkout.session.completed select:", selErr);
+            break;
+          }
+          if (row) {
+            const patch: Record<string, unknown> = {
+              status: "paid",
+              stripe_payment_intent_id: intentId,
+            };
+            if (!row.paid_at) {
+              patch.paid_at = paidAtIso;
+            }
+            const { error } = await service
+              .from("resident_payments")
+              .update(patch)
+              .eq("id", row.id);
+            if (error) {
+              console.error("checkout.session.completed update:", error);
+            }
+          }
+        } else {
+          const { error } = await service
+            .from("resident_payments")
+            .update({
+              status: nextStatus,
+              stripe_payment_intent_id: intentId,
+            })
+            .eq("stripe_checkout_session_id", session.id);
+          if (error) {
+            console.error("checkout.session.completed update:", error);
+          }
         }
         break;
       }
       case "checkout.session.async_payment_succeeded": {
         const session = event.data.object as Stripe.Checkout.Session;
         const intentId = paymentIntentId(session);
-        const { error } = await service
+        const paidAtIso = paidAtFromStripeEvent(event);
+        const { data: row, error: selErr } = await service
           .from("resident_payments")
-          .update({
+          .select("id, paid_at")
+          .eq("stripe_checkout_session_id", session.id)
+          .maybeSingle();
+        if (selErr) {
+          console.error("checkout.session.async_payment_succeeded select:", selErr);
+          break;
+        }
+        if (row) {
+          const patch: Record<string, unknown> = {
             status: "paid",
             stripe_payment_intent_id: intentId,
-          })
-          .eq("stripe_checkout_session_id", session.id);
-        if (error) {
-          console.error("checkout.session.async_payment_succeeded update:", error);
+          };
+          if (!row.paid_at) {
+            patch.paid_at = paidAtIso;
+          }
+          const { error } = await service
+            .from("resident_payments")
+            .update(patch)
+            .eq("id", row.id);
+          if (error) {
+            console.error("checkout.session.async_payment_succeeded update:", error);
+          }
         }
         break;
       }
@@ -128,15 +177,31 @@ export async function POST(request: Request) {
         const intent = event.data.object as Stripe.PaymentIntent;
         const paymentId = intent.metadata?.payment_id;
         if (paymentId) {
-          const { error } = await service
+          const paidAtIso = paidAtFromStripeEvent(event);
+          const { data: row, error: selErr } = await service
             .from("resident_payments")
-            .update({
+            .select("id, paid_at")
+            .eq("id", paymentId)
+            .maybeSingle();
+          if (selErr) {
+            console.error("payment_intent.succeeded select:", selErr);
+            break;
+          }
+          if (row) {
+            const patch: Record<string, unknown> = {
               status: "paid",
               stripe_payment_intent_id: intent.id,
-            })
-            .eq("id", paymentId);
-          if (error) {
-            console.error("payment_intent.succeeded update:", error);
+            };
+            if (!row.paid_at) {
+              patch.paid_at = paidAtIso;
+            }
+            const { error } = await service
+              .from("resident_payments")
+              .update(patch)
+              .eq("id", paymentId);
+            if (error) {
+              console.error("payment_intent.succeeded update:", error);
+            }
           }
         }
         break;

@@ -2,8 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 
+import { parseDuesFrequency, publicDuesFromMetrics } from "@/lib/community/billing-display";
+import { requireAdminUser } from "@/lib/auth/require-admin";
+import { parseDollarsToCents } from "@/lib/format/money";
 import { requireServiceSupabase } from "@/lib/supabase/service";
-import type { HoaDashboardMetricsRow } from "@/lib/types/community";
+import type { HoaDashboardMetricsRow, PublicDuesDisplay } from "@/lib/types/community";
 
 export type FinanceMonthBucket = {
   key: string;
@@ -23,6 +26,19 @@ function monthLabel(key: string): string {
   });
 }
 
+function withBillingDefaults(row: HoaDashboardMetricsRow): HoaDashboardMetricsRow {
+  return {
+    ...row,
+    total_units: row.total_units ?? null,
+    hoa_fee_amount_cents: row.hoa_fee_amount_cents ?? null,
+    hoa_due_day_of_month: row.hoa_due_day_of_month ?? null,
+    dues_frequency: row.dues_frequency ?? null,
+    dues_schedule_note: row.dues_schedule_note ?? null,
+    payment_methods_note: row.payment_methods_note ?? null,
+    late_fee_policy_note: row.late_fee_policy_note ?? null,
+  };
+}
+
 export async function getDashboardMetrics(): Promise<HoaDashboardMetricsRow | null> {
   try {
     const supabase = requireServiceSupabase();
@@ -32,7 +48,17 @@ export async function getDashboardMetrics(): Promise<HoaDashboardMetricsRow | nu
       .eq("id", 1)
       .maybeSingle();
     if (error || !data) return null;
-    return data as HoaDashboardMetricsRow;
+    return withBillingDefaults(data as HoaDashboardMetricsRow);
+  } catch {
+    return null;
+  }
+}
+
+export async function getPublicDuesDisplay(): Promise<PublicDuesDisplay | null> {
+  try {
+    const m = await getDashboardMetrics();
+    if (!m) return null;
+    return publicDuesFromMetrics(m);
   } catch {
     return null;
   }
@@ -152,4 +178,77 @@ export async function updateDashboardMetrics(formData: FormData): Promise<void> 
   revalidatePath("/admin/finances");
   revalidatePath("/admin/settings");
   revalidatePath("/admin/settings/community");
+  revalidatePath("/payment");
+}
+
+export type HoaBillingSettingsFormState =
+  | { ok: true }
+  | { ok: false; error: string }
+  | null;
+
+async function persistHoaBillingSettings(formData: FormData): Promise<void> {
+  await requireAdminUser();
+  const supabase = requireServiceSupabase();
+
+  const unitsRaw = String(formData.get("total_units") ?? "").trim();
+  const total_units =
+    unitsRaw === "" ? null : Math.max(0, parseInt(unitsRaw, 10) || 0);
+
+  const feeRaw = String(formData.get("hoa_fee_dollars") ?? "").trim();
+  let hoa_fee_amount_cents: number | null =
+    feeRaw === "" ? null : parseDollarsToCents(feeRaw);
+  if (hoa_fee_amount_cents != null && hoa_fee_amount_cents < 0) hoa_fee_amount_cents = null;
+
+  const dueRaw = String(formData.get("hoa_due_day_of_month") ?? "").trim();
+  let hoa_due_day_of_month: number | null = null;
+  if (dueRaw !== "") {
+    const d = parseInt(dueRaw, 10);
+    if (Number.isFinite(d) && d >= 1 && d <= 28) hoa_due_day_of_month = d;
+  }
+
+  const dues_frequency = parseDuesFrequency(String(formData.get("dues_frequency") ?? ""));
+  const dues_schedule_note =
+    String(formData.get("dues_schedule_note") ?? "").trim() || null;
+  const payment_methods_note =
+    String(formData.get("payment_methods_note") ?? "").trim() || null;
+  const late_fee_policy_note =
+    String(formData.get("late_fee_policy_note") ?? "").trim() || null;
+
+  const { error } = await supabase
+    .from("hoa_dashboard_metrics")
+    .update({
+      total_units,
+      hoa_fee_amount_cents,
+      hoa_due_day_of_month,
+      dues_frequency,
+      dues_schedule_note,
+      payment_methods_note,
+      late_fee_policy_note,
+    })
+    .eq("id", 1);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/finances");
+  revalidatePath("/payment");
+  revalidatePath("/admin/settings");
+  revalidatePath("/admin/settings/community");
+}
+
+export async function updateHoaBillingSettings(formData: FormData): Promise<void> {
+  await persistHoaBillingSettings(formData);
+}
+
+export async function submitHoaBillingSettings(
+  _prev: HoaBillingSettingsFormState,
+  formData: FormData,
+): Promise<HoaBillingSettingsFormState> {
+  try {
+    await persistHoaBillingSettings(formData);
+    return { ok: true };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Could not save settings";
+    return { ok: false, error: message };
+  }
 }

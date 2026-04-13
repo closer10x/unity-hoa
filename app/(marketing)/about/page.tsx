@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
+import { AboutFlashProbe } from "@/components/marketing/about-flash-probe";
+
 export const metadata: Metadata = {
   title: "About Us",
 };
@@ -9,33 +11,32 @@ export const metadata: Metadata = {
 const HERO_BG =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuDhFhF-u8D8R-LJkRb8eRzlYDZWq4ed82TNcNdc4LeczPMcq2cTL-cCWBmx5xdd7fPruG_PZtHAp8LyaAn1OMmRR60wl5Bh-IyXzRHKInWODU5Ukw6BDCCWY_masPPimV1ikfHVxjGuz6W4VDnw9fBnuVL1iNzmpyDyxB9opiX0BGlR3PGUmKZAAY8yYIBkKaWOkxxQs4d1kqctO-ZuVsuPYTkOt8JgmEVb0-6kbrhDaFqjq-dv8uaayAv0bpCd103-iGrpkZet2ZzD";
 
-const MISSION_IMG =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuAu81QlWCZSzVw6H1IBIcnKHWB_IcqgKaRC2PvS5x7bDh2O4WeBzclac7LhiMypb44TV2k1X2yAgGRN789ZDHA1Ob0cRwIhVX0IDSLrQcjVFHEGfTZa3IoWnqpqrzBOD5GtGzk6AwhGwG0STF97E5lspBZAbSuYSI0dq3OuJr0BtWCz0xnv0HsdnY9vGwwNNky2GGrHwsh5bjP_OUdJobebE88CkUMtcjsffChxkPbjilYtS52RXaW_-lv0eG-2FXxlPRY_FBL-sdCv";
+const MISSION_IMG = "/images/about-mission-community-art.png";
 
-const HISTORY_BG =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuC8d4BIsDM2Gsb7ZfMBDyRQPOvnkTx-0vikwFCXmHIDjzqwJGZMvO5Q-XgcP-M5pyno7JGLQ2RFAo2Muulhs0GMsY27Io3lGnWrIEKYV3zD_XO9xVDKo-2JZs-QRRAsXeTypjwaKAGlYy4Tae0Kh1daIq890t2yLVhSGjMQWIVH9NXQchPQECTqT7mh9Ni6jfeOEZ6fdg52fAi6GZrWcriGrX1ldGx-JOWGRpQDyEkth3T_tdlIzFTOcsAYf7HmXiGNNBCTpdUyRmyT";
+/** Subtle “behind the copy” treatment, same pattern as the hero imagery elsewhere on this page. */
+const HOUSTON_MARKET_BG = "/images/houston-market-skyline.png";
 
 const BOARD = [
   {
-    name: "Julian Vance",
+    name: "Sophia Filfil",
     role: "President",
-    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBKdk7P23C-qT3buFh1npRT5Q7sneKSe2z87b0If5TZkjaLkuVXqEjfrqMSBKgf_I7nYm60sGiwlxHdHSGIJn4DZUkiZTSh8M1uc3zmz3auv3Rsg3YKcPVFOSntPfpC_n9TJ0zmn-NGJ0y2U1qWht7NoioAdyLfK6_f93siIfGWLCAhvX5Cf2OF50F6PF-qRSivVSovRvFrmlWfbtR1ilbrBAQzD79xnWU5kBl1U4P6mtpRtR9RlQecgOBAW0urvfgEjAn2dMhIcLvu",
-    alt: "Professional portrait of male board president",
-    bio: "A resident for 12 years and an urban planning consultant, Julian oversees long-term infrastructure projects and strategic partnerships.",
+    img: "/images/sophia-filfil-board.png",
+    alt: "Portrait of board president Sophia Filfil",
+    bio: "Sofi Lakes homeowner who runs the board like property management—short agendas, reserve numbers you can read, and vendors held accountable until gates, pools, and lighting are really fixed.",
   },
   {
-    name: "Helena Thorne",
+    name: "William Robert Jackson",
     role: "Treasurer",
-    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuD4lD_FA5qknv0-37ISGQmhPpn4Vq_H-qNeB9RDPvVzsMLyYVH2L81fYngdGlxpGuJH7Ys55PDDms_MbIGcGPfCwBNYUTVS_TS4t2m9upC4ocA6uEz0gM94soyadrsncs890cy_0GuzCiEV6Q2nfYGlO1qnafgPH89Us_oGI7YcnBdRPoChR_nbG9nZw2ecaW8-2yrITcFOFRfFDyvCCr5xfj50ZOp6IGEEbE0ZhCd9jsxkQ54h041hai66Ivv2mlq3spRH7qd0-RN2",
-    alt: "Professional portrait of female treasurer",
-    bio: "With a background in forensic accounting, Helena ensures our dues are utilized with maximum efficiency and complete fiscal transparency.",
+    img: "/images/william-robert-jackson-board.png",
+    alt: "Portrait of board treasurer William Robert Jackson",
+    bio: "Houston-area through and through—William still believes a treasurer ought to look you in the eye at the mailbox and show the math. He keeps dues straight, reserves funded before the next big Gulf Coast storm season, and monthly packets plain enough that nobody has to decode fine print to know where their money went.",
   },
   {
-    name: "Marcus Wu",
+    name: "Phillip Dautrich",
     role: "Secretary",
-    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAVW0CqGoyQhjoPGMj_MZDUCHQBqSvhMX_vsZPtrQRtoNIffHIn7ZvkFb4YK5maPnVioE6_p9WtENK1-JoBjwPTkhZfM-WR4NO6whMZbsOWvaH-9SKYP7fUr2bOqiR_BrbbXYjBDIprAEOJaC5mdWPbseVSBpWHaNoLTvIH_aWXK7kPRLk_j5I7QMu_ljlO6xSW4wyMR-DOLzGd10tTPxmbEQA6NdG_H8G1Cr9Xjn-ppocuBBjFvu4g_CJrWEtzOe-9ehf7NYZoQtsk",
-    alt: "Professional portrait of secretary",
-    bio: "Marcus bridges the gap between the board and residents, managing communications and the digital portal with precision.",
+    img: "/images/phillip-dautrich-board.png",
+    alt: "Portrait of board secretary Phillip Dautrich",
+    bio: "Keeps agendas, minutes, and notices aligned with what the board actually voted on—so residents get one clear story in email and on the portal, not three conflicting versions.",
   },
 ] as const;
 
@@ -43,16 +44,12 @@ export default function AboutPage() {
   return (
     <main className="flex-grow">
       <section className="relative min-h-[614px] flex items-center overflow-hidden bg-primary-container">
-        <div className="absolute inset-0 opacity-40">
-          <Image
-            alt="Luxury residential estate architecture and landscaping"
-            className="object-cover"
-            src={HERO_BG}
-            fill
-            sizes="100vw"
-            priority
-          />
-        </div>
+        <div
+          className="absolute inset-0 opacity-40 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url('${HERO_BG}')` }}
+          role="img"
+          aria-label="Luxury residential estate architecture and landscaping"
+        />
         <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/80 to-transparent" />
         <div className="relative z-10 max-w-7xl mx-auto px-8 w-full py-24">
           <span className="text-secondary-fixed text-xs font-bold uppercase tracking-[0.2em] mb-4 block">
@@ -112,8 +109,8 @@ export default function AboutPage() {
           <div className="relative">
             <div className="aspect-[4/5] rounded-xl overflow-hidden shadow-2xl relative">
               <Image
-                alt="Modern neighborhood walkway with manicured trees"
-                className="object-cover"
+                alt="Large illuminated public art installation with leaf-like canopies on a plaza at dusk, with modern buildings nearby"
+                className="object-cover object-center"
                 src={MISSION_IMG}
                 fill
                 sizes="(min-width: 1024px) 50vw, 100vw"
@@ -138,38 +135,50 @@ export default function AboutPage() {
             <h2 className="text-4xl font-bold text-on-surface mb-4">
               Our Journey
             </h2>
-            <p className="text-on-surface-variant">
-              From a historic orchard to the region&apos;s premier private
-              residential enclave.
+            <p className="text-on-surface-variant leading-relaxed">
+              In <span className="font-semibold text-on-surface">2026</span>, our
+              story is written in real time: Sofi Lakes HOA coordinating assessments,
+              vendors, and common-area upkeep while Houston&apos;s inventory, rates,
+              and buyer expectations keep shifting. This page is a snapshot of how
+              we&apos;re operating <em>this year</em>—specific budgets, named
+              responsibilities, and a board that answers to people who live on these
+              streets.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 min-h-0 md:min-h-[600px]">
             <div className="md:col-span-7 bg-surface-container-lowest p-10 rounded-xl flex flex-col justify-end relative overflow-hidden group min-h-[320px]">
               <div className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity duration-500">
                 <Image
-                  alt="Vintage photo of estate grounds"
-                  className="object-cover"
-                  src={HISTORY_BG}
+                  alt="Houston skyline at golden hour, representing the metro real estate market behind the community"
+                  className="object-cover object-center"
+                  src={HOUSTON_MARKET_BG}
                   fill
                   sizes="(min-width: 768px) 58vw, 100vw"
                 />
               </div>
               <div className="relative z-10">
                 <span className="text-secondary font-bold text-sm tracking-widest">
-                  EST. 1984
+                  EST. 2026 · SOFI LAKES · HOUSTON
                 </span>
-                <h3 className="text-3xl font-bold mt-2 mb-4">Founding Vision</h3>
-                <p className="text-on-surface-variant max-w-md">
-                  Originally established as the Grayson Orchard, the estate was
-                  reimagined in the late 80s as a haven for architectural
-                  experimentation, preserving 40% of the original flora.
+                <h3 className="text-3xl font-bold mt-2 mb-4">
+                  Property management tuned for the 2026 market
+                </h3>
+                <p className="text-on-surface-variant max-w-md leading-relaxed">
+                  Assessments, reserves, insurance renewals, and vendor contracts all
+                  landed with new price tags this cycle—so our 2026 playbook is
+                  explicit: line-item transparency, preventative maintenance on pools
+                  and gates before they fail, and architectural reviews that keep
+                  curb appeal aligned with what buyers are touring in Energy Corridor
+                  and Katy comps. Sofi Lakes is the association office you can walk up
+                  to, not a distant call center pretending Houston is generic
+                  &quot;sunbelt sprawl.&quot;
                 </p>
               </div>
             </div>
             <div className="md:col-span-5 grid grid-rows-2 gap-6">
               <div className="bg-primary p-8 rounded-xl text-white flex flex-col justify-center">
                 <h3 className="text-4xl font-extrabold text-secondary-fixed mb-2">
-                  250+
+                  3+
                 </h3>
                 <p className="text-on-primary-container uppercase tracking-widest text-xs font-bold">
                   Unique Residences
@@ -190,7 +199,7 @@ export default function AboutPage() {
                     The Bylaw Evolution
                   </h4>
                   <p className="text-on-secondary-container/80 text-sm mt-1">
-                    Updated in 2022 to include comprehensive renewable energy
+                    Updated in 2026 to include comprehensive renewable energy
                     integration and digital community voting.
                   </p>
                 </div>
@@ -279,6 +288,7 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+      <AboutFlashProbe />
     </main>
   );
 }

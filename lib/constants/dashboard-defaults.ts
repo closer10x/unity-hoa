@@ -11,4 +11,11 @@ export const DEFAULT_HOA_METRICS: HoaDashboardMetricsRow = {
   satisfaction_pct: 92,
   pulse_note: null,
   updated_at: "1970-01-01T00:00:00.000Z",
+  total_units: null,
+  hoa_fee_amount_cents: null,
+  hoa_due_day_of_month: null,
+  dues_frequency: null,
+  dues_schedule_note: null,
+  payment_methods_note: null,
+  late_fee_policy_note: null,
 };

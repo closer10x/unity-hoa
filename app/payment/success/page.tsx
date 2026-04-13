@@ -13,7 +13,12 @@ export default function PaymentSuccessPage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6 py-24 bg-surface-container-low">
       <div className="max-w-md w-full bg-surface-container-lowest rounded-xl shadow-lg p-10 space-y-6 text-center">
-        <WordmarkLogo href="/" variant="onLight" className="text-base font-bold mx-auto" />
+        <WordmarkLogo
+          href="/"
+          variant="onLight"
+          align="center"
+          className="text-base font-bold"
+        />
         <div className="space-y-2">
           <span
             className="material-symbols-outlined text-5xl text-tertiary"

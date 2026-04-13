@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { WordmarkLogo } from "@/components/site/WordmarkLogo";
+import { MaintenanceRequestCard } from "@/components/marketing/maintenance-request-card";
 
 const HERO_IMG = "/images/hero-neighborhood.png";
 
@@ -54,18 +54,11 @@ export default function HomePage() {
             <span className="inline-block px-3 py-1 bg-secondary/20 text-secondary-fixed-dim text-[11px] uppercase tracking-wider font-bold mb-6 rounded">
               Premier Living Experience
             </span>
-            <h1 className="text-white text-5xl sm:text-6xl font-extrabold leading-tight mb-6 tracking-tight">
-              <span className="block mb-3 sm:mb-4">Welcome to</span>
-              <WordmarkLogo
-                variant="onDark"
-                showPeriod
-                className="text-5xl sm:text-6xl font-extrabold tracking-tight"
-              />
-            </h1>
             <p className="text-slate-200 text-lg mb-10 font-body max-w-lg leading-relaxed">
-              Experience the gold standard of community management where luxury
-              meets tranquility. Your home is more than a residence; it&apos;s a
-              lifestyle statement.
+              Structured homeowners association management for Sofi Lakes and
+              the additional communities we serve—responsive support,
+              transparent communication, and dependable coordination for shared
+              amenities and community standards.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link
@@ -102,7 +95,11 @@ export default function HomePage() {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-6">
-            <div className="md:col-span-2 lg:col-span-2 bg-surface-container-lowest p-8 rounded-xl shadow-sm hover:translate-y-[-4px] transition-transform flex flex-col justify-between group">
+            <Link
+              href="/payment"
+              aria-label="Pay assessments — make payment"
+              className="md:col-span-2 lg:col-span-2 bg-surface-container-lowest p-8 rounded-xl shadow-sm hover:translate-y-[-4px] transition-transform flex flex-col justify-between group no-underline text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
+            >
               <div className="mb-12">
                 <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center mb-6 group-hover:bg-secondary/20 transition-colors">
                   <span
@@ -118,42 +115,14 @@ export default function HomePage() {
                   community fees.
                 </p>
               </div>
-              <Link
-                href="/payment"
-                className="text-secondary font-bold text-sm flex items-center"
-              >
-                Access Payments{" "}
+              <span className="text-secondary font-bold text-sm flex items-center">
+                Make Payment{" "}
                 <span className="material-symbols-outlined ml-2 text-sm">
                   arrow_forward
                 </span>
-              </Link>
-            </div>
-            <div className="md:col-span-2 lg:col-span-2 bg-surface-container-lowest p-8 rounded-xl shadow-sm hover:translate-y-[-4px] transition-transform flex flex-col justify-between group">
-              <div className="mb-12">
-                <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center mb-6 group-hover:bg-secondary/20 transition-colors">
-                  <span
-                    className="material-symbols-outlined text-secondary"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    engineering
-                  </span>
-                </div>
-                <h3 className="text-xl font-bold mb-2">Maintenance Request</h3>
-                <p className="text-sm text-on-surface-variant">
-                  Report issues or request service for common areas directly
-                  through our portal.
-                </p>
-              </div>
-              <Link
-                href="/services#maintenance"
-                className="text-secondary font-bold text-sm flex items-center"
-              >
-                File Request{" "}
-                <span className="material-symbols-outlined ml-2 text-sm">
-                  arrow_forward
-                </span>
-              </Link>
-            </div>
+              </span>
+            </Link>
+            <MaintenanceRequestCard />
             <div className="md:col-span-4 lg:col-span-2 bg-primary text-white p-8 rounded-xl shadow-sm hover:translate-y-[-4px] transition-transform flex flex-col justify-between group relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/10 rounded-full translate-x-16 -translate-y-16" />
               <div className="mb-12 relative z-10">
@@ -189,13 +158,13 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-8">
           <div className="flex items-center justify-between mb-16 flex-wrap gap-4">
             <h2 className="text-4xl font-bold">Latest Community News</h2>
-            <button
-              type="button"
+            <Link
+              href="/events"
               className="text-secondary font-bold text-sm flex items-center hover:translate-x-1 transition-transform"
             >
               Browse Archives{" "}
               <span className="material-symbols-outlined ml-1">chevron_right</span>
-            </button>
+            </Link>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             {NEWS.map((item) => (
@@ -224,12 +193,12 @@ export default function HomePage() {
                 <p className="text-on-surface-variant text-sm leading-relaxed mb-6">
                   {item.excerpt}
                 </p>
-                <a
+                <Link
+                  href="/events"
                   className="mt-auto text-on-surface font-semibold text-sm underline underline-offset-4 decoration-secondary/30 hover:decoration-secondary"
-                  href="#"
                 >
                   Read Story
-                </a>
+                </Link>
               </article>
             ))}
           </div>
@@ -272,65 +241,17 @@ export default function HomePage() {
               </div>
             </div>
             <div className="bg-primary-container p-12 rounded-2xl text-white">
-              <h3 className="text-2xl font-bold mb-8">Contact the Board</h3>
-              <form className="space-y-6" action="#" method="post">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase font-bold text-slate-400">
-                      Full Name
-                    </label>
-                    <input
-                      className="w-full bg-primary border-none rounded-md p-3 text-sm focus:ring-1 focus:ring-secondary text-on-primary placeholder:text-on-primary-container"
-                      placeholder="Jane Doe"
-                      type="text"
-                      name="name"
-                      autoComplete="name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase font-bold text-slate-400">
-                      Address
-                    </label>
-                    <input
-                      className="w-full bg-primary border-none rounded-md p-3 text-sm focus:ring-1 focus:ring-secondary text-on-primary placeholder:text-on-primary-container"
-                      placeholder="Lot 402"
-                      type="text"
-                      name="address"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-slate-400">
-                    Subject
-                  </label>
-                  <select
-                    className="w-full bg-primary border-none rounded-md p-3 text-sm focus:ring-1 focus:ring-secondary text-on-primary"
-                    name="subject"
-                    defaultValue="maintenance"
-                  >
-                    <option value="maintenance">Maintenance Issue</option>
-                    <option value="general">General Inquiry</option>
-                    <option value="arc">Architectural Review</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-slate-400">
-                    Message
-                  </label>
-                  <textarea
-                    className="w-full bg-primary border-none rounded-md p-3 text-sm focus:ring-1 focus:ring-secondary text-on-primary placeholder:text-on-primary-container"
-                    placeholder="How can we help you?"
-                    rows={4}
-                    name="message"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-secondary text-white font-bold py-4 rounded-md transition-all hover:bg-secondary/90"
-                >
-                  Send Message
-                </button>
-              </form>
+              <h3 className="text-2xl font-bold mb-4">Contact the Board</h3>
+              <p className="text-sm text-slate-300 mb-8 leading-relaxed">
+                Use the community contact form so your message reaches the
+                management office and board liaisons with the right context.
+              </p>
+              <Link
+                href="/contact"
+                className="inline-flex w-full justify-center bg-secondary text-white font-bold py-4 rounded-md transition-all hover:bg-secondary/90"
+              >
+                Open contact form
+              </Link>
             </div>
           </div>
         </div>

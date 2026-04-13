@@ -4,6 +4,8 @@ const BUCKET = "work-order-images";
 
 export const WORK_ORDER_IMAGES_BUCKET = BUCKET;
 
+export const PROFILE_AVATARS_BUCKET = "profile-avatars";
+
 export function isSupabaseConfigured(): boolean {
   return Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
@@ -39,4 +41,16 @@ export async function signAttachmentUrls(
     }
   }
   return map;
+}
+
+export async function signProfileAvatarUrl(
+  client: SupabaseClient,
+  path: string,
+  expiresInSec = 3600,
+): Promise<string | null> {
+  const { data, error } = await client.storage
+    .from(PROFILE_AVATARS_BUCKET)
+    .createSignedUrl(path, expiresInSec);
+  if (error || !data?.signedUrl) return null;
+  return data.signedUrl;
 }

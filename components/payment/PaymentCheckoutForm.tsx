@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
+import { FINANCE_ACCOUNT_NUMBER_MAX } from "@/lib/constants/finance-ledger";
+
 export type PaymentCheckoutDefaults = {
   firstName?: string;
   lastName?: string;
@@ -81,9 +83,10 @@ export function PaymentCheckoutForm({ canceled, defaults }: Props) {
           Payment details
         </h2>
         <p className="mt-1 text-sm text-on-surface-variant">
-          Enter your name, unit or account number, and amount. We pass those
-          details to Stripe with your payment; you&apos;ll finish on
-          Stripe&apos;s secure page. Your{" "}
+          Enter your name, numeric unit number (1–{FINANCE_ACCOUNT_NUMBER_MAX}
+          ), and amount. The unit must match the admin roster and, when your
+          profile lists a unit, must match that number. We pass those details to
+          Stripe; you&apos;ll finish on Stripe&apos;s secure page. Your{" "}
           <span className="font-semibold text-on-surface">
             payment confirmation email
           </span>{" "}
@@ -202,16 +205,17 @@ export function PaymentCheckoutForm({ canceled, defaults }: Props) {
             htmlFor="payment-unit"
             className="text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant"
           >
-            Unit or account number
+            Unit number
           </label>
           <input
             id="payment-unit"
             name="unitNumber"
             type="text"
+            inputMode="numeric"
             autoComplete="off"
             required
             className="w-full rounded-xl border border-outline-variant/25 bg-surface-container-high/60 px-4 py-3.5 text-on-surface outline-none ring-0 transition-shadow focus:border-secondary/50 focus:ring-2 focus:ring-secondary/25"
-            placeholder="e.g. 1204 or A-14"
+            placeholder={`e.g. 60 (1–${FINANCE_ACCOUNT_NUMBER_MAX})`}
             value={unitNumber}
             onChange={(ev) => setUnitNumber(ev.target.value)}
           />

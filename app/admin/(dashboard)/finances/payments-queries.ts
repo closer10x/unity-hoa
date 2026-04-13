@@ -6,11 +6,9 @@ import type {
   ProfileUnitDirectoryRow,
   ResidentPaymentAdminRow,
   ResidentPaymentStatus,
-  StripeWebhookEventRow,
 } from "@/lib/types/resident-payments-admin";
 
 const PAYMENTS_PAGE_LIMIT = 500;
-const WEBHOOK_EVENTS_LIMIT = 100;
 const UNITS_PAYMENTS_FETCH_LIMIT = 3000;
 
 export type PaymentListFilters = {
@@ -19,8 +17,20 @@ export type PaymentListFilters = {
   unitIndex: number | null;
 };
 
-function escapeIlike(value: string): string {
-  return value.replace(/[%_\\]/g, "\\$&");
+function paymentMatchesSearch(row: ResidentPaymentAdminRow, q: string): boolean {
+  const needle = q.trim().toLowerCase();
+  if (!needle) return true;
+  const parts = [
+    row.unit_lot,
+    row.payer_first_name,
+    row.payer_last_name,
+    row.stripe_checkout_session_id,
+    row.stripe_payment_intent_id,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return parts.includes(needle);
 }
 
 export async function listResidentPaymentsAdmin(
@@ -39,18 +49,15 @@ export async function listResidentPaymentsAdmin(
       q = q.eq("status", filters.status);
     }
 
-    const search = filters.search.trim();
-    if (search.length > 0) {
-      const pat = `%${escapeIlike(search)}%`;
-      q = q.or(
-        `payer_first_name.ilike.${pat},payer_last_name.ilike.${pat},unit_lot.ilike.${pat}`,
-      );
-    }
-
     const { data, error } = await q;
     if (error) return { error: error.message };
 
     let rows = (data ?? []) as ResidentPaymentAdminRow[];
+
+    const search = filters.search.trim();
+    if (search.length > 0) {
+      rows = rows.filter((r) => paymentMatchesSearch(r, search));
+    }
 
     if (filters.unitIndex != null) {
       const u = filters.unitIndex;
@@ -95,24 +102,6 @@ export async function listAllResidentPaymentsForUnits(): Promise<
       .limit(UNITS_PAYMENTS_FETCH_LIMIT);
     if (error) return { error: error.message };
     return { items: (data ?? []) as ResidentPaymentAdminRow[] };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Unknown error" };
-  }
-}
-
-export async function listRecentWebhookEvents(): Promise<
-  { items: StripeWebhookEventRow[] } | { error: string }
-> {
-  await requireAdminUser();
-  try {
-    const supabase = requireServiceSupabase();
-    const { data, error } = await supabase
-      .from("stripe_webhook_events")
-      .select("id, type, received_at")
-      .order("received_at", { ascending: false })
-      .limit(WEBHOOK_EVENTS_LIMIT);
-    if (error) return { error: error.message };
-    return { items: (data ?? []) as StripeWebhookEventRow[] };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Unknown error" };
   }
