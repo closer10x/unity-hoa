@@ -2,33 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 
+import { fetchPublishedCommunityEvents } from "@/lib/data/community-events";
+import { getServiceClientForAdmin } from "@/lib/auth/admin-service";
 import { enqueueAdminNotification } from "@/lib/notifications/enqueue";
-import { requireServiceSupabase } from "@/lib/supabase/service";
 import type { CommunityEventRow, EventCategory } from "@/lib/types/community";
 
+/** Published events (also used by the public marketing /events page via {@link fetchPublishedCommunityEvents}). */
 export async function listCommunityEvents(): Promise<
   { items: CommunityEventRow[] } | { error: string }
 > {
-  try {
-    const supabase = requireServiceSupabase();
-    const { data, error } = await supabase
-      .from("community_events")
-      .select("*")
-      .eq("published", true)
-      .order("starts_at", { ascending: true })
-      .limit(200);
-    if (error) return { error: error.message };
-    return { items: (data ?? []) as CommunityEventRow[] };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Unknown error" };
-  }
+  return fetchPublishedCommunityEvents(200);
 }
 
 export async function listAllEventsForAdmin(): Promise<
   { items: CommunityEventRow[] } | { error: string }
 > {
   try {
-    const supabase = requireServiceSupabase();
+    const supabase = await getServiceClientForAdmin();
     const { data, error } = await supabase
       .from("community_events")
       .select("*")
@@ -45,7 +35,7 @@ export async function getCommunityEvent(
   id: string,
 ): Promise<{ row: CommunityEventRow } | { error: string }> {
   try {
-    const supabase = requireServiceSupabase();
+    const supabase = await getServiceClientForAdmin();
     const { data, error } = await supabase
       .from("community_events")
       .select("*")
@@ -84,7 +74,7 @@ export async function createCommunityEvent(
   formData: FormData,
 ): Promise<{ id: string } | { error: string }> {
   try {
-    const supabase = requireServiceSupabase();
+    const supabase = await getServiceClientForAdmin();
     const title = String(formData.get("title") ?? "").trim();
     if (!title) return { error: "Title is required" };
     const description = String(formData.get("description") ?? "").trim() || null;
@@ -127,7 +117,7 @@ export async function updateCommunityEvent(
   formData: FormData,
 ): Promise<{ ok: true } | { error: string }> {
   try {
-    const supabase = requireServiceSupabase();
+    const supabase = await getServiceClientForAdmin();
     const id = String(formData.get("id") ?? "").trim();
     if (!id) return { error: "Missing id" };
     const title = String(formData.get("title") ?? "").trim();
@@ -181,7 +171,7 @@ export async function deleteCommunityEvent(
   id: string,
   _formData: FormData,
 ): Promise<void> {
-  const supabase = requireServiceSupabase();
+  const supabase = await getServiceClientForAdmin();
   const { error } = await supabase.from("community_events").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/events");

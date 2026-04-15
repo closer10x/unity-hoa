@@ -2,15 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 
+import { getServiceClientForAdmin } from "@/lib/auth/admin-service";
 import { enqueueAdminNotification } from "@/lib/notifications/enqueue";
-import { requireServiceSupabase } from "@/lib/supabase/service";
 import type { AnnouncementRow, AnnouncementStatus } from "@/lib/types/community";
 
 export async function listAnnouncements(): Promise<
   { items: AnnouncementRow[] } | { error: string }
 > {
   try {
-    const supabase = requireServiceSupabase();
+    const supabase = await getServiceClientForAdmin();
     const { data, error } = await supabase
       .from("announcements")
       .select("*")
@@ -27,7 +27,7 @@ export async function listPublishedAnnouncements(
   limit = 6,
 ): Promise<{ items: AnnouncementRow[] } | { error: string }> {
   try {
-    const supabase = requireServiceSupabase();
+    const supabase = await getServiceClientForAdmin();
     const { data, error } = await supabase
       .from("announcements")
       .select("*")
@@ -45,7 +45,7 @@ export async function getAnnouncement(
   id: string,
 ): Promise<{ row: AnnouncementRow } | { error: string }> {
   try {
-    const supabase = requireServiceSupabase();
+    const supabase = await getServiceClientForAdmin();
     const { data, error } = await supabase
       .from("announcements")
       .select("*")
@@ -68,7 +68,7 @@ export async function createAnnouncement(
   formData: FormData,
 ): Promise<{ id: string } | { error: string }> {
   try {
-    const supabase = requireServiceSupabase();
+    const supabase = await getServiceClientForAdmin();
     const title = String(formData.get("title") ?? "").trim();
     if (!title) return { error: "Title is required" };
     const body = String(formData.get("body") ?? "").trim() || null;
@@ -113,7 +113,7 @@ export async function updateAnnouncement(
   formData: FormData,
 ): Promise<{ ok: true } | { error: string }> {
   try {
-    const supabase = requireServiceSupabase();
+    const supabase = await getServiceClientForAdmin();
     const id = String(formData.get("id") ?? "").trim();
     if (!id) return { error: "Missing id" };
     const title = String(formData.get("title") ?? "").trim();
@@ -169,7 +169,7 @@ export async function updateAnnouncement(
 }
 
 export async function deleteAnnouncement(id: string, _formData: FormData): Promise<void> {
-  const supabase = requireServiceSupabase();
+  const supabase = await getServiceClientForAdmin();
   const { error } = await supabase.from("announcements").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin");

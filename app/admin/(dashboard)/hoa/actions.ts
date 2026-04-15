@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { parseDuesFrequency, publicDuesFromMetrics } from "@/lib/community/billing-display";
-import { requireAdminUser } from "@/lib/auth/require-admin";
+import { getServiceClientForAdmin } from "@/lib/auth/admin-service";
 import { parseDollarsToCents } from "@/lib/format/money";
 import { requireServiceSupabase } from "@/lib/supabase/service";
 import type { HoaDashboardMetricsRow, PublicDuesDisplay } from "@/lib/types/community";
@@ -135,7 +135,7 @@ function buildEmptyBuckets(months: number): FinanceMonthBucket[] {
 }
 
 export async function updateDashboardMetrics(formData: FormData): Promise<void> {
-  const supabase = requireServiceSupabase();
+  const supabase = await getServiceClientForAdmin();
   const total_residents = Math.max(0, parseInt(String(formData.get("total_residents") ?? "0"), 10) || 0);
   const growthRaw = String(formData.get("resident_growth_pct") ?? "").trim();
   const resident_growth_pct = growthRaw === "" ? null : Number(growthRaw);
@@ -187,8 +187,7 @@ export type HoaBillingSettingsFormState =
   | null;
 
 async function persistHoaBillingSettings(formData: FormData): Promise<void> {
-  await requireAdminUser();
-  const supabase = requireServiceSupabase();
+  const supabase = await getServiceClientForAdmin();
 
   const unitsRaw = String(formData.get("total_units") ?? "").trim();
   const total_units =

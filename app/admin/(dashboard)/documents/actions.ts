@@ -380,10 +380,22 @@ export async function getDocumentAcknowledgments(documentId: string): Promise<Ac
     profileMap.set(p.id, p.display_name);
   }
 
+  const emailMap = new Map<string, string | null>();
+  await Promise.all(
+    userIds.map(async (uid) => {
+      const { data: authUser, error } = await client.auth.admin.getUserById(uid);
+      if (error || !authUser?.user) {
+        emailMap.set(uid, null);
+        return;
+      }
+      emailMap.set(uid, authUser.user.email ?? null);
+    }),
+  );
+
   return data.map((a) => ({
     ...a,
     user_display_name: profileMap.get(a.user_id) ?? null,
-    user_email: null,
+    user_email: emailMap.get(a.user_id) ?? null,
   }));
 }
 

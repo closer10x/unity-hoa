@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
+
+import { CommunityEventsSection } from "./community-events-section";
 
 export const metadata: Metadata = {
   title: "Events & Amenities",

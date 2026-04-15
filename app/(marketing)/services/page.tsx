@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { formatNextDuesFirstOfMonthLong } from "@/lib/format/next-dues-cycle";
-
 export const metadata: Metadata = {
   title: "Resident Services Hub",
 };
@@ -10,30 +8,6 @@ export const metadata: Metadata = {
 export default function ServicesPage() {
   return (
     <main className="max-w-7xl mx-auto px-8 py-20">
-      <section className="mb-24">
-        <div className="flex justify-end">
-          <div className="bg-surface-container-low p-8 rounded-xl w-full lg:max-w-sm">
-            <div className="flex items-center gap-4 mb-4">
-              <span
-                className="material-symbols-outlined text-secondary"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                account_balance_wallet
-              </span>
-              <span className="font-label text-[11px] uppercase tracking-wider font-bold text-on-surface-variant">
-                Next Dues Cycle
-              </span>
-            </div>
-            <h3
-              className="font-headline text-2xl font-bold text-primary"
-              suppressHydrationWarning
-            >
-              {formatNextDuesFirstOfMonthLong()}
-            </h3>
-          </div>
-        </div>
-      </section>
-
       <section className="mb-24">
         <div className="mb-14">
           <span className="font-label text-sm uppercase tracking-[0.15em] text-secondary font-bold mb-4 block">
