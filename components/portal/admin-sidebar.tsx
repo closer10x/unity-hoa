@@ -10,6 +10,7 @@ import type { AdminNotificationHeaderPayload } from "@/lib/notifications/load";
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: "dashboard" },
   { href: "/admin/finances", label: "Finances", icon: "payments" },
+  { href: "/admin/documents", label: "Documents", icon: "description" },
   { href: "/admin/events", label: "Events", icon: "event_available" },
   { href: "/admin/maintenance", label: "Maintenance", icon: "engineering" },
   {

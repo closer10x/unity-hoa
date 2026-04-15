@@ -106,3 +106,27 @@ h4 {
 .maint-request-dialog-panel {
   animation: maint-request-dialog-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-full-width {
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+  }
+}

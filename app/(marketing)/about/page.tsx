@@ -19,8 +19,9 @@ const HOUSTON_MARKET_BG = "/images/houston-market-skyline.png";
 const BOARD = [
   {
     name: "Sophia Filfil",
+    hideName: true,
     role: "President",
-    img: "/images/sophia-filfil-board.png",
+    img: "/images/SophiaPhilphore.png",
     alt: "Portrait of board president Sophia Filfil",
     bio: "Sofi Lakes homeowner who runs the board like property management—short agendas, reserve numbers you can read, and vendors held accountable until gates, pools, and lighting are really fixed.",
   },
@@ -243,7 +244,9 @@ export default function AboutPage() {
                     sizes="(min-width: 768px) 33vw, 100vw"
                   />
                 </div>
-                <h4 className="text-xl font-bold text-on-surface">{d.name}</h4>
+                {!d.hideName && (
+                  <h4 className="text-xl font-bold text-on-surface">{d.name}</h4>
+                )}
                 <p className="text-secondary text-xs font-bold uppercase tracking-widest mt-1">
                   {d.role}
                 </p>

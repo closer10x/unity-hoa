@@ -55,17 +55,16 @@ export default function HomePage() {
               Premier Living Experience
             </span>
             <p className="text-slate-200 text-lg mb-10 font-body max-w-lg leading-relaxed">
-              Structured homeowners association management for Sofi Lakes and
-              the additional communities we serve—responsive support,
-              transparent communication, and dependable coordination for shared
-              amenities and community standards.
+              Unity Grid Management modernizes HOA management with streamlined
+              operations, transparent financials, and technology-driven systems
+              that reduce board workload and improve community performance.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link
-                href="/events"
+                href="/services"
                 className="inline-flex bg-gradient-to-br from-secondary to-secondary-fixed-dim text-on-secondary px-8 py-4 rounded-md font-bold transition-all hover:scale-[1.02]"
               >
-                Explore Amenities
+                Explore Services
               </Link>
               <Link
                 href="/services#governing"

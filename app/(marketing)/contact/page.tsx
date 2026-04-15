@@ -162,8 +162,8 @@ export default function ContactPage() {
               id="emergency"
               className="scroll-mt-28 bg-primary p-8 rounded-xl text-on-primary"
             >
-              <span className="material-symbols-outlined text-secondary-fixed mb-4">
-                emergency_home
+              <span className="material-symbols-outlined text-red-500 mb-4">
+                crisis_alert
               </span>
               <h3 className="text-lg font-bold mb-2">After-Hours Emergency</h3>
               <p className="text-sm text-on-primary-container mb-4">

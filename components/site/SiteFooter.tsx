@@ -132,6 +132,32 @@ export function SiteFooter() {
               <span className="material-symbols-outlined text-lg">public</span>
             </a>
           </div>
+          <div className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
+            <p className="font-semibold text-slate-800 dark:text-slate-200">
+              Unity Grid Management
+            </p>
+            <p className="leading-relaxed">
+              7880 Morrison Road
+              <br />
+              Katy, Texas 77493
+            </p>
+            <p>
+              <a
+                href="tel:7132083539"
+                className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+              >
+                713-208-3539
+              </a>
+            </p>
+            <p>
+              <a
+                href="mailto:info@sofilakes.com"
+                className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+              >
+                info@sofilakes.com
+              </a>
+            </p>
+          </div>
           <div className="p-4 bg-surface-container-low rounded-lg">
             <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">
               Office Hours
