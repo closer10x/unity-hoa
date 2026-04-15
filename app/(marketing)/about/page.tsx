@@ -16,7 +16,16 @@ const MISSION_IMG = "/images/about-mission-community-art.png";
 /** Subtle “behind the copy” treatment, same pattern as the hero imagery elsewhere on this page. */
 const HOUSTON_MARKET_BG = "/images/houston-market-skyline.png";
 
-const BOARD = [
+type BoardMember = {
+  name: string;
+  hideName?: boolean;
+  role: string;
+  img: string;
+  alt: string;
+  bio: string;
+};
+
+const BOARD: BoardMember[] = [
   {
     name: "Sophia Filfil",
     hideName: true,
@@ -39,7 +48,7 @@ const BOARD = [
     alt: "Portrait of board secretary Phillip Dautrich",
     bio: "Keeps agendas, minutes, and notices aligned with what the board actually voted on—so residents get one clear story in email and on the portal, not three conflicting versions.",
   },
-] as const;
+];
 
 export default function AboutPage() {
   return (

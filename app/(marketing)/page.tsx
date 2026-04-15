@@ -67,7 +67,7 @@ export default function HomePage() {
                 Explore Services
               </Link>
               <Link
-                href="/services#governing"
+                href="/governance"
                 className="inline-flex bg-white/10 backdrop-blur-md text-white border border-white/20 px-8 py-4 rounded-md font-bold hover:bg-white/20 transition-all"
               >
                 Association Bylaws
@@ -140,7 +140,7 @@ export default function HomePage() {
                 </p>
               </div>
               <Link
-                href="/services#governing"
+                href="/governance"
                 className="text-secondary-fixed-dim font-bold text-sm flex items-center relative z-10"
               >
                 View Library{" "}

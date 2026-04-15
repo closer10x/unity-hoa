@@ -49,6 +49,14 @@ export function SiteFooter() {
             <li>
               <Link
                 className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:translate-x-1 transition-transform duration-200 block"
+                href="/governance"
+              >
+                Governance
+              </Link>
+            </li>
+            <li>
+              <Link
+                className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:translate-x-1 transition-transform duration-200 block"
                 href="/events"
               >
                 Events
@@ -80,7 +88,7 @@ export function SiteFooter() {
             <li>
               <Link
                 className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:translate-x-1 transition-transform duration-200 block"
-                href="/services#governing"
+                href="/governance"
               >
                 Bylaws
               </Link>

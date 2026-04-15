@@ -1,19 +1,11 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 
 import { formatNextDuesFirstOfMonthLong } from "@/lib/format/next-dues-cycle";
-import { MAINTENANCE_REQUEST_PUBLIC_HREF } from "@/lib/maintenance-request/options";
 
 export const metadata: Metadata = {
   title: "Resident Services Hub",
 };
-
-const PAY_CARD_TEXTURE =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuD-2jhNr2NgGolsRPCkVR2LhJk9vMJ1zmUvwIaP0SZJhhg2Gt2_R5Kb3ytiZQUKE_pDVYbgS2mQxKsmETxGqekORizOoAuBf-sncJ4jrluJFCHF4hE_CSKsHJ_L7GhfVVF-DUSBVqzHGkv9HW34xBOylpMAL4iIMhcwD5Q5NUP8lP526LCwq6gQ8GxqlBv2pKRYCvbPma6_9nXXZzL9kPC-UbV8DeV-tNfE1XnkzzaRcmU-xdSxjUVvTt822l5M-FtdxGREjIpwlvNL";
-
-/** Set to true to show the Community Directory card again. */
-const SHOW_COMMUNITY_DIRECTORY_CARD = false;
 
 export default function ServicesPage() {
   return (
@@ -39,132 +31,6 @@ export default function ServicesPage() {
               {formatNextDuesFirstOfMonthLong()}
             </h3>
           </div>
-        </div>
-      </section>
-
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-24">
-        <div
-          id="maintenance"
-          className="scroll-mt-28 bg-surface-container-lowest p-10 rounded-xl flex flex-col justify-between hover:bg-surface-container-low transition-colors duration-300"
-        >
-          <div>
-            <div className="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center mb-8">
-              <span
-                className="material-symbols-outlined text-secondary"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                handyman
-              </span>
-            </div>
-            <h2 className="font-headline text-2xl font-bold text-primary mb-3">
-              Maintenance Request
-            </h2>
-            <p className="text-on-surface-variant text-sm leading-relaxed mb-6">
-              Report issues with common areas or request specialized community
-              maintenance services.
-            </p>
-          </div>
-          <Link
-            href={MAINTENANCE_REQUEST_PUBLIC_HREF}
-            className="text-secondary font-bold text-sm inline-flex items-center gap-2 group"
-          >
-            Submit a Request
-            <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
-              east
-            </span>
-          </Link>
-        </div>
-
-        <div
-          id="governing"
-          className="scroll-mt-28 bg-surface-container-lowest p-10 rounded-xl flex flex-col justify-between hover:bg-surface-container-low transition-colors duration-300"
-        >
-          <div>
-            <div className="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center mb-8">
-              <span
-                className="material-symbols-outlined text-secondary"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                gavel
-              </span>
-            </div>
-            <h2 className="font-headline text-2xl font-bold text-primary mb-3">
-              Governing Documents
-            </h2>
-            <p className="text-on-surface-variant text-sm leading-relaxed mb-6">
-              Access the Bylaws, Covenants (CC&amp;Rs), and Community Rules that
-              shape our estate.
-            </p>
-          </div>
-          <a
-            className="text-secondary font-bold text-sm inline-flex items-center gap-2 group"
-            href="#"
-          >
-            View Bylaws
-            <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
-              east
-            </span>
-          </a>
-        </div>
-
-        {SHOW_COMMUNITY_DIRECTORY_CARD ? (
-          <div className="bg-surface-container-lowest p-10 rounded-xl flex flex-col justify-between hover:bg-surface-container-low transition-colors duration-300">
-            <div>
-              <div className="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center mb-8">
-                <span
-                  className="material-symbols-outlined text-secondary"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  groups
-                </span>
-              </div>
-              <h2 className="font-headline text-2xl font-bold text-primary mb-3">
-                Community Directory
-              </h2>
-              <p className="text-on-surface-variant text-sm leading-relaxed mb-6">
-                Connect with your neighbors and HOA board members through our
-                private directory.
-              </p>
-            </div>
-            <Link
-              href="/contact"
-              className="text-secondary font-bold text-sm inline-flex items-center gap-2 group"
-            >
-              Explore Directory
-              <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
-                east
-              </span>
-            </Link>
-          </div>
-        ) : null}
-
-        <div className="bg-surface-container-lowest p-10 rounded-xl flex flex-col justify-between hover:bg-surface-container-low transition-colors duration-300">
-          <div>
-            <div className="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center mb-8">
-              <span
-                className="material-symbols-outlined text-secondary"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                description
-              </span>
-            </div>
-            <h2 className="font-headline text-2xl font-bold text-primary mb-3">
-              Find a Form
-            </h2>
-            <p className="text-on-surface-variant text-sm leading-relaxed mb-6">
-              Download architectural review forms, parking permits, and event
-              registration sheets.
-            </p>
-          </div>
-          <Link
-            className="text-secondary font-bold text-sm inline-flex items-center gap-2 group"
-            href="/documents"
-          >
-            Document Library
-            <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
-              east
-            </span>
-          </Link>
         </div>
       </section>
 
