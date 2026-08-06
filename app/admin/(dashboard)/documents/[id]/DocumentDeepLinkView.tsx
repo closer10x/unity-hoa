@@ -28,7 +28,7 @@ const ACCESS_LABELS: Record<string, string> = {
 
 const ACCESS_BADGE_STYLES: Record<string, string> = {
   public: "bg-green-50 text-green-700 border-green-200",
-  resident: "bg-blue-50 text-blue-700 border-blue-200",
+  resident: "bg-secondary-container text-on-secondary-container border-secondary-fixed",
   board: "bg-amber-50 text-amber-700 border-amber-200",
   manager_only: "bg-purple-50 text-purple-700 border-purple-200",
 };
@@ -74,7 +74,7 @@ export function DocumentDeepLinkView({ document: doc }: Props) {
 
       <div className="mx-auto max-w-4xl">
         {/* Header card */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8">
+        <div className="rounded-2xl border border-outline-variant bg-white p-6 sm:p-8">
           <div className="flex items-start gap-4">
             <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-surface-container-low ${fileInfo.color}`}>
               <span className="material-symbols-outlined text-[32px]">{fileInfo.icon}</span>
@@ -112,7 +112,7 @@ export function DocumentDeepLinkView({ document: doc }: Props) {
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <button
               onClick={handleDownload}
-              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-br from-secondary to-secondary-fixed-dim px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-secondary/20 transition-transform active:scale-95"
+              className="inline-flex items-center gap-2 rounded-lg bg-secondary hover:bg-secondary-hover px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-secondary/20 transition-transform active:scale-95"
             >
               <span className="material-symbols-outlined text-[18px]">download</span>
               Download
@@ -129,7 +129,7 @@ export function DocumentDeepLinkView({ document: doc }: Props) {
           </div>
 
           {/* Metadata grid */}
-          <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-6 border-t border-gray-100 pt-6">
+          <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-6 border-t border-outline-variant pt-6">
             <MetaField label="File Size" value={formatBytes(doc.file_size_bytes)} />
             <MetaField label="Uploaded" value={formatDate(doc.uploaded_at)} />
             <MetaField label="Downloads" value={String(doc.download_count)} />
@@ -140,7 +140,7 @@ export function DocumentDeepLinkView({ document: doc }: Props) {
 
           {/* Tags */}
           {doc.tags.length > 0 && (
-            <div className="mt-6 border-t border-gray-100 pt-6">
+            <div className="mt-6 border-t border-outline-variant pt-6">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-2">Tags</h3>
               <div className="flex flex-wrap gap-1.5">
                 {doc.tags.map((tag) => (
@@ -154,7 +154,7 @@ export function DocumentDeepLinkView({ document: doc }: Props) {
 
           {/* Acknowledgment */}
           {doc.requires_acknowledgment && (
-            <div className="mt-6 border-t border-gray-100 pt-6">
+            <div className="mt-6 border-t border-outline-variant pt-6">
               <div className="rounded-xl border border-orange-200 bg-orange-50/40 p-4">
                 <h3 className="text-sm font-semibold text-orange-900 flex items-center gap-2">
                   <span className="material-symbols-outlined text-[18px]">assignment_late</span>

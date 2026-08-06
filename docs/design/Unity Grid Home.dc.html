@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  body { margin: 0; background: oklch(0.972 0.006 130); -webkit-font-smoothing: antialiased; }
+  a { color: oklch(0.44 0.045 155); text-decoration: none; }
+  a:hover { color: oklch(0.34 0.05 155); }
+  * { box-sizing: border-box; }
+</style>
+</helmet>
+<div style="font-family: 'Instrument Sans', system-ui, sans-serif; color: oklch(0.26 0.014 150); background: oklch(0.972 0.006 130); min-height: 100vh;">
+
+  <sc-if value="{{ alertActive }}" hint-placeholder-val="{{ true }}">
+    <div style="background: oklch(0.42 0.05 155); color: oklch(0.96 0.01 140); padding: 12px 32px;">
+      <div style="max-width: 1200px; margin: 0 auto; width: 100%; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 15px;">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; border: 1px solid oklch(0.62 0.04 155); border-radius: 3px; padding: 3px 8px;">{{ communityName }}</span>
+      <span style="flex: 1; min-width: 260px;">{{ alertText }}</span>
+      <a href="#" onClick="{{ go.events }}" style="color: oklch(0.96 0.01 140); border-bottom: 1px solid oklch(0.62 0.04 155); font-size: 14px;">Details</a>
+      </div>
+    </div>
+  </sc-if>
+
+  <header style="padding: 16px clamp(16px, 3vw, 32px); border-bottom: 1px solid oklch(0.9 0.01 140); position: sticky; top: 0; background: oklch(0.972 0.006 130); z-index: 20;">
+    <div style="max-width: 1200px; margin: 0 auto; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 16px; flex: 0 0 auto;">
+      <a href="#" onClick="{{ go.home }}" style="display: flex; align-items: baseline; gap: 10px; color: inherit;">
+        <span style="width: 11px; height: 11px; border-radius: 2px; background: oklch(0.48 0.055 155); display: inline-block;"></span>
+        <span style="font-weight: 600; font-size: 17px; letter-spacing: -0.01em;">Unity Grid</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: oklch(0.56 0.015 150);">Management</span>
+      </a>
+      </div>
+    <sc-if value="{{ deskNav }}" hint-placeholder-val="{{ true }}">
+    <nav style="display: flex; align-items: center; justify-content: center; gap: 14px 24px; flex-wrap: wrap; flex: 1 1 auto; min-width: 0; font-size: 15px;">
+      <a href="#" onClick="{{ go.services }}" style="color: oklch(0.38 0.012 150);">Services</a>
+      <a href="#" onClick="{{ go.governance }}" style="color: oklch(0.38 0.012 150);">Governance</a>
+      <a href="#" onClick="{{ go.events }}" style="color: oklch(0.38 0.012 150);">Events</a>
+      <a href="#" onClick="{{ go.about }}" style="color: oklch(0.38 0.012 150);">About</a>
+      <a href="#" onClick="{{ go.contact }}" style="color: oklch(0.38 0.012 150);">Contact</a>
+    </nav>
+    </sc-if>
+    <sc-if value="{{ deskNav }}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; align-items: center; gap: 14px; flex: 0 0 auto;">
+      <a href="#" onClick="{{ authAction }}" style="font-size: 15px; color: oklch(0.38 0.012 150); white-space: nowrap;">{{ authLabel }}</a>
+      <a href="#" onClick="{{ go.payment }}" style="background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); padding: 11px 20px; border-radius: 999px; font-size: 15px; font-weight: 500; white-space: nowrap;" style-hover="background: oklch(0.34 0.05 155);">Resident portal</a>
+      </div>
+    </sc-if>
+    <sc-if value="{{ mobileNav }}" hint-placeholder-val="{{ false }}">
+      <button type="button" onClick="{{ toggleNav }}" style="display: flex; align-items: center; gap: 8px; font: inherit; font-size: 15px; font-weight: 500; background: oklch(0.99 0.004 130); border: 1px solid oklch(0.88 0.012 145); border-radius: 999px; padding: 12px 18px; cursor: pointer; color: oklch(0.3 0.02 150); margin-left: auto;">{{ navToggleLabel }}</button>
+    </sc-if>
+    <sc-if value="{{ navOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: 1 1 100%; display: grid; gap: 4px; padding-top: 12px; margin-top: 4px; border-top: 1px solid oklch(0.92 0.008 140); max-height: 68vh; overflow-y: auto;">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: oklch(0.6 0.015 150); padding: 4px 4px 6px;">Pages</span>
+        <a href="#" onClick="{{ go.services }}" style="display: flex; align-items: center; justify-content: space-between; font-size: 16px; padding: 13px 10px; border-radius: 9px; background: {{ mark.services }}; color: oklch(0.3 0.02 150);">Services<span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: oklch(0.5 0.04 155);">{{ markLabel.services }}</span></a>
+        <a href="#" onClick="{{ go.governance }}" style="display: flex; align-items: center; justify-content: space-between; font-size: 16px; padding: 13px 10px; border-radius: 9px; background: {{ mark.governance }}; color: oklch(0.3 0.02 150);">Governance<span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: oklch(0.5 0.04 155);">{{ markLabel.governance }}</span></a>
+        <a href="#" onClick="{{ go.events }}" style="display: flex; align-items: center; justify-content: space-between; font-size: 16px; padding: 13px 10px; border-radius: 9px; background: {{ mark.events }}; color: oklch(0.3 0.02 150);">Events<span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: oklch(0.5 0.04 155);">{{ markLabel.events }}</span></a>
+        <a href="#" onClick="{{ go.about }}" style="display: flex; align-items: center; justify-content: space-between; font-size: 16px; padding: 13px 10px; border-radius: 9px; background: {{ mark.about }}; color: oklch(0.3 0.02 150);">About<span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: oklch(0.5 0.04 155);">{{ markLabel.about }}</span></a>
+        <a href="#" onClick="{{ go.contact }}" style="display: flex; align-items: center; justify-content: space-between; font-size: 16px; padding: 13px 10px; border-radius: 9px; background: {{ mark.contact }}; color: oklch(0.3 0.02 150);">Contact<span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: oklch(0.5 0.04 155);">{{ markLabel.contact }}</span></a>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: oklch(0.6 0.015 150); padding: 14px 4px 6px; border-top: 1px solid oklch(0.94 0.008 140); margin-top: 8px;">Your account</span>
+        <a href="#" onClick="{{ authAction }}" style="font-size: 16px; padding: 13px 10px; border-radius: 9px; color: oklch(0.3 0.02 150);">{{ authLabel }}</a>
+        <a href="#" onClick="{{ go.payment }}" style="text-align: center; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); padding: 14px; border-radius: 10px; font-size: 16px; font-weight: 500; margin-top: 6px;">Pay your HOA fee</a>
+        <a href="#" onClick="{{ go.maintenance }}" style="text-align: center; border: 1px solid oklch(0.84 0.02 150); color: oklch(0.3 0.02 150); padding: 13px; border-radius: 10px; font-size: 16px; font-weight: 500; margin-bottom: 4px;">File a maintenance request</a>
+      </div>
+    </sc-if>
+    </div>
+  </header>
+
+  <sc-if value="{{ pageHome }}" hint-placeholder-val="{{ true }}">
+    <div>
+      <section style="max-width: 1200px; margin: 0 auto; padding: clamp(20px, 3vw, 32px) clamp(16px, 4vw, 32px) 0;">
+        <div style="border-radius: 18px; overflow: hidden; border: 1px solid oklch(0.9 0.01 140); aspect-ratio: 21 / 9; background-color: oklch(0.955 0.012 145); background-image: repeating-linear-gradient(135deg, oklch(0.91 0.016 148) 0 10px, oklch(0.955 0.012 145) 10px 20px); display: flex; align-items: flex-end; padding: clamp(16px, 2.5vw, 24px);">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.45 0.02 150); background: oklch(0.99 0.004 130); border: 1px solid oklch(0.88 0.012 145); border-radius: 4px; padding: 6px 10px;">hero photo — neighborhood entrance or streetscape</span>
+        </div>
+      </section>
+      <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 64px; align-items: start; padding: clamp(32px, 5vw, 56px) clamp(16px, 4vw, 32px) clamp(40px, 7vw, 76px); max-width: 1200px; margin: 0 auto;">
+        <div>
+          <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: oklch(0.52 0.03 155); margin: 0 0 26px;">{{ communityLabel }}</p>
+          <h1 style="font-size: clamp(38px, 4.4vw, 60px); line-height: 1.05; letter-spacing: -0.028em; font-weight: 600; margin: 0 0 24px; text-wrap: balance;"><sc-if value="{{ stateAccount }}" hint-placeholder-val="{{ false }}"><span style="display: block;">Good afternoon, {{ residentName }}.</span></sc-if>Everything for your home, in one place.</h1>
+          <p style="font-size: 19px; line-height: 1.6; color: oklch(0.42 0.012 150); max-width: 50ch; margin: 0 0 34px; text-wrap: pretty;">Pay your HOA dues, ask for a repair, or read the rules — without hunting for a phone number. Unity Grid runs the day-to-day of your association so the neighborhood stays well kept and the board stays out of the weeds.</p>
+          <div style="display: grid; gap: 1px; background: oklch(0.9 0.01 140); border: 1px solid oklch(0.9 0.01 140); border-radius: 14px; overflow: hidden; margin-bottom: 30px;">
+            <a href="#" onClick="{{ go.maintenance }}" style="background: oklch(0.99 0.004 130); padding: 20px 22px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: baseline; color: inherit;" style-hover="background: oklch(0.955 0.012 145);">
+              <span><strong style="font-weight: 600; font-size: 16px;">File a maintenance request</strong><span style="display: block; font-size: 14px; color: oklch(0.5 0.012 150); margin-top: 3px;">Common areas, gates, lighting and amenities.</span></span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.5 0.03 155);">→</span>
+            </a>
+            <a href="#" onClick="{{ go.governance }}" style="background: oklch(0.99 0.004 130); padding: 20px 22px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: baseline; color: inherit;" style-hover="background: oklch(0.955 0.012 145);">
+              <span><strong style="font-weight: 600; font-size: 16px;">Bylaws, CC&amp;Rs and rules</strong><span style="display: block; font-size: 14px; color: oklch(0.5 0.012 150); margin-top: 3px;">Every governing document, current and downloadable.</span></span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.5 0.03 155);">→</span>
+            </a>
+            <a href="#" onClick="{{ go.services }}" style="background: oklch(0.99 0.004 130); padding: 20px 22px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: baseline; color: inherit;" style-hover="background: oklch(0.955 0.012 145);">
+              <span><strong style="font-weight: 600; font-size: 16px;">What Unity Grid handles</strong><span style="display: block; font-size: 14px; color: oklch(0.5 0.012 150); margin-top: 3px;">Finances, grounds, rules and records for your association.</span></span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.5 0.03 155);">→</span>
+            </a>
+          </div>
+        </div>
+
+        <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 18px; padding: 30px; box-shadow: 0 1px 2px oklch(0.4 0.02 150 / 0.05), 0 12px 32px oklch(0.4 0.02 150 / 0.05);">
+
+          <sc-if value="{{ stateLookup }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.56 0.015 150); margin: 0 0 10px;">Look up your dues</p>
+              <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.55; color: oklch(0.42 0.012 150);">Pick your community, then enter your account number and street number to see what's owed.</p>
+              <div style="display: grid; gap: 16px;">
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Community</span>
+                  <select value="{{ lookupCommunity }}" onChange="{{ setCommunity }}" style="width: 100%; appearance: none; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 40px 13px 14px; cursor: pointer;">
+                    <option value="">Select your community…</option>
+                    <sc-for list="{{ communityOptions }}" as="o" hint-placeholder-count="3">
+                      <option value="{{ o.id }}">{{ o.label }}</option>
+                    </sc-for>
+                  </select>
+                </label>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Account number</span>
+                  <input type="text" value="{{ lookupAccount }}" onChange="{{ setAccount }}" placeholder="e.g. 40218" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Street number</span>
+                  <input type="text" value="{{ lookupStreet }}" onChange="{{ setStreet }}" placeholder="e.g. 7880" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+                <sc-if value="{{ lookupError }}" hint-placeholder-val="{{ false }}">
+                  <p style="margin: -4px 0 0; font-size: 14px; color: oklch(0.48 0.11 30);">{{ lookupError }}</p>
+                </sc-if>
+                <button type="button" onClick="{{ submitLookup }}" style="width: 100%; font: inherit; font-size: 16px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 15px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Show my dues</button>
+              </div>
+              <p style="margin: 18px 0 0; font-size: 14px; line-height: 1.55; color: oklch(0.52 0.012 150);">Your account number is printed on your statement. Registered residents can <a href="#" onClick="{{ signIn }}">sign in</a> instead and skip this step.</p>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ stateResult }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.56 0.015 150);">{{ communityName }}</span>
+                <button type="button" onClick="{{ resetLookup }}" style="background: none; border: none; padding: 0; font: inherit; font-size: 14px; color: oklch(0.44 0.045 155); cursor: pointer;">Look up another</button>
+              </div>
+              <p style="margin: 0 0 6px; font-size: 15px; color: oklch(0.48 0.012 150);">{{ resultAddress }}</p>
+              <p style="margin: 0 0 4px; font-size: 15px; color: oklch(0.48 0.012 150);">{{ duesCadence }} dues, due {{ dueDate }}</p>
+              <p style="margin: 12px 0 20px; font-size: 48px; font-weight: 600; letter-spacing: -0.03em; line-height: 1;">{{ duesAmount }}</p>
+              <a href="#" style="display: block; text-align: center; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); padding: 15px; border-radius: 10px; font-size: 16px; font-weight: 500;" style-hover="background: oklch(0.34 0.05 155);">Pay {{ duesAmount }} now</a>
+              <p style="margin: 12px 0 22px; font-size: 13px; color: oklch(0.58 0.012 150); text-align: center;">Card, bank transfer or scheduled autopay.</p>
+              <div style="padding-top: 20px; border-top: 1px solid oklch(0.92 0.008 140); display: grid; gap: 12px;">
+                <a href="#" onClick="{{ signIn }}" style="display: block; text-align: center; border: 1px solid oklch(0.78 0.02 150); color: oklch(0.3 0.02 150); padding: 13px; border-radius: 10px; font-size: 16px; font-weight: 500;" style-hover="border-color: oklch(0.5 0.04 155);">Sign in for full history</a>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ stateAccount }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 26px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.56 0.015 150);">Your account</span>
+                <span style="font-size: 13px; color: oklch(0.56 0.015 150);">{{ lotLabel }}</span>
+              </div>
+              <div style="padding-bottom: 26px; border-bottom: 1px solid oklch(0.92 0.008 140);">
+                <p style="margin: 0 0 6px; font-size: 14px; color: oklch(0.48 0.012 150);">HOA dues due {{ dueDate }}</p>
+                <p style="margin: 0 0 18px; font-size: 44px; font-weight: 600; letter-spacing: -0.03em; line-height: 1;">{{ balanceDue }}</p>
+                <a href="#" style="display: block; text-align: center; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); padding: 14px; border-radius: 10px; font-size: 16px; font-weight: 500;" style-hover="background: oklch(0.34 0.05 155);">Pay HOA dues</a>
+                <p style="margin: 12px 0 0; font-size: 13px; color: oklch(0.58 0.012 150); text-align: center;">Autopay is off · <a href="#">turn on</a></p>
+              </div>
+              <div style="padding-top: 24px;">
+                <p style="margin: 0 0 6px; font-size: 14px; color: oklch(0.48 0.012 150);">Maintenance</p>
+                <p style="margin: 0 0 16px; font-size: 16px; line-height: 1.5;">{{ requestSummary }}</p>
+                <a href="#" onClick="{{ go.maintenance }}" style="display: block; text-align: center; border: 1px solid oklch(0.78 0.02 150); color: oklch(0.3 0.02 150); padding: 13px; border-radius: 10px; font-size: 16px; font-weight: 500;" style-hover="border-color: oklch(0.5 0.04 155);">File a request</a>
+              </div>
+              <sc-if value="{{ multiProperty }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top: 26px; padding-top: 24px; border-top: 1px solid oklch(0.92 0.008 140);">
+                  <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.56 0.015 150); margin: 0 0 14px;">All your properties</p>
+                  <div style="display: grid; gap: 10px; margin-bottom: 18px;">
+                    <sc-for list="{{ ledger }}" as="row" hint-placeholder-count="3">
+                      <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: baseline; font-size: 15px;">
+                        <span style="color: oklch(0.34 0.014 150); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ row.name }}</span>
+                        <span style="font-family: 'IBM Plex Mono', monospace; color: {{ row.color }};">{{ row.balance }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding-top: 14px; border-top: 1px solid oklch(0.92 0.008 140);">
+                    <span style="font-size: 15px; font-weight: 600;">Total due</span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 17px; font-weight: 500;">{{ totalDue }}</span>
+                  </div>
+                  <a href="#" style="display: block; text-align: center; margin-top: 16px; border: 1px solid oklch(0.78 0.02 150); color: oklch(0.3 0.02 150); padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 500;" style-hover="border-color: oklch(0.5 0.04 155);">Pay all properties</a>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </section>
+
+      <section style="background: oklch(0.945 0.014 148); border-top: 1px solid oklch(0.9 0.012 145); border-bottom: 1px solid oklch(0.9 0.012 145); padding: clamp(48px, 9vw, 96px) clamp(16px, 4vw, 32px);">
+        <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 72px; align-items: start;">
+          <div>
+            <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: oklch(0.5 0.03 155); margin: 0 0 20px;">What Unity Grid does</p>
+            <h2 style="font-size: clamp(30px, 3vw, 40px); line-height: 1.12; letter-spacing: -0.025em; font-weight: 600; margin: 0 0 20px; text-wrap: balance;">A management office that neighbors can actually reach.</h2>
+            <p style="font-size: 17px; line-height: 1.65; color: oklch(0.42 0.012 150); margin: 0 0 24px; max-width: 42ch; text-wrap: pretty;">We handle the money, the vendors and the paperwork behind the association. Residents get straight answers; the volunteer board gets its evenings back.</p>
+            <a href="#" onClick="{{ go.services }}" style="font-size: 16px; font-weight: 500;">See everything we handle →</a>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 40px 48px;">
+            <div>
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.03 155); margin: 0 0 12px;">01</p>
+              <p style="margin: 0 0 8px; font-size: 18px; font-weight: 600;">Dues &amp; finances</p>
+              <p style="margin: 0; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">Dues billing, collections and a reserve budget the board can read in one sitting.</p>
+            </div>
+            <div>
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.03 155); margin: 0 0 12px;">02</p>
+              <p style="margin: 0 0 8px; font-size: 18px; font-weight: 600;">Grounds &amp; upkeep</p>
+              <p style="margin: 0; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">Landscaping, pool service, gates and lighting — scheduled, inspected and tracked.</p>
+            </div>
+            <div>
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.03 155); margin: 0 0 12px;">03</p>
+              <p style="margin: 0 0 8px; font-size: 18px; font-weight: 600;">Rules &amp; review</p>
+              <p style="margin: 0; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">Architectural applications, violation notices and covenant enforcement, applied evenly.</p>
+            </div>
+            <div>
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.03 155); margin: 0 0 12px;">04</p>
+              <p style="margin: 0 0 8px; font-size: 18px; font-weight: 600;">Meetings &amp; records</p>
+              <p style="margin: 0; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">Agendas, minutes and the document library, kept current and open to every owner.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section style="max-width: 1200px; margin: 0 auto; padding: clamp(48px, 9vw, 96px) clamp(16px, 4vw, 32px);">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 64px; align-items: center;">
+          <div style="border-radius: 18px; overflow: hidden; border: 1px solid oklch(0.9 0.01 140); aspect-ratio: 4 / 3; background-color: oklch(0.955 0.012 145); background-image: repeating-linear-gradient(135deg, oklch(0.91 0.016 148) 0 10px, oklch(0.955 0.012 145) 10px 20px); display: flex; align-items: flex-end; padding: 20px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.45 0.02 150); background: oklch(0.99 0.004 130); border: 1px solid oklch(0.88 0.012 145); border-radius: 4px; padding: 6px 10px;">photo — neighborhood at dusk</span>
+          </div>
+          <div>
+            <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: oklch(0.5 0.03 155); margin: 0 0 20px;">Your voice</p>
+            <h2 style="font-size: clamp(30px, 3vw, 40px); line-height: 1.12; letter-spacing: -0.025em; font-weight: 600; margin: 0 0 20px; text-wrap: balance;">The board is your neighbors. Come say something.</h2>
+            <p style="font-size: 17px; line-height: 1.65; color: oklch(0.42 0.012 150); margin: 0 0 32px; max-width: 48ch; text-wrap: pretty;">Every owner is welcome at the monthly meeting, and committee seats open through the year. Bring a suggestion, a question, or a complaint — all three are useful.</p>
+            <div style="display: grid; gap: 1px; background: oklch(0.9 0.01 140); border: 1px solid oklch(0.9 0.01 140); border-radius: 14px; overflow: hidden;">
+              <div style="background: oklch(0.99 0.004 130); padding: 22px 24px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 20px; align-items: baseline;">
+                <span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.5 0.03 155); margin-right: 14px;">2nd Tue</span><strong style="font-weight: 600;">Board meeting</strong><span style="color: oklch(0.5 0.012 150);"> — 6:30 PM, Clubhouse Annex</span></span>
+                <a href="#" onClick="{{ go.governance }}" style="font-size: 15px; white-space: nowrap;">Agenda</a>
+              </div>
+              <div style="background: oklch(0.99 0.004 130); padding: 22px 24px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 20px; align-items: baseline;">
+                <span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.5 0.03 155); margin-right: 14px;">Open</span><strong style="font-weight: 600;">Committee seats</strong><span style="color: oklch(0.5 0.012 150);"> — Architectural &amp; Social</span></span>
+                <a href="#" onClick="{{ go.contact }}" style="font-size: 15px; white-space: nowrap;">Volunteer</a>
+              </div>
+              <div style="background: oklch(0.99 0.004 130); padding: 22px 24px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 20px; align-items: baseline;">
+                <span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.5 0.03 155); margin-right: 14px;">Anytime</span><strong style="font-weight: 600;">Message the board</strong><span style="color: oklch(0.5 0.012 150);"> — routed with your lot details</span></span>
+                <a href="#" onClick="{{ go.contact }}" style="font-size: 15px; white-space: nowrap;">Write</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section style="border-top: 1px solid oklch(0.9 0.01 140); padding: clamp(40px, 7vw, 72px) clamp(16px, 4vw, 32px);">
+        <div style="max-width: 1200px; margin: 0 auto;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px; margin-bottom: 32px; flex-wrap: wrap;">
+            <h2 style="font-size: 22px; font-weight: 600; letter-spacing: -0.015em; margin: 0;">Community news</h2>
+            <a href="#" onClick="{{ go.events }}" style="font-size: 15px;">All updates &amp; events</a>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 40px;">
+            <a href="#" onClick="{{ go.events }}" style="color: inherit; display: block;">
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.02 150); margin: 0 0 10px;">Mar 24 · Community</p>
+              <p style="margin: 0 0 6px; font-size: 17px; font-weight: 600; line-height: 1.35;">Spring landscaping begins along the lake path</p>
+              <p style="margin: 0; font-size: 15px; line-height: 1.55; color: oklch(0.5 0.012 150);">Drought-resistant native plantings replace seasonal beds at the north entry.</p>
+            </a>
+            <a href="#" onClick="{{ go.events }}" style="color: inherit; display: block;">
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.02 150); margin: 0 0 10px;">Mar 18 · Events</p>
+              <p style="margin: 0 0 6px; font-size: 17px; font-weight: 600; line-height: 1.35;">Resident gala and annual homeowner meeting</p>
+              <p style="margin: 0; font-size: 15px; line-height: 1.55; color: oklch(0.5 0.012 150);">Dinner at the Great Hall, followed by the 2024 budget presentation.</p>
+            </a>
+            <a href="#" onClick="{{ go.events }}" style="color: inherit; display: block;">
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.02 150); margin: 0 0 10px;">Mar 12 · Safety</p>
+              <p style="margin: 0 0 6px; font-size: 17px; font-weight: 600; line-height: 1.35;">Touchless entry arrives at the north gate</p>
+              <p style="margin: 0; font-size: 15px; line-height: 1.55; color: oklch(0.5 0.012 150);">Existing remotes keep working through the transition period.</p>
+            </a>
+          </div>
+        </div>
+      </section>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ pagePayment }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 64px; align-items: start; padding: 80px 32px 76px; max-width: 1200px; margin: 0 auto;">
+        <div>
+          <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: oklch(0.52 0.03 155); margin: 0 0 26px;">Payment portal</p>
+          <h1 style="font-size: clamp(34px, 3.8vw, 52px); line-height: 1.06; letter-spacing: -0.026em; font-weight: 600; margin: 0 0 22px; max-width: 24ch; text-wrap: balance;">Pay your HOA dues.</h1>
+          <p style="font-size: 18px; line-height: 1.6; color: oklch(0.42 0.012 150); max-width: 50ch; margin: 0 0 34px; text-wrap: pretty;">Look up what's owed with your account and street number, or sign in to see every property on your account at once.</p>
+          <div style="display: grid; gap: 26px; max-width: 46ch;">
+            <div>
+              <p style="margin: 0 0 8px; font-size: 17px; font-weight: 600;">Ways to pay</p>
+              <p style="margin: 0; font-size: 15px; line-height: 1.65; color: oklch(0.45 0.012 150);">Debit or credit card, ACH bank transfer, or a recurring autopay you set once. Card payments carry a processor fee; bank transfers do not.</p>
+            </div>
+            <div>
+              <p style="margin: 0 0 8px; font-size: 17px; font-weight: 600;">When payments post</p>
+              <p style="margin: 0; font-size: 15px; line-height: 1.65; color: oklch(0.45 0.012 150);">Next business day. A late fee applies after the 15th, per your association's collection policy.</p>
+            </div>
+            <div>
+              <p style="margin: 0 0 8px; font-size: 17px; font-weight: 600;">Trouble paying</p>
+              <p style="margin: 0; font-size: 15px; line-height: 1.65; color: oklch(0.45 0.012 150);">Payment plans are available before an account goes to collections. <a href="#" onClick="{{ go.contact }}">Contact the office</a> — earlier is easier.</p>
+            </div>
+          </div>
+        </div>
+        <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 18px; padding: 30px; box-shadow: 0 1px 2px oklch(0.4 0.02 150 / 0.05), 0 12px 32px oklch(0.4 0.02 150 / 0.05);">
+          <sc-if value="{{ stateLookup }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.56 0.015 150); margin: 0 0 24px;">Look up your dues</p>
+              <div style="display: grid; gap: 16px;">
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Community</span>
+                  <select value="{{ lookupCommunity }}" onChange="{{ setCommunity }}" style="width: 100%; appearance: none; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 40px 13px 14px; cursor: pointer;">
+                    <option value="">Select your community…</option>
+                    <sc-for list="{{ communityOptions }}" as="o" hint-placeholder-count="3">
+                      <option value="{{ o.id }}">{{ o.label }}</option>
+                    </sc-for>
+                  </select>
+                </label>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Account number</span>
+                  <input type="text" value="{{ lookupAccount }}" onChange="{{ setAccount }}" placeholder="e.g. 40218" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Street number</span>
+                  <input type="text" value="{{ lookupStreet }}" onChange="{{ setStreet }}" placeholder="e.g. 7880" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+                <sc-if value="{{ lookupError }}" hint-placeholder-val="{{ false }}">
+                  <p style="margin: -4px 0 0; font-size: 14px; color: oklch(0.48 0.11 30);">{{ lookupError }}</p>
+                </sc-if>
+                <button type="button" onClick="{{ submitLookup }}" style="width: 100%; font: inherit; font-size: 16px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 15px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Show my dues</button>
+              </div>
+              <p style="margin: 18px 0 0; font-size: 14px; line-height: 1.55; color: oklch(0.52 0.012 150);">Registered residents can <a href="#" onClick="{{ signIn }}">sign in</a> and skip this step.</p>
+            </div>
+          </sc-if>
+          <sc-if value="{{ stateResult }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.56 0.015 150);">{{ communityName }}</span>
+                <button type="button" onClick="{{ resetLookup }}" style="background: none; border: none; padding: 0; font: inherit; font-size: 14px; color: oklch(0.44 0.045 155); cursor: pointer;">Look up another</button>
+              </div>
+              <p style="margin: 0 0 6px; font-size: 15px; color: oklch(0.48 0.012 150);">{{ resultAddress }}</p>
+              <p style="margin: 0 0 4px; font-size: 15px; color: oklch(0.48 0.012 150);">{{ duesCadence }} dues, due {{ dueDate }}</p>
+              <p style="margin: 12px 0 20px; font-size: 48px; font-weight: 600; letter-spacing: -0.03em; line-height: 1;">{{ duesAmount }}</p>
+              <a href="#" style="display: block; text-align: center; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); padding: 15px; border-radius: 10px; font-size: 16px; font-weight: 500;" style-hover="background: oklch(0.34 0.05 155);">Pay {{ duesAmount }} now</a>
+              <p style="margin: 12px 0 0; font-size: 13px; color: oklch(0.58 0.012 150); text-align: center;">Card, bank transfer or scheduled autopay.</p>
+            </div>
+          </sc-if>
+          <sc-if value="{{ stateAccount }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 26px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.56 0.015 150);">Your account</span>
+                <span style="font-size: 13px; color: oklch(0.56 0.015 150);">{{ lotLabel }}</span>
+              </div>
+              <p style="margin: 0 0 6px; font-size: 14px; color: oklch(0.48 0.012 150);">HOA dues due {{ dueDate }}</p>
+              <p style="margin: 0 0 18px; font-size: 44px; font-weight: 600; letter-spacing: -0.03em; line-height: 1;">{{ balanceDue }}</p>
+              <a href="#" style="display: block; text-align: center; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); padding: 14px; border-radius: 10px; font-size: 16px; font-weight: 500;" style-hover="background: oklch(0.34 0.05 155);">Pay HOA dues</a>
+              <div style="margin-top: 26px; padding-top: 24px; border-top: 1px solid oklch(0.92 0.008 140);">
+                <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.56 0.015 150); margin: 0 0 14px;">All your properties</p>
+                <div style="display: grid; gap: 10px; margin-bottom: 18px;">
+                  <sc-for list="{{ ledger }}" as="row" hint-placeholder-count="3">
+                    <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: baseline; font-size: 15px;">
+                      <span style="color: oklch(0.34 0.014 150); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ row.name }}</span>
+                      <span style="font-family: 'IBM Plex Mono', monospace; color: {{ row.color }};">{{ row.balance }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding-top: 14px; border-top: 1px solid oklch(0.92 0.008 140);">
+                  <span style="font-size: 15px; font-weight: 600;">Total due</span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 17px; font-weight: 500;">{{ totalDue }}</span>
+                </div>
+                <a href="#" style="display: block; text-align: center; margin-top: 16px; border: 1px solid oklch(0.78 0.02 150); color: oklch(0.3 0.02 150); padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 500;" style-hover="border-color: oklch(0.5 0.04 155);">Pay all properties</a>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </section>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ pageMaintenance }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <section style="padding: 80px 32px 40px; max-width: 1200px; margin: 0 auto;">
+        <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: oklch(0.52 0.03 155); margin: 0 0 24px;">Maintenance</p>
+        <h1 style="font-size: clamp(34px, 3.8vw, 52px); line-height: 1.06; letter-spacing: -0.026em; font-weight: 600; margin: 0 0 22px; max-width: 24ch; text-wrap: balance;">Report something that needs fixing.</h1>
+        <p style="font-size: 18px; line-height: 1.6; color: oklch(0.42 0.012 150); max-width: 54ch; margin: 0; text-wrap: pretty;">For common areas, amenities, gates and lighting. Repairs inside your own home stay with you as the owner.</p>
+      </section>
+      <section style="padding: 32px 32px 80px; max-width: 1200px; margin: 0 auto;">
+        <div style="max-width: 660px; margin: 0; background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 18px; padding: 32px; box-shadow: 0 1px 2px oklch(0.4 0.02 150 / 0.05), 0 12px 32px oklch(0.4 0.02 150 / 0.05);">
+          <sc-if value="{{ requestSent }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.5 0.03 155); margin: 0 0 14px;">Request received</p>
+              <p style="margin: 0 0 10px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em;">Reference {{ requestRef }}</p>
+              <p style="margin: 0 0 26px; font-size: 16px; line-height: 1.6; color: oklch(0.45 0.012 150);">A manager reviews new requests each business morning. You'll get an email when a vendor is scheduled, and again when the work is signed off.</p>
+              <button type="button" onClick="{{ resetRequest }}" style="font: inherit; font-size: 16px; font-weight: 500; background: none; border: 1px solid oklch(0.78 0.02 150); color: oklch(0.3 0.02 150); padding: 13px 22px; border-radius: 10px; cursor: pointer;" style-hover="border-color: oklch(0.5 0.04 155);">File another request</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ requestOpen }}" hint-placeholder-val="{{ true }}">
+            <div style="display: grid; gap: 18px;">
+              <label style="display: block;">
+                <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Community</span>
+                <select value="{{ lookupCommunity }}" onChange="{{ setCommunity }}" style="width: 100%; appearance: none; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 40px 13px 14px; cursor: pointer;">
+                  <option value="">Select your community…</option>
+                  <sc-for list="{{ communityOptions }}" as="o" hint-placeholder-count="3">
+                    <option value="{{ o.id }}">{{ o.label }}</option>
+                  </sc-for>
+                </select>
+              </label>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 18px;">
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Your name</span>
+                  <input type="text" value="{{ reqName }}" onChange="{{ setReqName }}" placeholder="First and last" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Email or phone</span>
+                  <input type="text" value="{{ reqContact }}" onChange="{{ setReqContact }}" placeholder="How we reach you" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+              </div>
+              <label style="display: block;">
+                <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Where is it?</span>
+                <input type="text" value="{{ reqLocation }}" onChange="{{ setReqLocation }}" placeholder="e.g. north gate keypad, pool deck" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+              </label>
+              <label style="display: block;">
+                <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Category</span>
+                <select value="{{ reqCategory }}" onChange="{{ setReqCategory }}" style="width: 100%; appearance: none; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 40px 13px 14px; cursor: pointer;">
+                  <option value="">Select a category…</option>
+                  <option value="landscaping">Landscaping &amp; irrigation</option>
+                  <option value="gates">Gates &amp; access</option>
+                  <option value="lighting">Lighting</option>
+                  <option value="pool">Pool &amp; amenities</option>
+                  <option value="streets">Streets, curbs &amp; drainage</option>
+                  <option value="other">Something else</option>
+                </select>
+              </label>
+              <label style="display: block;">
+                <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">What's wrong?</span>
+                <textarea value="{{ reqDetail }}" onChange="{{ setReqDetail }}" rows="4" placeholder="Describe what you saw and when." style="width: 100%; font: inherit; font-size: 16px; line-height: 1.55; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px; resize: vertical;"></textarea>
+              </label>
+              <div style="border: 1px dashed oklch(0.82 0.014 145); border-radius: 10px; padding: 20px; text-align: center;">
+                <p style="margin: 0 0 4px; font-size: 15px; color: oklch(0.42 0.012 150);">Add a photo</p>
+                <p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.015 150);">drag a file here or browse — optional</p>
+              </div>
+              <sc-if value="{{ requestError }}" hint-placeholder-val="{{ false }}">
+                <p style="margin: -4px 0 0; font-size: 14px; color: oklch(0.48 0.11 30);">{{ requestError }}</p>
+              </sc-if>
+              <button type="button" onClick="{{ submitRequest }}" style="width: 100%; font: inherit; font-size: 16px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 15px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Submit request</button>
+              <p style="margin: 0; font-size: 14px; line-height: 1.55; color: oklch(0.52 0.012 150);">Water leaks, downed lines, gate failures and anything unsafe: call <a href="tel:7132083539">713-208-3539</a> and press 9 for the after-hours line.</p>
+            </div>
+          </sc-if>
+        </div>
+      </section>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ pageServices }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <section style="padding: clamp(40px, 7vw, 80px) clamp(16px, 4vw, 32px) clamp(32px, 5vw, 60px); max-width: 1200px; margin: 0 auto;">
+        <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: oklch(0.52 0.03 155); margin: 0 0 24px;">Services</p>
+        <h1 style="font-size: clamp(34px, 3.8vw, 52px); line-height: 1.06; letter-spacing: -0.026em; font-weight: 600; margin: 0 0 22px; max-width: 24ch; text-wrap: balance;">Everything an association needs, run by one office.</h1>
+        <p style="font-size: 18px; line-height: 1.6; color: oklch(0.42 0.012 150); max-width: 56ch; margin: 0; text-wrap: pretty;">Four areas of work, one point of contact. The board keeps the decisions; we carry the operations, the record-keeping and the follow-up.</p>
+      </section>
+      <section style="max-width: 1200px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 32px) clamp(44px, 8vw, 88px);">
+        <div style="display: grid; gap: 1px; background: oklch(0.9 0.01 140); border: 1px solid oklch(0.9 0.01 140); border-radius: 18px; overflow: hidden;">
+          <sc-for list="{{ services }}" as="s" hint-placeholder-count="4">
+            <div style="background: oklch(0.99 0.004 130); padding: 44px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 40px;">
+              <div>
+                <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.03 155); margin: 0 0 12px;">{{ s.num }}</p>
+                <h2 style="margin: 0 0 12px; font-size: 26px; font-weight: 600; letter-spacing: -0.02em;">{{ s.title }}</h2>
+                <p style="margin: 0; font-size: 16px; line-height: 1.65; color: oklch(0.45 0.012 150); max-width: 40ch;">{{ s.blurb }}</p>
+              </div>
+              <div style="display: grid; gap: 14px; font-size: 15px; line-height: 1.6; color: oklch(0.4 0.012 150);">
+                <sc-for list="{{ s.items }}" as="item" hint-placeholder-count="5">
+                  <span>{{ item }}</span>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+      <section style="background: oklch(0.945 0.014 148); border-top: 1px solid oklch(0.9 0.012 145); border-bottom: 1px solid oklch(0.9 0.012 145); padding: clamp(44px, 8vw, 88px) clamp(16px, 4vw, 32px);">
+        <div style="max-width: 1200px; margin: 0 auto;">
+          <h2 style="font-size: clamp(28px, 2.6vw, 36px); line-height: 1.15; letter-spacing: -0.022em; font-weight: 600; margin: 0 0 44px; text-wrap: balance;">Bringing an association on board</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 40px;">
+            <div>
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.03 155); margin: 0 0 12px;">Week 1</p>
+              <p style="margin: 0 0 8px; font-size: 18px; font-weight: 600;">Records transfer</p>
+              <p style="margin: 0; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">Financials, contracts, owner roster and governing documents move over and get reconciled.</p>
+            </div>
+            <div>
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.03 155); margin: 0 0 12px;">Week 2</p>
+              <p style="margin: 0 0 8px; font-size: 18px; font-weight: 600;">Site walk</p>
+              <p style="margin: 0; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">A full inspection with the board, ending in a written condition report and a deferred-work list.</p>
+            </div>
+            <div>
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.03 155); margin: 0 0 12px;">Week 3</p>
+              <p style="margin: 0 0 8px; font-size: 18px; font-weight: 600;">Resident setup</p>
+              <p style="margin: 0; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">Owners get portal access, payment options and a single number that reaches a person.</p>
+            </div>
+            <div>
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.03 155); margin: 0 0 12px;">Week 4</p>
+              <p style="margin: 0 0 8px; font-size: 18px; font-weight: 600;">First board meeting</p>
+              <p style="margin: 0; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">Budget review, vendor decisions and a twelve-month calendar the board signs off on.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section style="padding: 80px 32px; max-width: 1200px; margin: 0 auto;">
+        <p style="font-size: 20px; line-height: 1.6; color: oklch(0.4 0.012 150); max-width: 46ch; margin: 0 0 28px; text-wrap: pretty;">Considering a change in management? We'll review your current contract and budget before you commit to anything.</p>
+        <a href="#" onClick="{{ go.contact }}" style="display: inline-block; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); padding: 14px 26px; border-radius: 999px; font-size: 16px; font-weight: 500;" style-hover="background: oklch(0.34 0.05 155);">Talk to the office</a>
+      </section>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ pageGovernance }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <section style="padding: clamp(40px, 7vw, 80px) clamp(16px, 4vw, 32px) clamp(32px, 5vw, 60px); max-width: 1200px; margin: 0 auto;">
+        <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: oklch(0.52 0.03 155); margin: 0 0 24px;">Governance</p>
+        <h1 style="font-size: clamp(34px, 3.8vw, 52px); line-height: 1.06; letter-spacing: -0.026em; font-weight: 600; margin: 0 0 22px; max-width: 24ch; text-wrap: balance;">The rules, the record, and who decides.</h1>
+        <p style="font-size: 18px; line-height: 1.6; color: oklch(0.42 0.012 150); max-width: 56ch; margin: 0; text-wrap: pretty;">Every governing document for your community, the process for changing your home's exterior, and the neighbors who vote on it.</p>
+      </section>
+      <section style="max-width: 1200px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 32px) clamp(44px, 8vw, 88px);">
+        <h2 style="font-size: 22px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 24px;">Document library</h2>
+        <div style="display: grid; gap: 1px; background: oklch(0.9 0.01 140); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+          <sc-for list="{{ documents }}" as="d" hint-placeholder-count="6">
+            <a href="#" style="background: oklch(0.99 0.004 130); padding: 22px 26px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px 28px; align-items: baseline; color: inherit;" style-hover="background: oklch(0.955 0.012 145);">
+              <span style="font-size: 17px; font-weight: 500;">{{ d.title }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.02 150); white-space: nowrap;">{{ d.meta }}</span>
+              <span style="font-size: 15px; color: oklch(0.44 0.045 155); white-space: nowrap;">Download</span>
+            </a>
+          </sc-for>
+        </div>
+      </section>
+      <section style="background: oklch(0.945 0.014 148); border-top: 1px solid oklch(0.9 0.012 145); border-bottom: 1px solid oklch(0.9 0.012 145); padding: clamp(44px, 8vw, 88px) clamp(16px, 4vw, 32px);">
+        <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 64px;">
+          <div>
+            <h2 style="font-size: clamp(28px, 2.6vw, 36px); line-height: 1.15; letter-spacing: -0.022em; font-weight: 600; margin: 0 0 20px; text-wrap: balance;">Changing something outside your home</h2>
+            <p style="font-size: 17px; line-height: 1.65; color: oklch(0.42 0.012 150); margin: 0 0 28px; max-width: 44ch; text-wrap: pretty;">Paint, fences, roofs, patios, pools, solar and anything else visible from the street needs written approval before work starts. Applications are answered within 30 days.</p>
+            <a href="#" style="display: inline-block; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); padding: 13px 24px; border-radius: 999px; font-size: 16px; font-weight: 500;" style-hover="background: oklch(0.34 0.05 155);">Start an application</a>
+          </div>
+          <div style="display: grid; gap: 24px;">
+            <div style="display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 18px; align-items: start;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.5 0.03 155); padding-top: 3px;">01</span>
+              <span style="font-size: 16px; line-height: 1.6; color: oklch(0.4 0.012 150);"><strong style="font-weight: 600;">Submit</strong> — plans, materials, colors and a site sketch. Photos help.</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 18px; align-items: start;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.5 0.03 155); padding-top: 3px;">02</span>
+              <span style="font-size: 16px; line-height: 1.6; color: oklch(0.4 0.012 150);"><strong style="font-weight: 600;">Review</strong> — the Architectural Committee meets twice monthly.</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 18px; align-items: start;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.5 0.03 155); padding-top: 3px;">03</span>
+              <span style="font-size: 16px; line-height: 1.6; color: oklch(0.4 0.012 150);"><strong style="font-weight: 600;">Decision</strong> — written approval, conditions, or the reason for denial.</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 18px; align-items: start;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.5 0.03 155); padding-top: 3px;">04</span>
+              <span style="font-size: 16px; line-height: 1.6; color: oklch(0.4 0.012 150);"><strong style="font-weight: 600;">Close out</strong> — tell us when work finishes so the file can be closed.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section style="max-width: 1200px; margin: 0 auto; padding: clamp(44px, 8vw, 88px) clamp(16px, 4vw, 32px);">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px; margin-bottom: 32px; flex-wrap: wrap;">
+          <h2 style="font-size: 22px; font-weight: 600; letter-spacing: -0.015em; margin: 0;">Your board</h2>
+          <span style="font-size: 15px; color: oklch(0.5 0.012 150);">Elected annually · terms run through the annual meeting</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px; background: oklch(0.9 0.01 140); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+          <sc-for list="{{ board }}" as="m" hint-placeholder-count="5">
+            <div style="background: oklch(0.99 0.004 130); padding: 26px 24px;">
+              <p style="margin: 0 0 6px; font-size: 17px; font-weight: 600;">{{ m.name }}</p>
+              <p style="margin: 0 0 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.5 0.03 155);">{{ m.role }}</p>
+              <p style="margin: 0; font-size: 14px; line-height: 1.55; color: oklch(0.5 0.012 150);">{{ m.note }}</p>
+            </div>
+          </sc-for>
+        </div>
+        <p style="margin: 28px 0 0; font-size: 16px; line-height: 1.6; color: oklch(0.45 0.012 150); max-width: 70ch;">Board meetings are held the second Tuesday of each month at 6:30 PM in the Clubhouse Annex. Owners may speak during the open forum at the start of each meeting. <a href="#" onClick="{{ go.contact }}">Ask to be on the agenda</a>.</p>
+      </section>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ pageEvents }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <section style="padding: clamp(40px, 7vw, 80px) clamp(16px, 4vw, 32px) clamp(32px, 5vw, 60px); max-width: 1200px; margin: 0 auto;">
+        <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: oklch(0.52 0.03 155); margin: 0 0 24px;">Events &amp; notices</p>
+        <h1 style="font-size: clamp(34px, 3.8vw, 52px); line-height: 1.06; letter-spacing: -0.026em; font-weight: 600; margin: 0 0 22px; max-width: 24ch; text-wrap: balance;">What's happening in the neighborhood.</h1>
+        <p style="font-size: 18px; line-height: 1.6; color: oklch(0.42 0.012 150); max-width: 56ch; margin: 0; text-wrap: pretty;">Meetings, closures, socials and service notices — posted here first and emailed to registered residents.</p>
+      </section>
+      <section style="max-width: 1200px; margin: 0 auto; padding: 0 32px 80px;">
+        <h2 style="font-size: 22px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 24px;">Upcoming</h2>
+        <div style="display: grid; gap: 1px; background: oklch(0.9 0.01 140); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+          <sc-for list="{{ events }}" as="e" hint-placeholder-count="4">
+            <div style="background: oklch(0.99 0.004 130); padding: clamp(20px, 4vw, 26px); display: flex; flex-wrap: wrap; gap: 10px 28px; align-items: baseline;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: oklch(0.5 0.03 155); flex: 0 0 auto; min-width: 62px;">{{ e.date }}</span>
+              <span style="flex: 1 1 220px; min-width: 0;">
+                <span style="display: block; font-size: 18px; font-weight: 600; margin-bottom: 4px;">{{ e.title }}</span>
+                <span style="display: block; font-size: 15px; line-height: 1.55; color: oklch(0.5 0.012 150);">{{ e.detail }}</span>
+              </span>
+              <a href="#" style="font-size: 15px; white-space: nowrap;">{{ e.action }}</a>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+      <section style="border-top: 1px solid oklch(0.9 0.01 140); padding: 72px 32px 96px;">
+        <div style="max-width: 1200px; margin: 0 auto;">
+          <h2 style="font-size: 22px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 32px;">Recent notices</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 40px;">
+            <sc-for list="{{ notices }}" as="n" hint-placeholder-count="3">
+              <div>
+                <div style="border-radius: 14px; overflow: hidden; border: 1px solid oklch(0.9 0.01 140); aspect-ratio: 3 / 2; background-color: oklch(0.955 0.012 145); background-image: repeating-linear-gradient(135deg, oklch(0.91 0.016 148) 0 10px, oklch(0.955 0.012 145) 10px 20px); display: flex; align-items: flex-end; padding: 14px; margin-bottom: 16px;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: oklch(0.45 0.02 150); background: oklch(0.99 0.004 130); border: 1px solid oklch(0.88 0.012 145); border-radius: 4px; padding: 5px 8px;">{{ n.photo }}</span>
+                </div>
+                <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.02 150); margin: 0 0 8px;">{{ n.meta }}</p>
+                <p style="margin: 0 0 6px; font-size: 17px; font-weight: 600; line-height: 1.35;">{{ n.title }}</p>
+                <p style="margin: 0; font-size: 15px; line-height: 1.55; color: oklch(0.5 0.012 150);">{{ n.body }}</p>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ pageAbout }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <section style="padding: clamp(40px, 7vw, 80px) clamp(16px, 4vw, 32px) clamp(32px, 5vw, 60px); max-width: 1200px; margin: 0 auto;">
+        <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: oklch(0.52 0.03 155); margin: 0 0 24px;">About us</p>
+        <h1 style="font-size: clamp(34px, 3.8vw, 52px); line-height: 1.06; letter-spacing: -0.026em; font-weight: 600; margin: 0 0 22px; max-width: 24ch; text-wrap: balance;">A local office, not a call center.</h1>
+        <p style="font-size: 18px; line-height: 1.6; color: oklch(0.42 0.012 150); max-width: 56ch; margin: 0; text-wrap: pretty;">Unity Grid manages homeowners associations across greater Houston. Every community gets a named manager, a real phone number, and books that stay open to owners.</p>
+      </section>
+      <section style="max-width: 1200px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 32px) clamp(44px, 8vw, 88px);">
+        <div style="border-radius: 18px; overflow: hidden; border: 1px solid oklch(0.9 0.01 140); aspect-ratio: 21 / 9; background-color: oklch(0.955 0.012 145); background-image: repeating-linear-gradient(135deg, oklch(0.91 0.016 148) 0 10px, oklch(0.955 0.012 145) 10px 20px); display: flex; align-items: flex-end; padding: 20px;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.45 0.02 150); background: oklch(0.99 0.004 130); border: 1px solid oklch(0.88 0.012 145); border-radius: 4px; padding: 6px 10px;">photo — management team or office</span>
+        </div>
+      </section>
+      <section style="background: oklch(0.945 0.014 148); border-top: 1px solid oklch(0.9 0.012 145); border-bottom: 1px solid oklch(0.9 0.012 145); padding: clamp(44px, 8vw, 88px) clamp(16px, 4vw, 32px);">
+        <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 48px;">
+          <div>
+            <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.03 155); margin: 0 0 12px;">How we work</p>
+            <p style="margin: 0 0 8px; font-size: 18px; font-weight: 600;">One manager per community</p>
+            <p style="margin: 0; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">You reach the same person each time, and they know your streets, your vendors and your history.</p>
+          </div>
+          <div>
+            <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.03 155); margin: 0 0 12px;">How we work</p>
+            <p style="margin: 0 0 8px; font-size: 18px; font-weight: 600;">Open books</p>
+            <p style="margin: 0; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">Monthly financials, vendor contracts and reserve balances are posted where owners can read them.</p>
+          </div>
+          <div>
+            <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.03 155); margin: 0 0 12px;">How we work</p>
+            <p style="margin: 0 0 8px; font-size: 18px; font-weight: 600;">Even enforcement</p>
+            <p style="margin: 0; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">Rules apply the same way on every street, with written notice and a route to appeal.</p>
+          </div>
+        </div>
+      </section>
+      <section style="max-width: 1200px; margin: 0 auto; padding: clamp(44px, 8vw, 88px) clamp(16px, 4vw, 32px);">
+        <h2 style="font-size: 22px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 32px;">Communities we manage</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1px; background: oklch(0.9 0.01 140); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+          <sc-for list="{{ communities }}" as="c" hint-placeholder-count="3">
+            <div style="background: oklch(0.99 0.004 130); padding: 28px 26px;">
+              <p style="margin: 0 0 6px; font-size: 18px; font-weight: 600;">{{ c.name }}</p>
+              <p style="margin: 0; font-size: 14px; line-height: 1.6; color: oklch(0.52 0.012 150);">{{ c.meta }}</p>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ pageContact }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <section style="padding: clamp(40px, 7vw, 80px) clamp(16px, 4vw, 32px) clamp(32px, 5vw, 60px); max-width: 1200px; margin: 0 auto;">
+        <p style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: oklch(0.52 0.03 155); margin: 0 0 24px;">Contact</p>
+        <h1 style="font-size: clamp(34px, 3.8vw, 52px); line-height: 1.06; letter-spacing: -0.026em; font-weight: 600; margin: 0 0 22px; max-width: 24ch; text-wrap: balance;">Reach a person, not a queue.</h1>
+        <p style="font-size: 18px; line-height: 1.6; color: oklch(0.42 0.012 150); max-width: 54ch; margin: 0; text-wrap: pretty;">Office hours are Monday through Friday, 9AM to 5PM. Messages sent through the form reach your community manager and the board liaison together.</p>
+      </section>
+      <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 56px; align-items: start; padding: 20px 32px 88px; max-width: 1200px; margin: 0 auto;">
+        <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 18px; padding: 32px; box-shadow: 0 1px 2px oklch(0.4 0.02 150 / 0.05), 0 12px 32px oklch(0.4 0.02 150 / 0.05);">
+          <sc-if value="{{ messageSent }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.5 0.03 155); margin: 0 0 14px;">Message sent</p>
+              <p style="margin: 0 0 26px; font-size: 17px; line-height: 1.6; color: oklch(0.42 0.012 150);">Thanks — the office replies within one business day. Anything urgent should go to the phone line below.</p>
+              <button type="button" onClick="{{ resetMessage }}" style="font: inherit; font-size: 16px; font-weight: 500; background: none; border: 1px solid oklch(0.78 0.02 150); color: oklch(0.3 0.02 150); padding: 13px 22px; border-radius: 10px; cursor: pointer;" style-hover="border-color: oklch(0.5 0.04 155);">Write another message</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ messageOpen }}" hint-placeholder-val="{{ true }}">
+            <div style="display: grid; gap: 18px;">
+              <label style="display: block;">
+                <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Community</span>
+                <select value="{{ lookupCommunity }}" onChange="{{ setCommunity }}" style="width: 100%; appearance: none; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 40px 13px 14px; cursor: pointer;">
+                  <option value="">Select your community…</option>
+                  <sc-for list="{{ communityOptions }}" as="o" hint-placeholder-count="3">
+                    <option value="{{ o.id }}">{{ o.label }}</option>
+                  </sc-for>
+                </select>
+              </label>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 18px;">
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Your name</span>
+                  <input type="text" value="{{ msgName }}" onChange="{{ setMsgName }}" placeholder="First and last" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Email</span>
+                  <input type="text" value="{{ msgEmail }}" onChange="{{ setMsgEmail }}" placeholder="you@example.com" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+              </div>
+              <label style="display: block;">
+                <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">What's this about?</span>
+                <select value="{{ msgTopic }}" onChange="{{ setMsgTopic }}" style="width: 100%; appearance: none; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 40px 13px 14px; cursor: pointer;">
+                  <option value="">Select a topic…</option>
+                  <option value="dues">Dues or billing</option>
+                  <option value="arc">Architectural application</option>
+                  <option value="violation">A violation notice</option>
+                  <option value="board">Message for the board</option>
+                  <option value="committee">Joining a committee</option>
+                  <option value="other">Something else</option>
+                </select>
+              </label>
+              <label style="display: block;">
+                <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Message</span>
+                <textarea value="{{ msgBody }}" onChange="{{ setMsgBody }}" rows="5" placeholder="Tell us what you need." style="width: 100%; font: inherit; font-size: 16px; line-height: 1.55; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px; resize: vertical;"></textarea>
+              </label>
+              <sc-if value="{{ messageError }}" hint-placeholder-val="{{ false }}">
+                <p style="margin: -4px 0 0; font-size: 14px; color: oklch(0.48 0.11 30);">{{ messageError }}</p>
+              </sc-if>
+              <button type="button" onClick="{{ submitMessage }}" style="width: 100%; font: inherit; font-size: 16px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 15px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Send message</button>
+            </div>
+          </sc-if>
+        </div>
+        <div style="display: grid; gap: 32px;">
+          <div>
+            <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.56 0.015 150); margin: 0 0 12px;">Management office</p>
+            <p style="margin: 0; font-size: 17px; line-height: 1.7; color: oklch(0.34 0.014 150);">7880 Morrison Road<br />Katy, Texas 77493<br /><a href="tel:7132083539">713-208-3539</a><br /><a href="mailto:info@sofilakes.com">info@sofilakes.com</a></p>
+          </div>
+          <div>
+            <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.56 0.015 150); margin: 0 0 12px;">Office hours</p>
+            <p style="margin: 0; font-size: 17px; line-height: 1.7; color: oklch(0.34 0.014 150);">Monday–Friday, 9AM–5PM<br />Saturday &amp; Sunday, closed</p>
+          </div>
+          <div style="background: oklch(0.945 0.014 148); border: 1px solid oklch(0.9 0.012 145); border-radius: 14px; padding: 26px;">
+            <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.45 0.05 155); margin: 0 0 14px;">Emergencies</p>
+            <div style="display: grid; gap: 14px; font-size: 16px; line-height: 1.5; color: oklch(0.34 0.014 150);">
+              <span><strong style="font-weight: 600;">Life safety, fire, crime</strong> — call 911 first, then the office.</span>
+              <span><strong style="font-weight: 600;">Water main or major leak</strong> — <a href="tel:7132083539">713-208-3539</a>, press 9.</span>
+              <span><strong style="font-weight: 600;">Gate stuck or access failure</strong> — <a href="tel:7132083539">713-208-3539</a>, press 9.</span>
+              <span><strong style="font-weight: 600;">Downed limb or blocked street</strong> — after-hours line, same number.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </sc-if>
+
+  <footer style="background: oklch(0.28 0.022 152); color: oklch(0.9 0.012 140); padding: clamp(40px, 7vw, 72px) clamp(16px, 4vw, 32px) 32px;">
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: clamp(32px, 5vw, 56px);">
+      <div style="flex: 1 1 300px; min-width: 0; max-width: 380px;">
+        <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px;">
+          <span style="width: 11px; height: 11px; border-radius: 2px; background: oklch(0.72 0.06 155); display: inline-block;"></span>
+          <span style="font-weight: 600; font-size: 17px; color: oklch(0.97 0.008 140);">Unity Grid Management</span>
+        </div>
+        <p style="margin: 0 0 20px; font-size: 15px; line-height: 1.6; color: oklch(0.76 0.012 145); text-wrap: pretty;">Day-to-day management for homeowners associations across greater Houston.</p>
+        <div style="display: grid; gap: 7px; font-size: 15px; line-height: 1.5; color: oklch(0.82 0.012 145);">
+          <span>7880 Morrison Road, Katy, Texas 77493</span>
+          <span><a href="tel:7132083539" style="color: oklch(0.86 0.03 150);">713-208-3539</a></span>
+          <span><a href="mailto:info@sofilakes.com" style="color: oklch(0.86 0.03 150);">info@sofilakes.com</a></span>
+          <span style="color: oklch(0.72 0.012 145);">Mon–Fri, 9AM–5PM</span>
+        </div>
+      </div>
+
+      <div style="flex: 2 1 420px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 32px;">
+        <div style="display: grid; gap: 6px; align-content: start;">
+          <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.66 0.012 145); margin: 0 0 14px;">Residents</p>
+          <a href="#" onClick="{{ go.payment }}" style="color: oklch(0.88 0.012 145); font-size: 15px; line-height: 1.35; padding: 12px 0;">Pay HOA fees</a>
+          <a href="#" onClick="{{ go.maintenance }}" style="color: oklch(0.88 0.012 145); font-size: 15px; line-height: 1.35; padding: 12px 0;">Maintenance request</a>
+          <a href="#" onClick="{{ go.services }}" style="color: oklch(0.88 0.012 145); font-size: 15px; line-height: 1.35; padding: 12px 0;">Amenity reservations</a>
+          <a href="#" onClick="{{ go.contact }}" style="color: oklch(0.88 0.012 145); font-size: 15px; line-height: 1.35; padding: 12px 0;">Emergency contacts</a>
+        </div>
+        <div style="display: grid; gap: 6px; align-content: start;">
+          <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.66 0.012 145); margin: 0 0 14px;">Association</p>
+          <a href="#" onClick="{{ go.services }}" style="color: oklch(0.88 0.012 145); font-size: 15px; line-height: 1.35; padding: 12px 0;">Services</a>
+          <a href="#" onClick="{{ go.governance }}" style="color: oklch(0.88 0.012 145); font-size: 15px; line-height: 1.35; padding: 12px 0;">Governance</a>
+          <a href="#" onClick="{{ go.governance }}" style="color: oklch(0.88 0.012 145); font-size: 15px; line-height: 1.35; padding: 12px 0;">Bylaws &amp; CC&amp;Rs</a>
+          <a href="#" onClick="{{ go.governance }}" style="color: oklch(0.88 0.012 145); font-size: 15px; line-height: 1.35; padding: 12px 0;">Board &amp; committees</a>
+        </div>
+        <div style="display: grid; gap: 6px; align-content: start;">
+          <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.66 0.012 145); margin: 0 0 14px;">Company</p>
+          <a href="#" onClick="{{ go.about }}" style="color: oklch(0.88 0.012 145); font-size: 15px; line-height: 1.35; padding: 12px 0;">About us</a>
+          <a href="#" onClick="{{ go.events }}" style="color: oklch(0.88 0.012 145); font-size: 15px; line-height: 1.35; padding: 12px 0;">Events</a>
+          <a href="#" onClick="{{ go.contact }}" style="color: oklch(0.88 0.012 145); font-size: 15px; line-height: 1.35; padding: 12px 0;">Contact</a>
+          <a href="#" style="color: oklch(0.88 0.012 145); font-size: 15px; line-height: 1.35; padding: 12px 0;">Privacy policy</a>
+        </div>
+      </div>
+    </div>
+
+    <div style="max-width: 1200px; margin: clamp(32px, 5vw, 48px) auto 0; padding-top: 22px; border-top: 1px solid oklch(0.38 0.02 152); display: flex; justify-content: space-between; align-items: baseline; gap: 12px 24px; flex-wrap: wrap; font-size: 13px; line-height: 1.5; color: oklch(0.7 0.012 145);">
+      <span>© 2026 Unity Grid Management. All rights reserved.</span>
+      <span style="display: flex; gap: 20px; flex-wrap: wrap;"><a href="#" style="color: oklch(0.7 0.012 145);">Terms of service</a><a href="#" style="color: oklch(0.7 0.012 145);">Accessibility</a></span>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;alertsEnabled&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Alert band&quot;},&quot;alertOverride&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Alert band&quot;},&quot;residentName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Dana&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Resident state&quot;}}">
+const COMMUNITIES = [
+  { id: "sofi", name: "Sofi Lakes", location: "Katy, Texas", homes: "412 homes", dues: "$285.00", cadence: "Quarterly", cadenceShort: "qtr", lot: "Lot 214 · Willow Bend", balance: "$285.00", due: "April 1", request: "One open request — gate keypad, scheduled for Tuesday.", alert: "Water service to Willow Bend will be interrupted Thursday, 9AM–2PM, for main line repair." },
+  { id: "cypress", name: "Cypress Reserve", location: "Cypress, Texas", homes: "168 homes", dues: "$210.00", cadence: "Quarterly", cadenceShort: "qtr", lot: "Lot 62 · Heron Court", balance: "$0.00", due: "July 1", request: "No open requests.", alert: "" },
+  { id: "brookfield", name: "Brookfield Commons", location: "Fulshear, Texas", homes: "96 townhomes", dues: "$140.00", cadence: "Monthly", cadenceShort: "mo", lot: "Unit 9B · The Row", balance: "$140.00", due: "April 1", request: "Two open requests — mailbox light and fence panel.", alert: "Pool closed through Saturday for resurfacing. The splash pad stays open." }
+];
+
+const SERVICES = [
+  { num: "01", title: "Dues & finances", blurb: "Assessment billing on a schedule owners can plan around, with collections handled by policy rather than by mood.", items: ["Monthly and quarterly dues billing, statements and receipts", "Operating and reserve accounting, reconciled monthly", "Annual budget preparation and reserve study coordination", "Delinquency notices, payment plans and lien filings by policy", "Vendor invoicing, approvals and payment"] },
+  { num: "02", title: "Grounds & upkeep", blurb: "Common areas inspected on a route, not on a complaint. Work orders are tracked from report to sign-off.", items: ["Weekly property inspections with photo records", "Landscaping, irrigation and seasonal planting schedules", "Pool, gate, lighting and amenity maintenance contracts", "Emergency response and after-hours vendor dispatch", "Capital project bidding and oversight"] },
+  { num: "03", title: "Rules & review", blurb: "Covenant enforcement residents can predict: same standard, same timeline, written record every time.", items: ["Architectural applications answered within 30 days", "Violation notices with photos, deadlines and appeal rights", "Hearing scheduling and minutes for the board", "Resale certificates and lender questionnaires", "Insurance certificate tracking for vendors"] },
+  { num: "04", title: "Meetings & records", blurb: "Agendas out early, minutes out fast, and a document library owners can search without asking anyone.", items: ["Meeting notice, agenda packets and minutes", "Annual meeting, elections and proxy administration", "Governing document library kept current online", "Owner roster and contact management", "Records retention and state filing compliance"] }
+];
+
+const DOCUMENTS = [
+  { title: "Declaration of Covenants, Conditions & Restrictions", meta: "PDF · 2.4 MB · amended 2023" },
+  { title: "Bylaws of the Association", meta: "PDF · 640 KB · amended 2021" },
+  { title: "Architectural Design Guidelines", meta: "PDF · 1.1 MB · revised 2024" },
+  { title: "Collection & Late Fee Policy", meta: "PDF · 210 KB · adopted 2022" },
+  { title: "Fine & Enforcement Policy", meta: "PDF · 190 KB · adopted 2022" },
+  { title: "Approved Operating Budget", meta: "PDF · 380 KB · fiscal 2026" },
+  { title: "Reserve Study Summary", meta: "PDF · 720 KB · updated 2025" },
+  { title: "Board Meeting Minutes — archive", meta: "Folder · 36 documents" }
+];
+
+const BOARD = [
+  { name: "Marisol Reyes", role: "President", note: "Willow Bend. Serving a second term." },
+  { name: "Anthony Okafor", role: "Vice President", note: "Heron Court. Liaison to the Architectural Committee." },
+  { name: "Grace Lindqvist", role: "Treasurer", note: "The Row. Reviews the monthly financials." },
+  { name: "Dev Patel", role: "Secretary", note: "Lakeside Drive. Keeps the minutes and the roster." },
+  { name: "Carol Whitfield", role: "Director at large", note: "Willow Bend. Chairs the Social Committee." }
+];
+
+const EVENTS = [
+  { date: "Apr 14", title: "Monthly board meeting", detail: "6:30 PM, Clubhouse Annex. Open forum first, budget review after.", action: "Agenda" },
+  { date: "Apr 19", title: "Spring shred day", detail: "9AM–noon, north lot. Two boxes per household.", action: "Details" },
+  { date: "Apr 26", title: "Pool opening weekend", detail: "Gates open at 8AM. Bring your updated amenity tag.", action: "Details" },
+  { date: "May 3", title: "Architectural Committee review", detail: "Applications received by April 28 are on this docket.", action: "Submit" },
+  { date: "May 17", title: "Annual homeowner meeting & gala", detail: "Great Hall, 6PM. Election results and the 2026 budget.", action: "RSVP" }
+];
+
+const NOTICES = [
+  { photo: "photo — lake path plantings", meta: "Mar 24 · Community", title: "Spring landscaping begins along the lake path", body: "Drought-resistant native plantings replace seasonal beds at the north entry. Expect crews on weekday mornings through April." },
+  { photo: "photo — Great Hall interior", meta: "Mar 18 · Events", title: "Resident gala and annual homeowner meeting", body: "Dinner at the Great Hall, followed by the budget presentation and board election results." },
+  { photo: "photo — north gate", meta: "Mar 12 · Safety", title: "Touchless entry arrives at the north gate", body: "Existing remotes keep working through the transition. Registration opens at the office next week." }
+];
+
+class Component extends DCLogic {
+  componentDidMount() {
+    this.onResize = () => this.setState({ vw: window.innerWidth });
+    window.addEventListener("resize", this.onResize);
+    this.setState({ vw: window.innerWidth });
+  }
+
+  componentWillUnmount() {
+    if (this.onResize) window.removeEventListener("resize", this.onResize);
+  }
+
+  state = { page: "home", active: null, signedIn: false, switcherOpen: false, vw: 1200, navOpen: false, account: "", street: "", revealed: false, error: "",
+    reqName: "", reqContact: "", reqLocation: "", reqCategory: "", reqDetail: "", reqSent: false, reqError: "", reqRef: "",
+    msgName: "", msgEmail: "", msgTopic: "", msgBody: "", msgSent: false, msgError: "" };
+
+  field(key) {
+    return (e) => this.setState({ [key]: e.target.value });
+  }
+
+  amount(c) {
+    return parseFloat(String(c.balance).replace(/[^0-9.]/g, "")) || 0;
+  }
+
+  nav(page) {
+    return (e) => {
+      if (e) e.preventDefault();
+      this.setState({ page: page, switcherOpen: false, navOpen: false });
+      if (typeof window !== "undefined") window.scrollTo(0, 0);
+    };
+  }
+
+  renderVals() {
+    const p = this.props;
+    const c = COMMUNITIES.find(x => x.id === this.state.active) || COMMUNITIES[0];
+    const chosen = !!this.state.active;
+    const signedIn = this.state.signedIn;
+    const alertText = chosen ? (p.alertOverride || c.alert) : "";
+    const page = this.state.page;
+    const s = this.state;
+    const isMobile = (s.vw || 1200) < 760;
+
+    return {
+      mobileNav: isMobile,
+      deskNav: !isMobile,
+      navOpen: isMobile && s.navOpen,
+      navToggleLabel: s.navOpen ? "Close" : "Menu",
+      toggleNav: (e) => { if (e) e.preventDefault(); this.setState(st => ({ navOpen: !st.navOpen })); },
+      mark: {
+        services: page === "services" ? "oklch(0.955 0.018 150)" : "transparent",
+        governance: page === "governance" ? "oklch(0.955 0.018 150)" : "transparent",
+        events: page === "events" ? "oklch(0.955 0.018 150)" : "transparent",
+        about: page === "about" ? "oklch(0.955 0.018 150)" : "transparent",
+        contact: page === "contact" ? "oklch(0.955 0.018 150)" : "transparent"
+      },
+      markLabel: {
+        services: page === "services" ? "viewing" : "",
+        governance: page === "governance" ? "viewing" : "",
+        events: page === "events" ? "viewing" : "",
+        about: page === "about" ? "viewing" : "",
+        contact: page === "contact" ? "viewing" : ""
+      },
+      go: {
+        home: this.nav("home"), services: this.nav("services"), governance: this.nav("governance"),
+        events: this.nav("events"), about: this.nav("about"), contact: this.nav("contact"),
+        payment: this.nav("payment"), maintenance: this.nav("maintenance")
+      },
+      pageHome: page === "home",
+      pageServices: page === "services",
+      pageGovernance: page === "governance",
+      pageEvents: page === "events",
+      pageAbout: page === "about",
+      pageContact: page === "contact",
+      pagePayment: page === "payment",
+      pageMaintenance: page === "maintenance",
+
+      switcherOpen: this.state.switcherOpen,
+      toggleSwitcher: () => this.setState(s => ({ switcherOpen: !s.switcherOpen })),
+      switcherLabel: chosen ? c.name : "Choose your community",
+      switcherHeading: signedIn ? "Your properties" : "Communities we manage",
+      switcherFooterLabel: signedIn ? "Add a property to your account" : "Don't see your community? Contact us",
+      communities: COMMUNITIES.map(x => ({
+        name: x.name,
+        location: x.location,
+        meta: x.location + " · " + x.homes,
+        mark: x.id === this.state.active ? "viewing" : "",
+        select: () => this.setState({ active: x.id, switcherOpen: false })
+      })),
+      communityOptions: COMMUNITIES.map(x => ({ id: x.id, label: x.name + " — " + x.location })),
+
+      stateLookup: !signedIn && !this.state.revealed,
+      stateResult: !signedIn && this.state.revealed,
+      stateAccount: signedIn,
+      lookupCommunity: this.state.active || "",
+      lookupAccount: this.state.account,
+      lookupStreet: this.state.street,
+      lookupError: this.state.error,
+      setCommunity: (e) => this.setState({ active: e.target.value || null, error: "" }),
+      setAccount: (e) => this.setState({ account: e.target.value, error: "" }),
+      setStreet: (e) => this.setState({ street: e.target.value, error: "" }),
+      submitLookup: () => {
+        const s = this.state;
+        if (!s.active) return this.setState({ error: "Choose your community to continue." });
+        if (!s.account.trim() || !s.street.trim()) return this.setState({ error: "Enter both your account number and street number." });
+        this.setState({ revealed: true, error: "" });
+      },
+      resetLookup: () => this.setState({ revealed: false, account: "", street: "", active: null, error: "" }),
+      resultAddress: this.state.street ? "Street no. " + this.state.street + " · Account " + this.state.account : c.lot,
+
+      signIn: (e) => { if (e) e.preventDefault(); this.setState(s => ({ signedIn: true, active: s.active || "sofi", switcherOpen: false })); },
+      authLabel: signedIn ? "Sign out" : "Sign in",
+      authAction: signedIn
+        ? (e) => { if (e) e.preventDefault(); this.setState({ signedIn: false, active: null, revealed: false, switcherOpen: false }); }
+        : (e) => { if (e) e.preventDefault(); this.setState(s => ({ signedIn: true, active: s.active || "sofi", switcherOpen: false })); },
+
+      communityName: c.name,
+      communityLabel: chosen ? c.name + " · " + c.location : "Managed communities · Greater Houston",
+      lotLabel: c.lot,
+      duesAmount: c.dues,
+      duesCadence: c.cadence,
+      dueDate: c.due,
+      balanceDue: c.balance,
+      requestSummary: c.request,
+      residentName: p.residentName ?? "Dana",
+      alertActive: (p.alertsEnabled ?? true) && !!alertText,
+      alertText: alertText,
+
+      services: SERVICES,
+      documents: DOCUMENTS,
+      board: BOARD,
+      events: EVENTS,
+      notices: NOTICES,
+
+      requestOpen: !this.state.reqSent,
+      requestSent: this.state.reqSent,
+      requestRef: this.state.reqRef,
+      requestError: this.state.reqError,
+      reqName: this.state.reqName,
+      reqContact: this.state.reqContact,
+      reqLocation: this.state.reqLocation,
+      reqCategory: this.state.reqCategory,
+      reqDetail: this.state.reqDetail,
+      setReqName: this.field("reqName"),
+      setReqContact: this.field("reqContact"),
+      setReqLocation: this.field("reqLocation"),
+      setReqCategory: this.field("reqCategory"),
+      setReqDetail: this.field("reqDetail"),
+      submitRequest: () => {
+        const s = this.state;
+        if (!s.active) return this.setState({ reqError: "Choose your community to continue." });
+        if (!s.reqName.trim() || !s.reqContact.trim()) return this.setState({ reqError: "Add your name and a way to reach you." });
+        if (!s.reqLocation.trim() || !s.reqCategory) return this.setState({ reqError: "Tell us where the problem is and pick a category." });
+        this.setState({ reqSent: true, reqError: "", reqRef: "UG-" + Math.floor(100000 + Math.random() * 899999) });
+      },
+      resetRequest: () => this.setState({ reqSent: false, reqName: "", reqContact: "", reqLocation: "", reqCategory: "", reqDetail: "", reqRef: "" }),
+
+      messageOpen: !this.state.msgSent,
+      messageSent: this.state.msgSent,
+      messageError: this.state.msgError,
+      msgName: this.state.msgName,
+      msgEmail: this.state.msgEmail,
+      msgTopic: this.state.msgTopic,
+      msgBody: this.state.msgBody,
+      setMsgName: this.field("msgName"),
+      setMsgEmail: this.field("msgEmail"),
+      setMsgTopic: this.field("msgTopic"),
+      setMsgBody: this.field("msgBody"),
+      submitMessage: () => {
+        const s = this.state;
+        if (!s.msgName.trim() || !s.msgEmail.trim()) return this.setState({ msgError: "Add your name and email so we can reply." });
+        if (!s.msgBody.trim()) return this.setState({ msgError: "Add a message." });
+        this.setState({ msgSent: true, msgError: "" });
+      },
+      resetMessage: () => this.setState({ msgSent: false, msgName: "", msgEmail: "", msgTopic: "", msgBody: "" }),
+
+      multiProperty: signedIn && COMMUNITIES.length > 1,
+      ledger: COMMUNITIES.map(x => ({
+        name: x.name,
+        balance: x.balance,
+        color: this.amount(x) > 0 ? "oklch(0.3 0.02 150)" : "oklch(0.6 0.012 150)"
+      })),
+      totalDue: "$" + COMMUNITIES.reduce((s, x) => s + this.amount(x), 0).toFixed(2)
+    };
+  }
+}
+</script>
+</body>
+</html>

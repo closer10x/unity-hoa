@@ -15,7 +15,7 @@ type Props = {
 
 const ACCESS_BADGE_STYLES: Record<string, string> = {
   public: "bg-green-50 text-green-700",
-  resident: "bg-blue-50 text-blue-700",
+  resident: "bg-secondary-container text-on-secondary-container",
   board: "bg-amber-50 text-amber-700",
   manager_only: "bg-purple-50 text-purple-700",
 };
@@ -36,7 +36,7 @@ export function DocumentListRow({ document: doc, isSelected, onSelect, onClick, 
       className={`group flex items-center gap-4 rounded-xl border bg-white px-4 py-3 transition-all duration-200 hover:shadow-sm cursor-pointer ${
         isSelected
           ? "border-secondary ring-2 ring-secondary/20"
-          : "border-gray-200 hover:border-gray-300"
+          : "border-outline-variant hover:border-outline"
       } ${doc.is_pinned ? "bg-amber-50/30" : ""}`}
       onClick={() => onClick(doc)}
       role="button"

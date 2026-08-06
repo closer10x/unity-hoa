@@ -150,7 +150,7 @@ export function DocumentUploadModal({ categories, existingTags, isOpen, onClose,
         aria-label="Upload documents"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-outline-variant px-6 py-4">
           <div>
             <h2 className="text-lg font-bold text-on-surface">Upload Documents</h2>
             {entries.length > 0 && (
@@ -216,7 +216,7 @@ export function DocumentUploadModal({ categories, existingTags, isOpen, onClose,
                     ? "border-green-200 bg-green-50/30"
                     : entry.status === "error"
                     ? "border-red-200 bg-red-50/30"
-                    : "border-gray-200"
+                    : "border-outline-variant"
                 }`}
               >
                 {/* File row */}
@@ -256,7 +256,7 @@ export function DocumentUploadModal({ categories, existingTags, isOpen, onClose,
                 )}
 
                 {entry.status === "uploading" && (
-                  <div className="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+                  <div className="h-1.5 w-full rounded-full bg-surface-container-high overflow-hidden">
                     <div
                       className="h-full rounded-full bg-secondary transition-all duration-500"
                       style={{ width: `${entry.progress}%` }}
@@ -399,7 +399,7 @@ export function DocumentUploadModal({ categories, existingTags, isOpen, onClose,
 
         {/* Footer */}
         {entries.length > 0 && (
-          <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4 bg-white">
+          <div className="flex items-center justify-between border-t border-outline-variant px-6 py-4 bg-white">
             <button
               onClick={onClose}
               disabled={isUploading}
@@ -410,7 +410,7 @@ export function DocumentUploadModal({ categories, existingTags, isOpen, onClose,
             <button
               onClick={handleUploadAll}
               disabled={isUploading || pendingCount === 0}
-              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-br from-secondary to-secondary-fixed-dim px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-secondary/20 transition-transform active:scale-95 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-secondary hover:bg-secondary-hover px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-secondary/20 transition-transform active:scale-95 disabled:opacity-50"
             >
               {isUploading ? (
                 <>

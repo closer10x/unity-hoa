@@ -110,7 +110,7 @@ export function PendingReviewTab({ categories, pendingCount, onCountChange }: Pr
         const isActioning = actionLoading === doc.id;
 
         return (
-          <div key={doc.id} className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+          <div key={doc.id} className="rounded-xl border border-outline-variant bg-white p-4 space-y-3">
             {/* File info row */}
             <div className="flex items-start gap-3">
               <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-container-low ${info.color}`}>
@@ -236,7 +236,7 @@ export function PendingReviewTab({ categories, pendingCount, onCountChange }: Pr
                   <button
                     onClick={() => handleApproveWithEdits(doc.id)}
                     disabled={isActioning}
-                    className="rounded-lg bg-gradient-to-br from-secondary to-secondary-fixed-dim px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                    className="rounded-lg bg-secondary hover:bg-secondary-hover px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                   >
                     Approve with Edits
                   </button>

@@ -177,7 +177,7 @@ export function DocumentLibraryView({
       />
 
       {/* Tabs: Documents / Pending Review */}
-      <div className="mt-6 flex items-center gap-1 border-b border-gray-200">
+      <div className="mt-6 flex items-center gap-1 border-b border-outline-variant">
         <button
           onClick={() => setActiveTab("documents")}
           className={`relative px-4 py-2.5 text-sm font-medium transition-colors ${

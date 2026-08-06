@@ -40,17 +40,17 @@ export function AdminHeader({ email, displayName, avatarUrl }: Props) {
         <form action={signOutAdmin}>
           <button
             type="submit"
-            className="text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-secondary px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="text-xs font-semibold text-on-surface-variant dark:text-slate-300 hover:text-secondary px-2 py-1 rounded-md hover:bg-surface-container dark:hover:bg-slate-800"
           >
             Sign out
           </button>
         </form>
         <div className="hidden sm:flex flex-col items-end max-w-[140px] mr-1">
-          <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate w-full text-right">
+          <span className="text-xs font-bold text-on-surface dark:text-slate-100 truncate w-full text-right">
             {label}
           </span>
           {email ? (
-            <span className="text-[10px] text-slate-500 truncate w-full text-right">
+            <span className="text-[10px] text-on-surface-variant truncate w-full text-right">
               {email}
             </span>
           ) : null}

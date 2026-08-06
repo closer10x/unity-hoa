@@ -1,58 +1,126 @@
 @import "tailwindcss";
 
+/* Unity Grid design system — warm stone surfaces, sage accent, ink text.
+   The app addresses colour only through these semantic tokens, so the
+   palette is swapped here rather than in the 90+ components that use it. */
 @theme inline {
-  --color-on-primary-container: #9198a0;
-  --color-on-tertiary-container: #7e9e8f;
-  --color-surface-container-high: #e2e9f2;
-  --color-inverse-on-surface: #ebf1fb;
-  --color-on-secondary-container: #006b76;
-  --color-surface-container-highest: #dce3ec;
-  --color-surface-container-low: #edf4fe;
-  --color-inverse-primary: #c0c7d0;
-  --color-secondary-container: #76eeff;
-  --color-outline: #75777b;
-  --color-surface-container: #e8eef8;
-  /* Brand cyan (Unity Grid mark); pairs with lime accents in raster logo */
-  --color-secondary-fixed-dim: #00b4d8;
-  --color-error: #ba1a1a;
-  --color-secondary-fixed: #93f1ff;
-  --color-outline-variant: #c5c6cb;
-  --color-surface-tint: #585f67;
-  --color-inverse-surface: #2a3138;
-  --color-surface-bright: #f7f9ff;
-  --color-error-container: #ffdad6;
-  --color-on-background: #151c23;
-  --color-on-surface: #151c23;
-  --color-on-tertiary: #ffffff;
-  --color-surface-container-lowest: #ffffff;
-  --color-on-primary-fixed: #151c23;
-  --color-on-tertiary-fixed-variant: #2f4d40;
-  --color-surface: #f7f9ff;
-  --color-tertiary: #012015;
-  --color-on-secondary-fixed-variant: #004f57;
-  --color-background: #f7f9ff;
-  --color-surface-variant: #dce3ec;
-  --color-on-error: #ffffff;
-  --color-on-primary-fixed-variant: #40474f;
-  --color-tertiary-fixed: #c8ead9;
-  --color-surface-dim: #d4dbe4;
-  --color-on-secondary-fixed: #001f23;
-  --color-on-tertiary-fixed: #022016;
-  --color-primary-fixed-dim: #c0c7d0;
-  --color-on-primary: #ffffff;
-  --color-on-surface-variant: #44474b;
-  --color-secondary: #006973;
-  --color-on-error-container: #93000a;
-  --color-on-secondary: #ffffff;
-  --color-primary: #141b22;
-  --color-primary-container: #293037;
-  --color-tertiary-container: #17352a;
-  --color-primary-fixed: #dce3ec;
-  --color-tertiary-fixed-dim: #adcebe;
+  /* Page + card surfaces, lightest to dimmest */
+  --color-background: oklch(0.972 0.006 130);
+  --color-surface: oklch(0.972 0.006 130);
+  --color-surface-bright: oklch(0.99 0.004 130);
+  --color-surface-container-lowest: oklch(0.99 0.004 130);
+  --color-surface-container-low: oklch(0.985 0.005 135);
+  --color-surface-container: oklch(0.97 0.008 140);
+  --color-surface-container-high: oklch(0.955 0.012 145);
+  --color-surface-container-highest: oklch(0.945 0.014 148);
+  --color-surface-variant: oklch(0.945 0.014 148);
+  --color-surface-dim: oklch(0.92 0.008 140);
+  --color-surface-tint: oklch(0.5 0.03 155);
 
-  --font-headline: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-label: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* Text on those surfaces */
+  --color-on-background: oklch(0.26 0.014 150);
+  --color-on-surface: oklch(0.26 0.014 150);
+  --color-on-surface-variant: oklch(0.45 0.012 150);
+
+  /* Hairlines */
+  --color-outline: oklch(0.56 0.015 150);
+  --color-outline-variant: oklch(0.9 0.01 140);
+  /* Slightly stronger hairline — form fields, inset edges */
+  --color-outline-strong: oklch(0.86 0.012 145);
+
+  /* Dark shell — footer and inverse blocks */
+  --color-shell: oklch(0.28 0.022 152);
+  --color-on-shell: oklch(0.88 0.012 145);
+  --color-on-shell-variant: oklch(0.72 0.012 145);
+  --color-on-shell-bright: oklch(0.97 0.008 140);
+  --color-shell-outline: oklch(0.38 0.02 152);
+  --color-shell-accent: oklch(0.86 0.03 150);
+  --color-shell-mark: oklch(0.72 0.06 155);
+
+  /* Striped placeholder standing in for photography */
+  --color-placeholder-stripe: oklch(0.91 0.016 148);
+
+  /* --- Handoff tokens (design_handoff README) --- */
+  --color-surface-muted: oklch(0.978 0.006 140);
+  --color-hairline-soft: oklch(0.95 0.006 140);
+  --color-accent-tint-border: oklch(0.89 0.022 150);
+  --color-row-hover: oklch(0.965 0.01 145);
+  --color-confirm-bar: oklch(0.965 0.014 148);
+
+  /* Toggle chips */
+  --color-chip-on: oklch(0.93 0.03 152);
+  --color-chip-on-border: oklch(0.82 0.04 152);
+  --color-chip-on-ink: oklch(0.36 0.05 155);
+
+  /* Status — colour carries the meaning, never an icon */
+  --color-status-positive: oklch(0.45 0.06 155);
+  --color-status-attention: oklch(0.5 0.09 60);
+  --color-status-critical: oklch(0.48 0.11 30);
+  --color-status-destructive: oklch(0.5 0.09 30);
+  --color-status-neutral: oklch(0.5 0.03 155);
+
+  /* Calendar categories */
+  --color-cat-meeting: oklch(0.5 0.06 155);
+  --color-cat-meeting-tint: oklch(0.955 0.022 155);
+  --color-cat-inspection: oklch(0.52 0.08 250);
+  --color-cat-inspection-tint: oklch(0.95 0.025 250);
+  --color-cat-booking: oklch(0.5 0.03 155);
+  --color-cat-booking-tint: oklch(0.96 0.012 155);
+  --color-cat-legal: oklch(0.48 0.11 30);
+  --color-cat-legal-tint: oklch(0.955 0.035 30);
+  --color-cat-community: oklch(0.55 0.09 60);
+  --color-cat-community-tint: oklch(0.96 0.035 70);
+
+  /* Sage accent — the interactive/brand colour */
+  --color-secondary: oklch(0.42 0.05 155);
+  --color-secondary-hover: oklch(0.34 0.05 155);
+  /* Lighter sage used for mono eyebrows and reference marks */
+  --color-secondary-muted: oklch(0.52 0.03 155);
+  --color-on-secondary: oklch(0.97 0.008 140);
+  --color-secondary-container: oklch(0.955 0.018 150);
+  --color-on-secondary-container: oklch(0.34 0.05 155);
+  /* "fixed" tones stay light in every context — they carry ink text on
+     light surfaces and act as legible sage text on dark ones. */
+  --color-secondary-fixed: oklch(0.9 0.045 155);
+  --color-secondary-fixed-dim: oklch(0.82 0.055 155);
+  --color-on-secondary-fixed: oklch(0.26 0.014 150);
+  --color-on-secondary-fixed-variant: oklch(0.34 0.05 155);
+
+  /* Ink — headers, dark panels */
+  --color-primary: oklch(0.26 0.014 150);
+  --color-on-primary: oklch(0.99 0.004 130);
+  --color-primary-container: oklch(0.3 0.02 150);
+  --color-on-primary-container: oklch(0.78 0.02 150);
+  --color-primary-fixed: oklch(0.9 0.012 145);
+  --color-primary-fixed-dim: oklch(0.78 0.02 150);
+  --color-on-primary-fixed: oklch(0.26 0.014 150);
+  --color-on-primary-fixed-variant: oklch(0.42 0.012 150);
+
+  /* Deep sage — secondary emphasis blocks */
+  --color-tertiary: oklch(0.34 0.05 155);
+  --color-on-tertiary: oklch(0.99 0.004 130);
+  --color-tertiary-container: oklch(0.34 0.05 155);
+  --color-on-tertiary-container: oklch(0.78 0.02 150);
+  --color-tertiary-fixed: oklch(0.955 0.018 150);
+  --color-tertiary-fixed-dim: oklch(0.78 0.02 150);
+  --color-on-tertiary-fixed: oklch(0.26 0.014 150);
+  --color-on-tertiary-fixed-variant: oklch(0.34 0.05 155);
+
+  /* Inverse pairing */
+  --color-inverse-surface: oklch(0.3 0.02 150);
+  --color-inverse-on-surface: oklch(0.97 0.008 140);
+  --color-inverse-primary: oklch(0.78 0.02 150);
+
+  /* Error — warmed to sit with the stone palette */
+  --color-error: oklch(0.51 0.18 27);
+  --color-on-error: oklch(0.99 0.004 130);
+  --color-error-container: oklch(0.93 0.04 30);
+  --color-on-error-container: oklch(0.4 0.16 27);
+
+  --font-headline: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Labels, reference codes and amounts are mono */
+  --font-label: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, monospace;
 }
 
 .material-symbols-outlined {
@@ -75,17 +143,26 @@ h4 {
 }
 
 .glass-panel {
-  background: rgba(247, 249, 255, 0.8);
+  background: oklch(0.972 0.006 130 / 0.82);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
 
+/* Primary action fill — flat sage, no gradient. */
 .btn-gradient {
-  background: linear-gradient(135deg, #006973 0%, #5dd7e8 100%);
+  background: oklch(0.42 0.05 155);
+}
+
+.btn-gradient:hover {
+  background: oklch(0.34 0.05 155);
 }
 
 .hero-texture {
-  background: linear-gradient(135deg, #141b22 0%, #293037 100%);
+  background: linear-gradient(
+    135deg,
+    oklch(0.26 0.014 150) 0%,
+    oklch(0.34 0.05 155) 100%
+  );
 }
 
 .no-scrollbar::-webkit-scrollbar {

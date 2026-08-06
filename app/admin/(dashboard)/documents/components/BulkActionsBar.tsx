@@ -37,12 +37,12 @@ export function BulkActionsBar({ selectedIds, categories, onClearSelection, onAc
 
   return (
     <div className="sticky bottom-4 z-30 mx-auto w-fit">
-      <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-5 py-3 shadow-xl">
+      <div className="flex items-center gap-3 rounded-xl border border-outline-variant bg-white px-5 py-3 shadow-xl">
         <span className="text-sm font-medium text-on-surface">
           {count} selected
         </span>
 
-        <div className="h-5 w-px bg-gray-200" />
+        <div className="h-5 w-px bg-surface-container-high" />
 
         <button
           onClick={handleArchive}
@@ -62,7 +62,7 @@ export function BulkActionsBar({ selectedIds, categories, onClearSelection, onAc
           Delete
         </button>
 
-        <div className="h-5 w-px bg-gray-200" />
+        <div className="h-5 w-px bg-surface-container-high" />
 
         <button
           onClick={onClearSelection}

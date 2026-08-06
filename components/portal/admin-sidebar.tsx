@@ -1,111 +1,137 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { AdminNotificationsBell } from "@/components/portal/admin-notifications-bell";
 import type { AdminNotificationHeaderPayload } from "@/lib/notifications/load";
 
-const NAV = [
-  { href: "/admin", label: "Dashboard", icon: "dashboard" },
-  { href: "/admin/finances", label: "Finances", icon: "payments" },
-  { href: "/admin/documents", label: "Documents", icon: "description" },
-  { href: "/admin/events", label: "Events", icon: "event_available" },
-  { href: "/admin/maintenance", label: "Maintenance", icon: "engineering" },
+/**
+ * Admin nav groups, verbatim from docs/design/handoff.md:
+ *   Today · Money · Property · People · Office
+ *
+ * No icons anywhere — the handoff is explicit that no icon set is used and
+ * status is carried by colour and mono text labels.
+ *
+ * Sections marked `built: false` are specified in the handoff but not yet
+ * implemented; they render as disabled so the information architecture is
+ * visible without linking to a 404.
+ */
+export const NAV_GROUPS = [
   {
-    href: "/admin/announcements",
-    label: "Announcements",
-    icon: "campaign",
+    group: "Today",
+    items: [
+      { href: "/admin", label: "Dashboard", built: true },
+      { href: "/admin/calendar", label: "Calendar", built: false },
+    ],
   },
-  { href: "/admin/settings", label: "Settings", icon: "settings" },
-  { href: "/admin/settings/employees", label: "Team", icon: "groups" },
+  {
+    group: "Money",
+    items: [
+      { href: "/admin/finances", label: "Accounting", built: true },
+      { href: "/admin/legal", label: "Legal & liens", built: false },
+    ],
+  },
+  {
+    group: "Property",
+    items: [
+      { href: "/admin/maintenance", label: "Work orders", built: true },
+      { href: "/admin/architectural", label: "Architectural", built: false },
+      { href: "/admin/violations", label: "Violations", built: false },
+      { href: "/admin/bookings", label: "Bookings", built: false },
+      { href: "/admin/vendors", label: "Vendors", built: false },
+    ],
+  },
+  {
+    group: "People",
+    items: [
+      { href: "/admin/owners", label: "Owners", built: true },
+      { href: "/admin/announcements", label: "Communications", built: true },
+      { href: "/admin/board", label: "Board & meetings", built: false },
+    ],
+  },
+  {
+    group: "Office",
+    items: [
+      { href: "/admin/documents", label: "Documents", built: true },
+      { href: "/admin/communities", label: "Communities", built: false },
+      { href: "/admin/settings/employees", label: "Team", built: true },
+    ],
+  },
 ] as const;
-
-const AVATAR =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuAKyeRcbbbK86lsnDXruJxGcVfTZgNV-NvXH3Grz3LJoliD1T8pdrShWEeHo2xtvHOkNGpGq0L-BaeK0C96Xdy8YVu_PcMtB4S7ndocsW8MyTDtT-O5te1F4WXPOig0ePEnel_nv7dvzQ_G1rOSsTRlivN5xdH5YnhtZu81w9LqKMPX4tkeSTQ8Bu_-PFFNqyE5jazQHBoCfUFCKQnXhY5w6YJnxIEUftrnl8rYn2xk2Sh3f9pAlRt2XbrT4IKb30AbKiIoYu_VbFZ6";
 
 type SidebarProps = {
   notifications: AdminNotificationHeaderPayload;
 };
 
+function isActive(href: string, pathname: string) {
+  return href === "/admin"
+    ? pathname === "/admin"
+    : pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function AdminSidebar({ notifications }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden md:flex flex-col gap-2 p-6 h-full min-h-screen w-64 fixed left-0 top-0 bg-slate-50 dark:bg-slate-950 z-40">
-      <div className="mb-10 flex items-start justify-between gap-2">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 shrink-0 bg-primary-container rounded-lg flex items-center justify-center text-secondary-fixed-dim">
-            <span
-              className="material-symbols-outlined"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              grid_view
+    <aside className="fixed top-0 left-0 z-40 hidden h-full min-h-screen w-64 flex-col gap-2 overflow-y-auto border-r border-outline-variant bg-surface p-6 md:flex">
+      <div className="mb-8 flex items-start justify-between gap-2">
+        <Link href="/admin" className="flex min-w-0 items-baseline gap-2.5">
+          <span
+            aria-hidden
+            className="inline-block size-[11px] shrink-0 rounded-[2px] bg-secondary"
+          />
+          <span className="min-w-0">
+            <span className="block text-[17px] font-semibold tracking-[-0.01em] text-on-surface">
+              Unity Grid
             </span>
-          </div>
-          <div className="min-w-0">
-            <h1 className="font-[Manrope] text-lg font-bold text-slate-900 dark:text-white">
-              Unity Management
-            </h1>
-            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">
-              Community Admin
-            </p>
-          </div>
-        </div>
+            <span className="mt-0.5 block font-label text-[10px] uppercase tracking-[0.12em] text-outline">
+              Management
+            </span>
+          </span>
+        </Link>
         <div className="shrink-0 pt-0.5">
           <AdminNotificationsBell initial={notifications} />
         </div>
       </div>
-      <nav className="flex-1 flex flex-col gap-1">
-        {NAV.map(({ href, label, icon }) => {
-          const active =
-            href === "/admin"
-              ? pathname === "/admin"
-              : href === "/admin/settings"
-                ? pathname === "/admin/settings" ||
-                  pathname.startsWith("/admin/settings/")
-                : pathname === href || pathname.startsWith(`${href}/`);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ease-in-out font-[Inter] text-sm font-medium ${
-                active
-                  ? "bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-400 shadow-sm font-semibold"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-800/50"
-              }`}
-            >
-              <span className="material-symbols-outlined">{icon}</span>
-              <span>{label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-      <div className="mt-auto pt-6">
-        <Link
-          href="/admin/announcements/new"
-          className="w-full bg-gradient-to-br from-secondary to-secondary-fixed-dim text-white font-semibold py-3 px-4 rounded-lg shadow-lg shadow-secondary/20 flex items-center justify-center gap-2 transition-transform active:scale-95"
-        >
-          <span className="material-symbols-outlined text-sm">add</span>
-          <span>Post update</span>
-        </Link>
-        <div className="mt-6 flex items-center gap-3 px-2">
-          <Image
-            className="w-10 h-10 rounded-full object-cover"
-            alt="Admin user"
-            src={AVATAR}
-            width={40}
-            height={40}
-          />
-          <div className="overflow-hidden min-w-0">
-            <p className="text-xs font-bold truncate">Signed in</p>
-            <p className="text-[10px] text-on-surface-variant truncate">
-              Admin portal
+
+      <nav className="flex flex-1 flex-col gap-6">
+        {NAV_GROUPS.map(({ group, items }) => (
+          <div key={group} className="flex flex-col gap-1">
+            <p className="mb-1 px-3 font-label text-[10px] uppercase tracking-[0.12em] text-outline">
+              {group}
             </p>
+            {items.map((item) =>
+              item.built ? (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={isActive(item.href, pathname) ? "page" : undefined}
+                  className={
+                    isActive(item.href, pathname)
+                      ? "rounded-[10px] border border-accent-tint-border bg-secondary-container px-3 py-2.5 text-[15px] font-semibold text-on-secondary-container"
+                      : "rounded-[10px] px-3 py-2.5 text-[15px] text-on-surface-variant hover:bg-row-hover hover:text-on-surface"
+                  }
+                >
+                  {item.label}
+                </Link>
+              ) : (
+                <span
+                  key={item.href}
+                  aria-disabled
+                  title="Specified in the handoff — not built yet"
+                  className="flex items-baseline justify-between gap-2 rounded-[10px] px-3 py-2.5 text-[15px] text-outline"
+                >
+                  {item.label}
+                  <span className="font-label text-[10px] uppercase tracking-[0.12em]">
+                    Soon
+                  </span>
+                </span>
+              ),
+            )}
           </div>
-        </div>
-      </div>
+        ))}
+      </nav>
     </aside>
   );
 }

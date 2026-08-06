@@ -299,7 +299,7 @@ export function PaymentCheckoutForm({ canceled, defaults }: Props) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-gradient-to-r from-secondary to-secondary-fixed-dim py-4 font-headline font-bold text-white shadow-lg shadow-secondary/20 transition-all hover:opacity-90 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-60 sm:py-5"
+            className="w-full rounded-xl bg-secondary hover:bg-secondary-hover py-4 font-headline font-bold text-white shadow-lg shadow-secondary/20 transition-all hover:opacity-90 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-60 sm:py-5"
           >
             {loading ? "Redirecting…" : "Continue to Stripe Checkout"}
           </button>

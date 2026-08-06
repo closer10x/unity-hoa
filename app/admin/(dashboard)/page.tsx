@@ -45,31 +45,31 @@ export default async function AdminDashboardPage() {
         supabaseReady={supabaseReady}
       />
 
-      <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 pt-3 pb-8 bg-white/90 backdrop-blur-lg dark:bg-slate-900/90 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] border-t border-slate-100 dark:border-slate-800 rounded-t-3xl">
-        <a className="text-teal-700 dark:text-teal-300 flex flex-col items-center gap-1" href="/admin">
+      <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 pt-3 pb-8 bg-white/90 backdrop-blur-lg dark:bg-slate-900/90 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] border-t border-outline-variant dark:border-slate-800 rounded-t-3xl">
+        <a className="text-secondary dark:text-teal-300 flex flex-col items-center gap-1" href="/admin">
           <span className="material-symbols-outlined">home</span>
-          <span className="font-[Inter] text-[10px] font-bold uppercase tracking-wider">Home</span>
+          <span className="font-body text-[10px] font-bold uppercase tracking-wider">Home</span>
         </a>
         <a
-          className="text-slate-400 dark:text-slate-500 flex flex-col items-center gap-1"
+          className="text-outline dark:text-slate-500 flex flex-col items-center gap-1"
           href="/admin/finances"
         >
           <span className="material-symbols-outlined">account_balance_wallet</span>
-          <span className="font-[Inter] text-[10px] font-bold uppercase tracking-wider">Pay</span>
+          <span className="font-body text-[10px] font-bold uppercase tracking-wider">Pay</span>
         </a>
         <a
-          className="text-slate-400 dark:text-slate-500 flex flex-col items-center gap-1"
+          className="text-outline dark:text-slate-500 flex flex-col items-center gap-1"
           href="/admin/events"
         >
           <span className="material-symbols-outlined">calendar_month</span>
-          <span className="font-[Inter] text-[10px] font-bold uppercase tracking-wider">Events</span>
+          <span className="font-body text-[10px] font-bold uppercase tracking-wider">Events</span>
         </a>
         <a
-          className="text-slate-400 dark:text-slate-500 flex flex-col items-center gap-1"
+          className="text-outline dark:text-slate-500 flex flex-col items-center gap-1"
           href="/payment"
         >
           <span className="material-symbols-outlined">person</span>
-          <span className="font-[Inter] text-[10px] font-bold uppercase tracking-wider">Profile</span>
+          <span className="font-body text-[10px] font-bold uppercase tracking-wider">Profile</span>
         </a>
       </nav>
     </>

@@ -27,7 +27,7 @@ export function PaymentBillingSummary({ dues }: Props) {
             </span>
           ) : (
             <span className="ml-2 text-sm font-semibold text-on-surface-variant">
-              regular assessment
+              regular HOA fee
             </span>
           )}
         </p>

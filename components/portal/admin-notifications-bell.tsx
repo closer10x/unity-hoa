@@ -60,7 +60,7 @@ export function AdminNotificationsBell({ initial }: Props) {
     <div className="relative" ref={rootRef}>
       <button
         type="button"
-        className="relative p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500"
+        className="relative p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-on-surface-variant"
         aria-label="Notifications"
         aria-expanded={open}
         aria-haspopup="true"
@@ -101,7 +101,7 @@ export function AdminNotificationsBell({ initial }: Props) {
                   <button
                     type="button"
                     role="menuitem"
-                    className={`w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors ${
+                    className={`w-full text-left px-4 py-3 hover:bg-surface-container-low dark:hover:bg-slate-800/80 transition-colors ${
                       !n.read ? "bg-secondary/5" : ""
                     }`}
                     onClick={() => onItemClick(n.id, n.href)}

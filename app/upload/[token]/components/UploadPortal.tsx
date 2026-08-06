@@ -214,7 +214,7 @@ export function UploadPortal({ token, link, categories = [], error }: Props) {
           <button
             type="submit"
             disabled={authLoading || !password.trim()}
-            className="w-full rounded-lg bg-gradient-to-br from-secondary to-secondary-fixed-dim py-3 text-sm font-semibold text-white shadow-lg shadow-secondary/20 transition-transform active:scale-[0.98] disabled:opacity-50"
+            className="w-full rounded-lg bg-secondary hover:bg-secondary-hover py-3 text-sm font-semibold text-white shadow-lg shadow-secondary/20 transition-transform active:scale-[0.98] disabled:opacity-50"
           >
             {authLoading ? (
               <span className="inline-flex items-center gap-2">
@@ -384,7 +384,7 @@ export function UploadPortal({ token, link, categories = [], error }: Props) {
                   ? "border-green-200 bg-green-50/30"
                   : entry.status === "error"
                   ? "border-red-200 bg-red-50/30"
-                  : "border-gray-200"
+                  : "border-outline-variant"
               }`}
             >
               <div className="flex items-center gap-3">
@@ -419,7 +419,7 @@ export function UploadPortal({ token, link, categories = [], error }: Props) {
               )}
 
               {entry.status === "uploading" && (
-                <div className="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+                <div className="h-1.5 w-full rounded-full bg-surface-container-high overflow-hidden">
                   <div
                     className="h-full rounded-full bg-secondary transition-all duration-500"
                     style={{ width: `${entry.progress}%` }}
@@ -486,7 +486,7 @@ export function UploadPortal({ token, link, categories = [], error }: Props) {
             <button
               onClick={handleUploadAll}
               disabled={isUploading || pendingCount === 0}
-              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-br from-secondary to-secondary-fixed-dim px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-secondary/20 transition-transform active:scale-95 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-secondary hover:bg-secondary-hover px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-secondary/20 transition-transform active:scale-95 disabled:opacity-50"
             >
               {isUploading ? (
                 <>
@@ -523,7 +523,7 @@ function Shell({ children, wide }: { children: React.ReactNode; wide?: boolean }
         </p>
       </div>
 
-      <div className={`w-full ${wide ? "max-w-2xl" : "max-w-md"} rounded-2xl bg-white border border-gray-200 shadow-lg shadow-black/5 p-6 sm:p-8`}>
+      <div className={`w-full ${wide ? "max-w-2xl" : "max-w-md"} rounded-2xl bg-white border border-outline-variant shadow-lg shadow-black/5 p-6 sm:p-8`}>
         {children}
       </div>
 

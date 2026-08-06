@@ -1,0 +1,1944 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="./image-slot.js"></script>
+<style>
+  body { margin: 0; background: oklch(0.972 0.006 130); -webkit-font-smoothing: antialiased; }
+  a { color: oklch(0.44 0.045 155); text-decoration: none; }
+  a:hover { color: oklch(0.34 0.05 155); }
+  * { box-sizing: border-box; }
+</style>
+</helmet>
+<div style="font-family: 'Instrument Sans', system-ui, sans-serif; color: oklch(0.26 0.014 150); background: oklch(0.972 0.006 130); min-height: 100vh;">
+
+  <header style="padding: 14px clamp(16px, 3vw, 32px); border-bottom: 1px solid oklch(0.9 0.01 140); position: sticky; top: 0; background: oklch(0.972 0.006 130); z-index: 30;">
+    <div style="max-width: 1440px; margin: 0 auto; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px 14px; flex-wrap: wrap; min-width: 0;">
+      <div style="display: flex; align-items: center; gap: 16px; flex: 0 0 auto;">
+        <a href="#" style="display: flex; align-items: baseline; gap: 10px; color: inherit;">
+          <span style="width: 11px; height: 11px; border-radius: 2px; background: oklch(0.48 0.055 155); display: inline-block;"></span>
+          <span style="font-weight: 600; font-size: 17px; letter-spacing: -0.01em;">Unity Grid</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: oklch(0.56 0.015 150);">Portal</span>
+        </a>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; flex: 1 1 auto; min-width: 0; flex-wrap: wrap; justify-content: flex-end;">
+        <div style="position: relative;">
+          <button type="button" onClick="{{ toggleSwitcher }}" style="display: flex; align-items: center; gap: 10px; background: oklch(0.99 0.004 130); border: 1px solid oklch(0.88 0.012 145); border-radius: 999px; padding: 12px 14px 12px 16px; font: inherit; font-size: 15px; color: oklch(0.28 0.014 150); cursor: pointer; white-space: nowrap;" style-hover="border-color: oklch(0.6 0.04 155);">
+            <span style="font-weight: 500;">{{ propertyName }}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: oklch(0.55 0.02 150);">▾</span>
+          </button>
+          <sc-if value="{{ switcherOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position: absolute; top: calc(100% + 10px); right: 0; width: 320px; background: oklch(0.99 0.004 130); border: 1px solid oklch(0.88 0.012 145); border-radius: 14px; box-shadow: 0 16px 40px oklch(0.4 0.02 150 / 0.12); padding: 8px; z-index: 40;">
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.58 0.015 150); margin: 10px 12px 8px;">Your properties</p>
+              <sc-for list="{{ properties }}" as="p" hint-placeholder-count="3">
+                <button type="button" onClick="{{ p.select }}" style="display: block; width: 100%; text-align: left; background: none; border: none; border-radius: 9px; padding: 11px 12px; font: inherit; cursor: pointer; color: inherit;" style-hover="background: oklch(0.955 0.012 145);">
+                  <span style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+                    <span style="font-size: 15px; font-weight: 500;">{{ p.name }}</span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: oklch(0.5 0.03 155);">{{ p.mark }}</span>
+                  </span>
+                  <span style="display: block; font-size: 13px; color: oklch(0.55 0.012 150); margin-top: 3px;">{{ p.address }}</span>
+                </button>
+              </sc-for>
+              <div style="border-top: 1px solid oklch(0.92 0.008 140); margin: 8px 12px 0; padding: 12px 0 6px;">
+                <a href="#" style="font-size: 14px;">Add a property</a>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+        <span style="width: 1px; height: 22px; background: oklch(0.88 0.012 145);"></span>
+        <span style="display: flex; align-items: center; gap: 10px;">
+          <span style="width: 32px; height: 32px; border-radius: 999px; background: oklch(0.9 0.02 150); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: oklch(0.4 0.03 155);">{{ initials }}</span>
+          <span style="font-size: 15px; white-space: nowrap;">{{ residentName }}</span>
+        </span>
+        <a href="#" style="font-size: 15px; color: oklch(0.38 0.012 150); white-space: nowrap;">Sign out</a>
+      </div>
+    </div>
+  </header>
+
+  <div style="max-width: 1440px; margin: 0 auto; width: 100%; display: flex; flex-wrap: wrap; align-items: flex-start; gap: clamp(20px, 3vw, 40px); padding: clamp(16px, 3vw, 32px);">
+
+    <sc-if value="{{ deskNav }}" hint-placeholder-val="{{ true }}">
+    <aside style="position: sticky; top: 88px; align-self: start; flex: 1 1 200px; display: flex; flex-wrap: wrap; gap: 6px;">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="8">
+        <button type="button" onClick="{{ n.go }}" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex: 1 1 150px; text-align: left; font: inherit; font-size: 15px; border: 1px solid {{ n.border }}; background: {{ n.bg }}; color: {{ n.color }}; border-radius: 10px; padding: 11px 14px; cursor: pointer;" style-hover="border-color: oklch(0.82 0.02 150);">
+          <span style="font-weight: {{ n.weight }};">{{ n.label }}</span>
+          <sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: oklch(0.9 0.03 152); color: oklch(0.38 0.05 155); border-radius: 999px; padding: 2px 8px;">{{ n.badge }}</span>
+          </sc-if>
+        </button>
+      </sc-for>
+      <div style="margin-top: 20px; border-top: 1px solid oklch(0.9 0.01 140); padding-top: 20px;">
+        <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.58 0.015 150); margin: 0 0 12px;">Need help?</p>
+        <p style="margin: 0 0 8px; font-size: 14px; line-height: 1.55; color: oklch(0.5 0.012 150);">Office: Mon–Fri, 9–5</p>
+        <p style="margin: 0; font-size: 14px; line-height: 1.55;"><a href="tel:7132083539">713-208-3539</a></p>
+      </div>
+    </aside>
+    </sc-if>
+
+    <sc-if value="{{ mobileNav }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: 1 1 100%; display: grid; gap: 10px;">
+        <button type="button" onClick="{{ toggleNav }}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; font: inherit; text-align: left; background: oklch(0.99 0.004 130); border: 1px solid oklch(0.88 0.012 145); border-radius: 12px; padding: 13px 16px; cursor: pointer; color: oklch(0.26 0.014 150);">
+          <span style="display: grid; gap: 2px; min-width: 0;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.58 0.015 150);">{{ currentGroup }}</span>
+            <span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">{{ currentSection }}</span>
+          </span>
+          <span style="font-size: 13px; font-weight: 500; color: oklch(0.44 0.045 155); flex: 0 0 auto;">{{ navToggleLabel }}</span>
+        </button>
+        <sc-if value="{{ navOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 14px; padding: 6px; max-height: 66vh; overflow-y: auto; box-shadow: 0 12px 32px oklch(0.4 0.02 150 / 0.1);">
+            <sc-for list="{{ navGroups }}" as="g" hint-placeholder-count="4">
+              <div style="display: grid; gap: 2px; padding: 8px 6px 10px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: oklch(0.6 0.015 150); padding: 0 8px 6px;">{{ g.name }}</span>
+                <sc-for list="{{ g.items }}" as="n" hint-placeholder-count="3">
+                  <button type="button" onClick="{{ n.go }}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; font: inherit; font-size: 16px; border: none; background: {{ n.sheetBg }}; color: {{ n.color }}; border-radius: 10px; padding: 13px 14px; cursor: pointer;">
+                    <span style="font-weight: {{ n.weight }};">{{ n.label }}</span>
+                    <span style="display: flex; align-items: center; gap: 8px; flex: 0 0 auto;">
+                      <sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}">
+                        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: oklch(0.9 0.03 152); color: oklch(0.38 0.05 155); border-radius: 999px; padding: 2px 8px;">{{ n.badge }}</span>
+                      </sc-if>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.5 0.04 155);">{{ n.mark }}</span>
+                    </span>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+        </button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <main style="flex: 999 1 420px; min-width: 0; display: grid; gap: clamp(20px, 3vw, 28px); align-content: start;">
+
+      <sc-if value="{{ viewOverview }}" hint-placeholder-val="{{ true }}">
+        <div style="display: grid; gap: 28px;">
+          <div>
+            <h1 style="font-size: clamp(24px, 5vw, 32px); font-weight: 600; letter-spacing: -0.024em; margin: 0 0 8px;">Good afternoon, {{ firstName }}.</h1>
+            <p style="margin: 0; font-size: 16px; color: oklch(0.5 0.012 150);">{{ propertyName }} · {{ propertyAddress }} · Account {{ accountNumber }}</p>
+          </div>
+
+          <sc-if value="{{ alertActive }}" hint-placeholder-val="{{ true }}">
+            <div style="background: oklch(0.945 0.03 152); border: 1px solid oklch(0.86 0.04 152); border-radius: 14px; padding: 20px 24px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center;">
+              <span style="font-size: 16px; line-height: 1.55;"><strong style="font-weight: 600;">Notice · </strong>{{ alertText }}</span>
+              <a href="#" style="font-size: 15px; white-space: nowrap;">Details</a>
+            </div>
+          </sc-if>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
+            <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 26px;">
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.56 0.015 150); margin: 0 0 14px;">Balance due</p>
+              <p style="margin: 0 0 4px; font-size: 40px; font-weight: 600; letter-spacing: -0.03em; line-height: 1;">{{ balance }}</p>
+              <p style="margin: 0 0 18px; font-size: 14px; color: oklch(0.5 0.012 150);">Due {{ dueDate }} · {{ cadence }} HOA fee</p>
+              <button type="button" onClick="{{ goPayments }}" style="width: 100%; font: inherit; font-size: 15px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 13px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Pay now</button>
+            </div>
+            <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 26px;">
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.56 0.015 150); margin: 0 0 14px;">Open requests</p>
+              <p style="margin: 0 0 4px; font-size: 40px; font-weight: 600; letter-spacing: -0.03em; line-height: 1;">{{ openRequestCount }}</p>
+              <p style="margin: 0 0 18px; font-size: 14px; color: oklch(0.5 0.012 150);">{{ openRequestNote }}</p>
+              <button type="button" onClick="{{ goMaintenance }}" style="width: 100%; font: inherit; font-size: 15px; font-weight: 500; background: none; border: 1px solid oklch(0.78 0.02 150); color: oklch(0.3 0.02 150); padding: 13px; border-radius: 10px; cursor: pointer;" style-hover="border-color: oklch(0.5 0.04 155);">View requests</button>
+            </div>
+            <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 26px;">
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.56 0.015 150); margin: 0 0 14px;">Account standing</p>
+              <p style="margin: 0 0 4px; font-size: 28px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2;">{{ standing }}</p>
+              <p style="margin: 0 0 18px; font-size: 14px; color: oklch(0.5 0.012 150);">{{ standingNote }}</p>
+              <button type="button" onClick="{{ goCompliance }}" style="width: 100%; font: inherit; font-size: 15px; font-weight: 500; background: none; border: 1px solid oklch(0.78 0.02 150); color: oklch(0.3 0.02 150); padding: 13px; border-radius: 10px; cursor: pointer;" style-hover="border-color: oklch(0.5 0.04 155);">Compliance history</button>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+            <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+              <div style="padding: 20px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.93 0.008 140); display: flex; align-items: baseline; justify-content: space-between; gap: 16px;">
+                <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Recent activity</h2>
+                <a href="#" onClick="{{ goPayments }}" style="font-size: 14px;">All activity</a>
+              </div>
+              <div style="display: grid;">
+                <sc-for list="{{ activity }}" as="a" hint-placeholder-count="5">
+                  <div style="padding: 14px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.95 0.006 140); display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); justify-items: start; gap: 16px; align-items: baseline;">
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.02 150);">{{ a.date }}</span>
+                    <span style="font-size: 15px; line-height: 1.45;">{{ a.label }}</span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: {{ a.color }}; white-space: nowrap;">{{ a.amount }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+              <div style="padding: 20px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.93 0.008 140);">
+                <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Coming up</h2>
+              </div>
+              <div style="display: grid;">
+                <sc-for list="{{ upcoming }}" as="u" hint-placeholder-count="4">
+                  <div style="padding: 14px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.95 0.006 140); display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); justify-items: start; gap: 16px; align-items: baseline;">
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.5 0.03 155);">{{ u.date }}</span>
+                    <span>
+                      <span style="display: block; font-size: 15px; font-weight: 500;">{{ u.title }}</span>
+                      <span style="display: block; font-size: 14px; color: oklch(0.52 0.012 150); margin-top: 2px;">{{ u.detail }}</span>
+                    </span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1px; background: oklch(0.9 0.01 140); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+            <button type="button" onClick="{{ goMaintenance }}" style="background: oklch(0.99 0.004 130); border: none; text-align: left; font: inherit; padding: 24px 22px; cursor: pointer; color: inherit;" style-hover="background: oklch(0.955 0.012 145);">
+              <span style="display: block; font-size: 16px; font-weight: 600; margin-bottom: 4px;">File a request</span>
+              <span style="display: block; font-size: 14px; color: oklch(0.5 0.012 150);">Common areas and amenities</span>
+            </button>
+            <button type="button" onClick="{{ goArchitectural }}" style="background: oklch(0.99 0.004 130); border: none; text-align: left; font: inherit; padding: 24px 22px; cursor: pointer; color: inherit;" style-hover="background: oklch(0.955 0.012 145);">
+              <span style="display: block; font-size: 16px; font-weight: 600; margin-bottom: 4px;">Architectural application</span>
+              <span style="display: block; font-size: 14px; color: oklch(0.5 0.012 150);">Exterior changes</span>
+            </button>
+            <button type="button" onClick="{{ goAmenities }}" style="background: oklch(0.99 0.004 130); border: none; text-align: left; font: inherit; padding: 24px 22px; cursor: pointer; color: inherit;" style-hover="background: oklch(0.955 0.012 145);">
+              <span style="display: block; font-size: 16px; font-weight: 600; margin-bottom: 4px;">Reserve an amenity</span>
+              <span style="display: block; font-size: 14px; color: oklch(0.5 0.012 150);">Great Hall and cabanas</span>
+            </button>
+            <button type="button" onClick="{{ goDocuments }}" style="background: oklch(0.99 0.004 130); border: none; text-align: left; font: inherit; padding: 24px 22px; cursor: pointer; color: inherit;" style-hover="background: oklch(0.955 0.012 145);">
+              <span style="display: block; font-size: 16px; font-weight: 600; margin-bottom: 4px;">Documents</span>
+              <span style="display: block; font-size: 14px; color: oklch(0.5 0.012 150);">Bylaws, budgets, minutes</span>
+            </button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ viewPayments }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; gap: 28px;">
+          <div>
+            <h1 style="font-size: clamp(24px, 5vw, 32px); font-weight: 600; letter-spacing: -0.024em; margin: 0 0 8px;">Payments</h1>
+            <p style="margin: 0; font-size: 16px; color: oklch(0.5 0.012 150);">HOA fees, autopay, saved methods and your full ledger.</p>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+            <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 26px;">
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.56 0.015 150); margin: 0 0 14px;">Amount due</p>
+              <p style="margin: 0 0 4px; font-size: 44px; font-weight: 600; letter-spacing: -0.03em; line-height: 1;">{{ balance }}</p>
+              <p style="margin: 0 0 20px; font-size: 14px; color: oklch(0.5 0.012 150);">Due {{ dueDate }} · late fee applies after the 15th</p>
+              <div style="display: grid; gap: 14px;">
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Payment amount</span>
+                  <select value="{{ payAmountChoice }}" onChange="{{ setPayAmountChoice }}" style="width: 100%; appearance: none; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 40px 13px 14px; cursor: pointer;">
+                    <option value="full">Pay full balance — {{ balance }}</option>
+                    <option value="custom">Other amount</option>
+                  </select>
+                </label>
+                <sc-if value="{{ payCustom }}" hint-placeholder-val="{{ false }}">
+                  <label style="display: block;">
+                    <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Amount</span>
+                    <input type="text" value="{{ payCustomAmount }}" onChange="{{ setPayCustomAmount }}" placeholder="$0.00" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                  </label>
+                </sc-if>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Pay with</span>
+                  <select value="{{ payMethod }}" onChange="{{ setPayMethod }}" style="width: 100%; appearance: none; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 40px 13px 14px; cursor: pointer;">
+                    <sc-for list="{{ methods }}" as="m" hint-placeholder-count="2">
+                      <option value="{{ m.id }}">{{ m.label }}</option>
+                    </sc-for>
+                    <option value="new">Add a new payment method…</option>
+                  </select>
+                </label>
+                <sc-if value="{{ paySubmitted }}" hint-placeholder-val="{{ false }}">
+                  <p style="margin: 0; font-size: 15px; line-height: 1.55; color: oklch(0.4 0.04 155); background: oklch(0.95 0.02 152); border: 1px solid oklch(0.88 0.03 152); border-radius: 10px; padding: 14px;">{{ payConfirmation }}</p>
+                </sc-if>
+                <button type="button" onClick="{{ submitPayment }}" style="width: 100%; font: inherit; font-size: 16px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 15px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Submit payment</button>
+                <p style="margin: 0; font-size: 13px; color: oklch(0.58 0.012 150);">Bank transfers are free. Card payments add a 2.95% processor fee.</p>
+              </div>
+            </div>
+
+            <div style="display: grid; gap: 20px; align-content: start;">
+              <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 26px;">
+                <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 16px;">
+                  <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Autopay</h2>
+                  <button type="button" onClick="{{ toggleAutopay }}" style="font: inherit; font-size: 14px; font-weight: 500; background: none; border: 1px solid oklch(0.8 0.02 150); border-radius: 999px; padding: 11px 18px; cursor: pointer; color: oklch(0.32 0.02 150);" style-hover="border-color: oklch(0.5 0.04 155);">{{ autopayAction }}</button>
+                </div>
+                <p style="margin: 0; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">{{ autopayStatus }}</p>
+              </div>
+
+              <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+                <div style="padding: 20px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.93 0.008 140); display: flex; align-items: baseline; justify-content: space-between; gap: 16px;">
+                  <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Saved payment methods</h2>
+                  <a href="#" style="font-size: 14px;">Add method</a>
+                </div>
+                <div style="display: grid;">
+                  <sc-for list="{{ methods }}" as="m" hint-placeholder-count="2">
+                    <div style="padding: 14px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.95 0.006 140); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center;">
+                      <span>
+                        <span style="display: block; font-size: 15px; font-weight: 500;">{{ m.label }}</span>
+                        <span style="display: block; font-size: 13px; color: oklch(0.55 0.012 150); margin-top: 2px;">{{ m.note }}</span>
+                      </span>
+                      <a href="#" style="font-size: 14px;">Remove</a>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+            <div style="padding: 20px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.93 0.008 140); display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+              <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Ledger</h2>
+              <span style="font-size: 14px; color: oklch(0.52 0.012 150);">Statements posted on the 1st · <a href="#">download 2026 statement</a> · <a href="#">request a payment plan</a> · <a href="#">resale or lender certificate</a></span>
+            </div>
+            <div style="display: grid;">
+              <div style="display: grid; grid-template-columns: 88px minmax(120px, 1fr) 96px 96px; gap: 4px 12px; align-items: baseline; padding: 12px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.93 0.008 140);">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: oklch(0.56 0.015 150);">Date</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: oklch(0.56 0.015 150);">Description</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: oklch(0.56 0.015 150); text-align: right;">Amount</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: oklch(0.56 0.015 150); text-align: right;">Balance</span>
+              </div>
+              <sc-for list="{{ ledger }}" as="l" hint-placeholder-count="6">
+                <div style="display: grid; grid-template-columns: 88px minmax(120px, 1fr) 96px 96px; gap: 4px 12px; align-items: baseline; padding: 14px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.95 0.006 140); font-size: 15px;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: oklch(0.55 0.02 150);">{{ l.date }}</span>
+                  <span style="line-height: 1.45;">{{ l.label }}</span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; text-align: right; color: {{ l.color }};">{{ l.amount }}</span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; text-align: right; color: oklch(0.45 0.012 150);">{{ l.balance }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ viewMaintenance }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; gap: 28px;">
+          <div>
+            <h1 style="font-size: clamp(24px, 5vw, 32px); font-weight: 600; letter-spacing: -0.024em; margin: 0 0 8px;">Maintenance</h1>
+            <p style="margin: 0; font-size: 16px; color: oklch(0.5 0.012 150);">Common areas, gates, lighting and amenities. Repairs inside your home stay with you as the owner.</p>
+          </div>
+
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+            <div style="padding: 20px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.93 0.008 140);">
+              <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Your requests</h2>
+            </div>
+            <div style="display: grid;">
+              <sc-for list="{{ requests }}" as="r" hint-placeholder-count="3">
+                <div style="padding: 16px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.95 0.006 140); display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); justify-items: start; gap: 8px 20px; align-items: baseline;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.02 150);">{{ r.ref }}</span>
+                  <span>
+                    <span style="display: block; font-size: 16px; font-weight: 500;">{{ r.title }}</span>
+                    <span style="display: block; font-size: 14px; color: oklch(0.52 0.012 150); margin-top: 3px;">{{ r.detail }}</span>
+                  </span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: {{ r.statusColor }}; text-align: right;">{{ r.status }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 28px; max-width: 660px;">
+            <sc-if value="{{ requestSent }}" hint-placeholder-val="{{ false }}">
+              <div>
+                <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.5 0.03 155); margin: 0 0 12px;">Request received</p>
+                <p style="margin: 0 0 10px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em;">Reference {{ requestRef }}</p>
+                <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.6; color: oklch(0.45 0.012 150);">A manager reviews new requests each business morning. You'll get an email when a vendor is scheduled and again when the work is signed off.</p>
+                <button type="button" onClick="{{ resetRequest }}" style="font: inherit; font-size: 16px; font-weight: 500; background: none; border: 1px solid oklch(0.78 0.02 150); color: oklch(0.3 0.02 150); padding: 13px 22px; border-radius: 10px; cursor: pointer;" style-hover="border-color: oklch(0.5 0.04 155);">File another request</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ requestOpen }}" hint-placeholder-val="{{ true }}">
+              <div style="display: grid; gap: 18px;">
+                <h2 style="margin: 0; font-size: 19px; font-weight: 600;">New request</h2>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Where is it?</span>
+                  <input type="text" value="{{ reqLocation }}" onChange="{{ setReqLocation }}" placeholder="e.g. north gate keypad, pool deck" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Category</span>
+                  <select value="{{ reqCategory }}" onChange="{{ setReqCategory }}" style="width: 100%; appearance: none; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 40px 13px 14px; cursor: pointer;">
+                    <option value="">Select a category…</option>
+                    <option value="landscaping">Landscaping &amp; irrigation</option>
+                    <option value="gates">Gates &amp; access</option>
+                    <option value="lighting">Lighting</option>
+                    <option value="pool">Pool &amp; amenities</option>
+                    <option value="streets">Streets, curbs &amp; drainage</option>
+                    <option value="other">Something else</option>
+                  </select>
+                </label>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Urgency</span>
+                  <select value="{{ reqUrgency }}" onChange="{{ setReqUrgency }}" style="width: 100%; appearance: none; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 40px 13px 14px; cursor: pointer;">
+                    <option value="routine">Routine — next scheduled visit</option>
+                    <option value="soon">Soon — within a week</option>
+                    <option value="urgent">Urgent — safety or damage risk</option>
+                  </select>
+                </label>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">What's wrong?</span>
+                  <textarea value="{{ reqDetail }}" onChange="{{ setReqDetail }}" rows="4" placeholder="Describe what you saw and when." style="width: 100%; font: inherit; font-size: 16px; line-height: 1.55; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px; resize: vertical;"></textarea>
+                </label>
+                <div style="border: 1px dashed oklch(0.82 0.014 145); border-radius: 10px; padding: 20px; text-align: center;">
+                  <p style="margin: 0 0 4px; font-size: 15px; color: oklch(0.42 0.012 150);">Add a photo</p>
+                  <p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.015 150);">drag a file here or browse — optional</p>
+                </div>
+                <sc-if value="{{ requestError }}" hint-placeholder-val="{{ false }}">
+                  <p style="margin: -4px 0 0; font-size: 14px; color: oklch(0.48 0.11 30);">{{ requestError }}</p>
+                </sc-if>
+                <button type="button" onClick="{{ submitRequest }}" style="width: 100%; font: inherit; font-size: 16px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 15px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Submit request</button>
+                <p style="margin: 0; font-size: 14px; line-height: 1.55; color: oklch(0.52 0.012 150);">Anything unsafe — leaks, downed lines, gate failures — call <a href="tel:7132083539">713-208-3539</a> and press 9.</p>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ viewArchitectural }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; gap: 28px;">
+          <div>
+            <h1 style="font-size: clamp(24px, 5vw, 32px); font-weight: 600; letter-spacing: -0.024em; margin: 0 0 8px;">Architectural review</h1>
+            <p style="margin: 0; font-size: 16px; color: oklch(0.5 0.012 150);">Anything visible from the street needs written approval before work starts. Applications are answered within 30 days.</p>
+          </div>
+
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+            <div style="padding: 20px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.93 0.008 140);">
+              <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Your applications</h2>
+            </div>
+            <div style="display: grid;">
+              <sc-for list="{{ applications }}" as="a" hint-placeholder-count="2">
+                <div style="padding: 16px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.95 0.006 140); display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); justify-items: start; gap: 8px 20px; align-items: baseline;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.02 150);">{{ a.ref }}</span>
+                  <span>
+                    <span style="display: block; font-size: 16px; font-weight: 500;">{{ a.title }}</span>
+                    <span style="display: block; font-size: 14px; color: oklch(0.52 0.012 150); margin-top: 3px;">{{ a.detail }}</span>
+                  </span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: {{ a.statusColor }}; text-align: right;">{{ a.status }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 28px; max-width: 660px;">
+            <div style="display: grid; gap: 18px;">
+              <h2 style="margin: 0; font-size: 19px; font-weight: 600;">New application</h2>
+              <label style="display: block;">
+                <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Type of work</span>
+                <select value="{{ arcType }}" onChange="{{ setArcType }}" style="width: 100%; appearance: none; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 40px 13px 14px; cursor: pointer;">
+                  <option value="">Select the work…</option>
+                  <option value="paint">Exterior paint or stain</option>
+                  <option value="fence">Fence or gate</option>
+                  <option value="roof">Roof replacement</option>
+                  <option value="patio">Patio, deck or pergola</option>
+                  <option value="pool">Pool or spa</option>
+                  <option value="solar">Solar panels</option>
+                  <option value="landscape">Landscaping or trees</option>
+                  <option value="other">Something else</option>
+                </select>
+              </label>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 18px;">
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Planned start</span>
+                  <input type="text" value="{{ arcStart }}" onChange="{{ setArcStart }}" placeholder="MM / DD / YYYY" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Contractor</span>
+                  <input type="text" value="{{ arcContractor }}" onChange="{{ setArcContractor }}" placeholder="Company or self" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+              </div>
+              <label style="display: block;">
+                <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Materials, colors and scope</span>
+                <textarea value="{{ arcDetail }}" onChange="{{ setArcDetail }}" rows="4" placeholder="Describe the work, materials and finishes." style="width: 100%; font: inherit; font-size: 16px; line-height: 1.55; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px; resize: vertical;"></textarea>
+              </label>
+              <div style="border: 1px dashed oklch(0.82 0.014 145); border-radius: 10px; padding: 20px; text-align: center;">
+                <p style="margin: 0 0 4px; font-size: 15px; color: oklch(0.42 0.012 150);">Plans, site sketch and color samples</p>
+                <p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.015 150);">drag files here or browse — required</p>
+              </div>
+              <sc-if value="{{ arcSubmitted }}" hint-placeholder-val="{{ false }}">
+                <p style="margin: 0; font-size: 15px; line-height: 1.55; color: oklch(0.4 0.04 155); background: oklch(0.95 0.02 152); border: 1px solid oklch(0.88 0.03 152); border-radius: 10px; padding: 14px;">{{ arcMessage }}</p>
+              </sc-if>
+              <button type="button" onClick="{{ submitArc }}" style="width: 100%; font: inherit; font-size: 16px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 15px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Submit application</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ viewAmenities }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; gap: 28px;">
+          <div>
+            <h1 style="font-size: clamp(24px, 5vw, 32px); font-weight: 600; letter-spacing: -0.024em; margin: 0 0 8px;">Amenities</h1>
+            <p style="margin: 0; font-size: 16px; color: oklch(0.5 0.012 150);">Reserve shared spaces and check hours. Tags, gate codes and guest passes live under Access &amp; guests.</p>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
+            <sc-for list="{{ amenities }}" as="a" hint-placeholder-count="4">
+              <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 24px;">
+                <p style="margin: 0 0 6px; font-size: 17px; font-weight: 600;">{{ a.name }}</p>
+                <p style="margin: 0 0 6px; font-size: 14px; color: oklch(0.52 0.012 150);">{{ a.hours }}</p>
+                <p style="margin: 0 0 18px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.5 0.03 155);">{{ a.fee }}</p>
+                <button type="button" onClick="{{ a.reserve }}" style="width: 100%; font: inherit; font-size: 15px; font-weight: 500; background: {{ a.bg }}; border: 1px solid {{ a.border }}; color: {{ a.color }}; padding: 12px; border-radius: 10px; cursor: pointer;" style-hover="border-color: oklch(0.5 0.04 155);">{{ a.action }}</button>
+              </div>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ bookingOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 28px; max-width: 660px;">
+              <sc-if value="{{ bookingConfirmed }}" hint-placeholder-val="{{ false }}">
+                <div>
+                  <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.5 0.03 155); margin: 0 0 12px;">Reserved</p>
+                  <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.6; color: oklch(0.45 0.012 150);">{{ bookingConfirmation }}</p>
+                  <button type="button" onClick="{{ closeBooking }}" style="font: inherit; font-size: 15px; font-weight: 500; background: none; border: 1px solid oklch(0.78 0.02 150); color: oklch(0.3 0.02 150); padding: 12px 22px; border-radius: 10px; cursor: pointer;" style-hover="border-color: oklch(0.5 0.04 155);">Done</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ bookingForm }}" hint-placeholder-val="{{ true }}">
+                <div style="display: grid; gap: 16px;">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px;">
+                    <h2 style="margin: 0; font-size: 19px; font-weight: 600;">Reserve {{ bookingAmenity }}</h2>
+                    <button type="button" onClick="{{ closeBooking }}" style="background: none; border: none; padding: 10px 2px; font: inherit; font-size: 14px; color: oklch(0.5 0.012 150); cursor: pointer;">Cancel</button>
+                  </div>
+                  <p style="margin: 0; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">{{ bookingTerms }}</p>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px;">
+                    <label style="display: block;">
+                      <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Date</span>
+                      <input type="text" value="{{ bookingDate }}" onChange="{{ setBookingDate }}" placeholder="Apr 20" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px;" />
+                    </label>
+                    <label style="display: block;">
+                      <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Time</span>
+                      <input type="text" value="{{ bookingTime }}" onChange="{{ setBookingTime }}" placeholder="4–9PM" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px;" />
+                    </label>
+                    <label style="display: block;">
+                      <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Guests</span>
+                      <input type="text" value="{{ bookingGuests }}" onChange="{{ setBookingGuests }}" placeholder="Approx. count" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px;" />
+                    </label>
+                  </div>
+                  <label style="display: block;">
+                    <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">What's the occasion?</span>
+                    <input type="text" value="{{ bookingNote }}" onChange="{{ setBookingNote }}" placeholder="Optional" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px;" />
+                  </label>
+                  <sc-if value="{{ bookingError }}" hint-placeholder-val="{{ false }}">
+                    <p style="margin: 0; font-size: 14px; color: oklch(0.48 0.11 30);">{{ bookingError }}</p>
+                  </sc-if>
+                  <button type="button" onClick="{{ confirmBooking }}" style="justify-self: start; font: inherit; font-size: 15px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 13px 24px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Confirm reservation</button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+            <div style="padding: 20px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.93 0.008 140);">
+              <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Your reservations</h2>
+            </div>
+            <div style="display: grid;">
+              <sc-for list="{{ reservations }}" as="r" hint-placeholder-count="2">
+                <div style="padding: 16px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.95 0.006 140); display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); justify-items: start; gap: 20px; align-items: baseline;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: oklch(0.5 0.03 155);">{{ r.date }}</span>
+                  <span style="font-size: 15px;">{{ r.label }}</span>
+                  <a href="#" style="font-size: 14px;">Cancel</a>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ viewCompliance }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; gap: 28px;">
+          <div>
+            <h1 style="font-size: clamp(24px, 5vw, 32px); font-weight: 600; letter-spacing: -0.024em; margin: 0 0 8px;">Compliance</h1>
+            <p style="margin: 0; font-size: 16px; color: oklch(0.5 0.012 150);">Inspection notes, notices and how to respond or appeal.</p>
+          </div>
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+            <div style="padding: 20px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.93 0.008 140);">
+              <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Notice history</h2>
+            </div>
+            <div style="display: grid;">
+              <sc-for list="{{ notices }}" as="n" hint-placeholder-count="3">
+                <div style="padding: 16px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.95 0.006 140); display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); justify-items: start; gap: 8px 20px; align-items: baseline;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.02 150);">{{ n.date }}</span>
+                  <span>
+                    <span style="display: block; font-size: 16px; font-weight: 500;">{{ n.title }}</span>
+                    <span style="display: block; font-size: 14px; color: oklch(0.52 0.012 150); margin-top: 3px;">{{ n.detail }}</span>
+                  </span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: {{ n.statusColor }}; text-align: right;">{{ n.status }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="background: oklch(0.945 0.014 148); border: 1px solid oklch(0.9 0.012 145); border-radius: 16px; padding: 26px; max-width: 720px;">
+            <h2 style="margin: 0 0 10px; font-size: 17px; font-weight: 600;">Disagree with a notice?</h2>
+            <p style="margin: 0 0 18px; font-size: 15px; line-height: 1.65; color: oklch(0.45 0.012 150);">You may request a hearing before the board within 30 days of any notice. Bring photos, dates and any correspondence. Fines are suspended while a hearing is pending.</p>
+            <a href="#" style="display: inline-block; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); padding: 12px 22px; border-radius: 999px; font-size: 15px; font-weight: 500;" style-hover="background: oklch(0.34 0.05 155);">Request a hearing</a>
+          </div>
+
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 28px; max-width: 720px;">
+            <sc-if value="{{ concernSent }}" hint-placeholder-val="{{ false }}">
+              <div>
+                <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.5 0.03 155); margin: 0 0 12px;">Report received</p>
+                <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.6; color: oklch(0.45 0.012 150);">A manager will inspect within three business days. Reports are never shared with the neighbor named, and no fine is issued without an inspection.</p>
+                <button type="button" onClick="{{ resetConcern }}" style="font: inherit; font-size: 16px; font-weight: 500; background: none; border: 1px solid oklch(0.78 0.02 150); color: oklch(0.3 0.02 150); padding: 13px 22px; border-radius: 10px; cursor: pointer;" style-hover="border-color: oklch(0.5 0.04 155);">Report something else</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ concernOpen }}" hint-placeholder-val="{{ true }}">
+              <div style="display: grid; gap: 18px;">
+                <div>
+                  <h2 style="margin: 0 0 6px; font-size: 19px; font-weight: 600;">Report a concern</h2>
+                  <p style="margin: 0; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">Something in the neighborhood that looks like a rules problem. The office inspects before any notice goes out.</p>
+                </div>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">What kind of issue?</span>
+                  <select value="{{ concernType }}" onChange="{{ setConcernType }}" style="width: 100%; appearance: none; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 40px 13px 14px; cursor: pointer;">
+                    <option value="">Select a type…</option>
+                    <option value="yard">Yard or landscaping upkeep</option>
+                    <option value="trash">Trash bins or debris</option>
+                    <option value="parking">Parking or inoperable vehicle</option>
+                    <option value="exterior">Unapproved exterior work</option>
+                    <option value="noise">Noise or nuisance</option>
+                    <option value="pets">Pets off leash or waste</option>
+                    <option value="other">Something else</option>
+                  </select>
+                </label>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Where?</span>
+                  <input type="text" value="{{ concernLocation }}" onChange="{{ setConcernLocation }}" placeholder="Street address or nearest cross street" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">What did you see?</span>
+                  <textarea value="{{ concernDetail }}" onChange="{{ setConcernDetail }}" rows="4" placeholder="Describe the issue and when you noticed it." style="width: 100%; font: inherit; font-size: 16px; line-height: 1.55; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px; resize: vertical;"></textarea>
+                </label>
+                <div style="border: 1px dashed oklch(0.82 0.014 145); border-radius: 10px; padding: 18px; text-align: center;">
+                  <p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.015 150);">drag a photo here or browse — optional</p>
+                </div>
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; background: oklch(0.985 0.005 135); border: 1px solid oklch(0.9 0.012 145); border-radius: 10px; padding: 16px 18px;">
+                  <span style="font-size: 15px; line-height: 1.55; color: oklch(0.42 0.012 150);">Submit anonymously — your name is kept from the file, though the office still sees it.</span>
+                  <button type="button" onClick="{{ toggleAnonymous }}" style="font: inherit; font-size: 13px; font-weight: 500; border: 1px solid {{ anonBorder }}; background: {{ anonBg }}; color: {{ anonColor }}; border-radius: 999px; padding: 10px 15px; cursor: pointer; white-space: nowrap;">{{ anonLabel }}</button>
+                </div>
+                <sc-if value="{{ concernError }}" hint-placeholder-val="{{ false }}">
+                  <p style="margin: -4px 0 0; font-size: 14px; color: oklch(0.48 0.11 30);">{{ concernError }}</p>
+                </sc-if>
+                <button type="button" onClick="{{ submitConcern }}" style="justify-self: start; font: inherit; font-size: 16px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 14px 26px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Submit report</button>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ viewAccess }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; gap: 28px;">
+          <div>
+            <h1 style="font-size: clamp(24px, 5vw, 32px); font-weight: 600; letter-spacing: -0.024em; margin: 0 0 8px;">Access &amp; guests</h1>
+            <p style="margin: 0; font-size: 16px; color: oklch(0.5 0.012 150);">Gate codes, guest passes, registered vehicles and amenity tags for {{ propertyAddress }}.</p>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
+            <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 26px;">
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.56 0.015 150); margin: 0 0 14px;">Your gate code</p>
+              <p style="margin: 0 0 6px; font-family: 'IBM Plex Mono', monospace; font-size: 34px; font-weight: 500; letter-spacing: 0.08em;">{{ gateCode }}</p>
+              <p style="margin: 0 0 18px; font-size: 14px; color: oklch(0.5 0.012 150);">Rotates annually · last changed Jan 2026</p>
+              <button type="button" onClick="{{ rotateGateCode }}" style="width: 100%; font: inherit; font-size: 15px; font-weight: 500; background: none; border: 1px solid oklch(0.78 0.02 150); color: oklch(0.3 0.02 150); padding: 12px; border-radius: 10px; cursor: pointer;" style-hover="border-color: oklch(0.5 0.04 155);">Request a new code</button>
+            </div>
+            <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 26px;">
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.56 0.015 150); margin: 0 0 14px;">Amenity tags</p>
+              <p style="margin: 0 0 6px; font-size: 34px; font-weight: 600; letter-spacing: -0.02em; line-height: 1;">2 of 2</p>
+              <p style="margin: 0 0 18px; font-size: 14px; color: oklch(0.5 0.012 150);">Pool and fitness access · included with dues</p>
+              <a href="#" style="display: block; text-align: center; font-size: 15px; font-weight: 500; border: 1px solid oklch(0.78 0.02 150); color: oklch(0.3 0.02 150); padding: 12px; border-radius: 10px;" style-hover="border-color: oklch(0.5 0.04 155);">Request an extra tag</a>
+            </div>
+            <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 26px;">
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.56 0.015 150); margin: 0 0 14px;">Parking rules</p>
+              <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">Two driveway spaces per home. Street parking is limited to 24 hours; guests over 24 hours need a pass.</p>
+              <a href="#" style="font-size: 15px;">Read the parking policy</a>
+            </div>
+          </div>
+
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+            <div style="padding: 20px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.93 0.008 140);">
+              <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Active guest passes</h2>
+            </div>
+            <div style="display: grid;">
+              <sc-for list="{{ guestPasses }}" as="g" hint-placeholder-count="2">
+                <div style="padding: 16px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.95 0.006 140); display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); justify-items: start; gap: 8px 20px; align-items: baseline;">
+                  <span>
+                    <span style="display: block; font-size: 16px; font-weight: 500;">{{ g.name }}</span>
+                    <span style="display: block; font-size: 14px; color: oklch(0.52 0.012 150); margin-top: 3px;">{{ g.detail }}</span>
+                  </span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: oklch(0.45 0.05 155); white-space: nowrap;">{{ g.code }}</span>
+                  <button type="button" onClick="{{ g.revoke }}" style="background: none; border: none; padding: 10px 2px; font: inherit; font-size: 14px; color: oklch(0.5 0.09 30); cursor: pointer; white-space: nowrap;">Revoke</button>
+                </div>
+              </sc-for>
+            </div>
+            <div style="padding: 24px; display: grid; gap: 16px; max-width: 640px;">
+              <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Issue a guest pass</h3>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px;">
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Guest name</span>
+                  <input type="text" value="{{ guestName }}" onChange="{{ setGuestName }}" placeholder="First and last" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px;" />
+                </label>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Dates</span>
+                  <input type="text" value="{{ guestDates }}" onChange="{{ setGuestDates }}" placeholder="Apr 18–20" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px;" />
+                </label>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Vehicle plate</span>
+                  <input type="text" value="{{ guestPlate }}" onChange="{{ setGuestPlate }}" placeholder="Optional" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px;" />
+                </label>
+              </div>
+              <sc-if value="{{ guestError }}" hint-placeholder-val="{{ false }}">
+                <p style="margin: 0; font-size: 14px; color: oklch(0.48 0.11 30);">{{ guestError }}</p>
+              </sc-if>
+              <button type="button" onClick="{{ issueGuestPass }}" style="justify-self: start; font: inherit; font-size: 15px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Issue pass</button>
+            </div>
+          </div>
+
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 26px; max-width: 720px;">
+            <h2 style="margin: 0 0 8px; font-size: 17px; font-weight: 600;">Registered vehicles</h2>
+            <p style="margin: 0 0 18px; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">Gate remotes and amenity tags are tied to these vehicles.</p>
+            <div style="display: grid; gap: 12px;">
+              <sc-for list="{{ vehicles }}" as="v" hint-placeholder-count="2">
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: baseline; padding-bottom: 12px; border-bottom: 1px solid oklch(0.95 0.006 140);">
+                  <span style="font-size: 15px;">{{ v.label }}</span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.02 150);">{{ v.tag }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <a href="#" style="display: inline-block; margin-top: 16px; font-size: 15px;">Register another vehicle</a>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ viewCommunity }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; gap: 28px;">
+          <div>
+            <h1 style="font-size: clamp(24px, 5vw, 32px); font-weight: 600; letter-spacing: -0.024em; margin: 0 0 8px;">Community</h1>
+            <p style="margin: 0; font-size: 16px; color: oklch(0.5 0.012 150);">Announcements, the calendar, open votes, your board and the neighbor directory.</p>
+          </div>
+
+          <sc-if value="{{ voteOpen }}" hint-placeholder-val="{{ true }}">
+            <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.86 0.04 152); border-radius: 16px; padding: 28px; max-width: 720px;">
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.45 0.05 155); margin: 0 0 12px;">Open vote · closes May 17</p>
+              <h2 style="margin: 0 0 8px; font-size: 21px; font-weight: 600; letter-spacing: -0.015em;">2026 board election</h2>
+              <p style="margin: 0 0 20px; font-size: 15px; line-height: 1.65; color: oklch(0.45 0.012 150);">Two director seats are open. One ballot per lot. You may vote here or assign a proxy for the annual meeting.</p>
+              <div style="display: grid; gap: 10px; margin-bottom: 20px;">
+                <sc-for list="{{ ballot }}" as="b" hint-placeholder-count="4">
+                  <button type="button" onClick="{{ b.choose }}" style="text-align: left; font: inherit; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; border: 1px solid {{ b.border }}; background: {{ b.bg }}; border-radius: 12px; padding: 16px 18px; cursor: pointer; color: inherit;" style-hover="border-color: oklch(0.6 0.04 155);">
+                    <span>
+                      <span style="display: block; font-size: 16px; font-weight: 500;">{{ b.name }}</span>
+                      <span style="display: block; font-size: 14px; color: oklch(0.52 0.012 150); margin-top: 3px;">{{ b.note }}</span>
+                    </span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.45 0.05 155);">{{ b.mark }}</span>
+                  </button>
+                </sc-for>
+              </div>
+              <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                <button type="button" onClick="{{ castVote }}" style="font: inherit; font-size: 15px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 13px 24px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Cast ballot</button>
+                <a href="#" style="font-size: 15px;">Assign a proxy instead</a>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ voteCast }}" hint-placeholder-val="{{ false }}">
+            <div style="background: oklch(0.95 0.02 152); border: 1px solid oklch(0.88 0.03 152); border-radius: 16px; padding: 24px 26px; max-width: 720px;">
+              <p style="margin: 0; font-size: 16px; line-height: 1.6; color: oklch(0.34 0.03 152);">{{ voteConfirmation }}</p>
+            </div>
+          </sc-if>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+            <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+              <div style="padding: 20px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.93 0.008 140);">
+                <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Announcements</h2>
+              </div>
+              <div style="display: grid;">
+                <sc-for list="{{ announcements }}" as="a" hint-placeholder-count="4">
+                  <div style="padding: 16px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.95 0.006 140);">
+                    <p style="margin: 0 0 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.02 150);">{{ a.meta }}</p>
+                    <p style="margin: 0 0 4px; font-size: 16px; font-weight: 600; line-height: 1.35;">{{ a.title }}</p>
+                    <p style="margin: 0; font-size: 14px; line-height: 1.55; color: oklch(0.5 0.012 150);">{{ a.body }}</p>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+              <div style="padding: 20px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.93 0.008 140);">
+                <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Calendar</h2>
+              </div>
+              <div style="display: grid;">
+                <sc-for list="{{ calendar }}" as="c" hint-placeholder-count="4">
+                  <div style="padding: 16px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.95 0.006 140); display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); justify-items: start; gap: 8px 16px; align-items: baseline;">
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.5 0.03 155);">{{ c.date }}</span>
+                    <span>
+                      <span style="display: block; font-size: 15px; font-weight: 500;">{{ c.title }}</span>
+                      <span style="display: block; font-size: 14px; color: oklch(0.52 0.012 150); margin-top: 2px;">{{ c.detail }}</span>
+                    </span>
+                    <button type="button" onClick="{{ c.rsvp }}" style="font: inherit; font-size: 13px; font-weight: 500; border: 1px solid {{ c.border }}; background: {{ c.bg }}; color: {{ c.color }}; border-radius: 999px; padding: 10px 15px; cursor: pointer; white-space: nowrap;">{{ c.rsvpLabel }}</button>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+            <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+              <div style="padding: 20px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.93 0.008 140);">
+                <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Board &amp; committees</h2>
+              </div>
+              <div style="display: grid;">
+                <sc-for list="{{ board }}" as="b" hint-placeholder-count="5">
+                  <div style="padding: 14px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.95 0.006 140); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: baseline;">
+                    <span>
+                      <span style="display: block; font-size: 15px; font-weight: 500;">{{ b.name }}</span>
+                      <span style="display: block; font-size: 14px; color: oklch(0.52 0.012 150); margin-top: 2px;">{{ b.note }}</span>
+                    </span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.5 0.03 155); white-space: nowrap;">{{ b.role }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="display: grid; gap: 20px; align-content: start;">
+              <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+                <div style="padding: 20px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.93 0.008 140);">
+                  <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Approved vendors</h2>
+                </div>
+                <div style="display: grid;">
+                  <sc-for list="{{ vendors }}" as="v" hint-placeholder-count="4">
+                    <div style="padding: 15px 24px; border-bottom: 1px solid oklch(0.95 0.006 140); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: baseline;">
+                      <span style="font-size: 15px;">{{ v.name }}</span>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.02 150); white-space: nowrap;">{{ v.trade }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 26px;">
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center;">
+                  <span>
+                    <span style="display: block; font-size: 16px; font-weight: 600; margin-bottom: 4px;">Neighbor directory</span>
+                    <span style="display: block; font-size: 14px; line-height: 1.6; color: oklch(0.5 0.012 150);">{{ directoryStatus }}</span>
+                  </span>
+                  <button type="button" onClick="{{ toggleDirectory }}" style="font: inherit; font-size: 14px; font-weight: 500; background: none; border: 1px solid oklch(0.8 0.02 150); border-radius: 999px; padding: 11px 18px; cursor: pointer; color: oklch(0.32 0.02 150); white-space: nowrap;" style-hover="border-color: oklch(0.5 0.04 155);">{{ directoryAction }}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ viewDocuments }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; gap: 28px;">
+          <div>
+            <h1 style="font-size: clamp(24px, 5vw, 32px); font-weight: 600; letter-spacing: -0.024em; margin: 0 0 8px;">Documents</h1>
+            <p style="margin: 0; font-size: 16px; color: oklch(0.5 0.012 150);">Governing documents, financials, minutes and your own statements.</p>
+          </div>
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+            <div style="display: grid;">
+              <sc-for list="{{ documents }}" as="d" hint-placeholder-count="8">
+                <a href="#" style="padding: 16px clamp(16px, 2.4vw, 24px); border-bottom: 1px solid oklch(0.95 0.006 140); display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); justify-items: start; gap: 8px 28px; align-items: baseline; color: inherit;" style-hover="background: oklch(0.955 0.012 145);">
+                  <span style="font-size: 16px; font-weight: 500;">{{ d.title }}</span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.02 150); white-space: nowrap;">{{ d.meta }}</span>
+                  <span style="font-size: 15px; color: oklch(0.44 0.045 155); white-space: nowrap;">Download</span>
+                </a>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ viewMessages }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; gap: 20px;">
+          <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap;">
+            <div>
+              <h1 style="font-size: clamp(24px, 5vw, 32px); font-weight: 600; letter-spacing: -0.024em; margin: 0 0 8px;">Messages</h1>
+              <p style="margin: 0; font-size: 16px; color: oklch(0.5 0.012 150);">Correspondence with the management office, the board liaison and committees. Replies land here and in your email.</p>
+            </div>
+            <button type="button" onClick="{{ startCompose }}" style="font: inherit; font-size: 15px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 12px 22px; border-radius: 999px; cursor: pointer; white-space: nowrap;" style-hover="background: oklch(0.34 0.05 155);">New message</button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start;">
+
+            <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden;">
+              <div style="padding: 14px 16px; border-bottom: 1px solid oklch(0.93 0.008 140); display: flex; gap: 8px; flex-wrap: wrap;">
+                <sc-for list="{{ filters }}" as="f" hint-placeholder-count="4">
+                  <button type="button" onClick="{{ f.select }}" style="font: inherit; font-size: 13px; font-weight: 500; border: 1px solid {{ f.border }}; background: {{ f.bg }}; color: {{ f.color }}; border-radius: 999px; padding: 10px 15px; cursor: pointer;">{{ f.label }}</button>
+                </sc-for>
+              </div>
+              <div style="display: grid; max-height: 560px; overflow-y: auto;">
+                <sc-for list="{{ threads }}" as="t" hint-placeholder-count="5">
+                  <button type="button" onClick="{{ t.open }}" style="text-align: left; font: inherit; color: inherit; background: {{ t.bg }}; border: none; border-bottom: 1px solid oklch(0.95 0.006 140); border-left: 3px solid {{ t.accent }}; padding: 16px 18px; cursor: pointer; display: grid; gap: 5px;" style-hover="background: oklch(0.955 0.012 145);">
+                    <span style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+                      <span style="font-size: 13px; color: oklch(0.52 0.012 150);">{{ t.party }}</span>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: oklch(0.58 0.015 150); white-space: nowrap;">{{ t.date }}</span>
+                    </span>
+                    <span style="font-size: 15px; font-weight: {{ t.weight }}; line-height: 1.35;">{{ t.subject }}</span>
+                    <span style="font-size: 13px; line-height: 1.45; color: oklch(0.55 0.012 150); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ t.preview }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; overflow: hidden; min-height: 520px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto;">
+
+              <sc-if value="{{ composing }}" hint-placeholder-val="{{ false }}">
+                <div style="grid-row: 1 / -1; padding: 28px; display: grid; gap: 18px; align-content: start;">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px;">
+                    <h2 style="margin: 0; font-size: 19px; font-weight: 600;">New message</h2>
+                    <button type="button" onClick="{{ cancelCompose }}" style="background: none; border: none; padding: 10px 2px; font: inherit; font-size: 14px; color: oklch(0.5 0.012 150); cursor: pointer;">Cancel</button>
+                  </div>
+                  <label style="display: block;">
+                    <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Send to</span>
+                    <select value="{{ msgTo }}" onChange="{{ setMsgTo }}" style="width: 100%; appearance: none; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 40px 13px 14px; cursor: pointer;">
+                      <option value="Management office">Management office</option>
+                      <option value="Board liaison">Board liaison</option>
+                      <option value="Architectural Committee">Architectural Committee</option>
+                      <option value="Billing">Billing</option>
+                    </select>
+                  </label>
+                  <label style="display: block;">
+                    <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Subject</span>
+                    <input type="text" value="{{ msgSubject }}" onChange="{{ setMsgSubject }}" placeholder="Short summary" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                  </label>
+                  <label style="display: block;">
+                    <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Message</span>
+                    <textarea value="{{ msgBody }}" onChange="{{ setMsgBody }}" rows="7" placeholder="Tell us what you need. Include your lot number if it's about a specific address." style="width: 100%; font: inherit; font-size: 16px; line-height: 1.55; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px; resize: vertical;"></textarea>
+                  </label>
+                  <div style="border: 1px dashed oklch(0.82 0.014 145); border-radius: 10px; padding: 18px; text-align: center;">
+                    <p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.015 150);">drag a file here or browse — optional</p>
+                  </div>
+                  <sc-if value="{{ messageError }}" hint-placeholder-val="{{ false }}">
+                    <p style="margin: -4px 0 0; font-size: 14px; color: oklch(0.48 0.11 30);">{{ messageError }}</p>
+                  </sc-if>
+                  <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                    <button type="button" onClick="{{ sendNewMessage }}" style="font: inherit; font-size: 16px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 14px 26px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Send message</button>
+                    <span style="font-size: 14px; color: oklch(0.52 0.012 150);">The office replies within one business day.</span>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ readingThread }}" hint-placeholder-val="{{ true }}">
+                <div style="grid-row: 1 / -1; display: grid; grid-template-rows: auto minmax(0, 1fr) auto;">
+                  <div style="padding: 22px 26px; border-bottom: 1px solid oklch(0.93 0.008 140);">
+                    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+                      <h2 style="margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.015em;">{{ threadSubject }}</h2>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: {{ threadStatusColor }};">{{ threadStatus }}</span>
+                    </div>
+                    <p style="margin: 8px 0 0; font-size: 14px; color: oklch(0.52 0.012 150);">{{ threadMeta }}</p>
+                  </div>
+
+                  <div style="padding: 24px 26px; display: grid; gap: 18px; align-content: start; max-height: 460px; overflow-y: auto;">
+                    <sc-for list="{{ threadMessages }}" as="m" hint-placeholder-count="3">
+                      <div style="justify-self: {{ m.align }}; max-width: 78%; background: {{ m.bg }}; border: 1px solid {{ m.border }}; border-radius: 14px; padding: 16px 18px;">
+                        <span style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 8px;">
+                          <span style="font-size: 13px; font-weight: 600; color: {{ m.nameColor }};">{{ m.from }}</span>
+                          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: oklch(0.58 0.015 150); white-space: nowrap;">{{ m.time }}</span>
+                        </span>
+                        <span style="display: block; font-size: 15px; line-height: 1.6; color: oklch(0.28 0.014 150); white-space: pre-wrap;">{{ m.body }}</span>
+                        <sc-if value="{{ m.attachment }}" hint-placeholder-val="{{ false }}">
+                          <span style="display: inline-block; margin-top: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.44 0.045 155); border: 1px solid oklch(0.88 0.012 145); border-radius: 6px; padding: 6px 10px; background: oklch(0.99 0.004 130);">{{ m.attachment }}</span>
+                        </sc-if>
+                      </div>
+                    </sc-for>
+                  </div>
+
+                  <div style="padding: 20px 26px; border-top: 1px solid oklch(0.93 0.008 140); display: grid; gap: 12px;">
+                    <textarea value="{{ replyText }}" onChange="{{ setReplyText }}" rows="3" placeholder="Write a reply…" style="width: 100%; font: inherit; font-size: 15px; line-height: 1.55; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px; resize: vertical;"></textarea>
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.015 150);">attach a file — optional</span>
+                      <button type="button" onClick="{{ sendReply }}" style="font: inherit; font-size: 15px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Send reply</button>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ viewAccount }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; gap: 28px;">
+          <div>
+            <h1 style="font-size: clamp(24px, 5vw, 32px); font-weight: 600; letter-spacing: -0.024em; margin: 0 0 8px;">Account</h1>
+            <p style="margin: 0; font-size: 16px; color: oklch(0.5 0.012 150);">Your contact details, household, notifications and sign-in security.</p>
+          </div>
+
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 28px; max-width: 720px;">
+            <h2 style="margin: 0 0 20px; font-size: 19px; font-weight: 600;">Contact information</h2>
+            <div style="display: grid; gap: 18px;">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px;">
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Full name</span>
+                  <input type="text" value="{{ acctName }}" onChange="{{ setAcctName }}" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Email</span>
+                  <input type="text" value="{{ acctEmail }}" onChange="{{ setAcctEmail }}" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px;">
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Mobile</span>
+                  <input type="text" value="{{ acctPhone }}" onChange="{{ setAcctPhone }}" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Mailing address (if different)</span>
+                  <input type="text" value="{{ acctMailing }}" onChange="{{ setAcctMailing }}" placeholder="Same as property" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px;">
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Emergency contact name</span>
+                  <input type="text" value="{{ acctEmergencyName }}" onChange="{{ setAcctEmergencyName }}" placeholder="First and last" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+                <label style="display: block;">
+                  <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Emergency contact phone</span>
+                  <input type="text" value="{{ acctEmergencyPhone }}" onChange="{{ setAcctEmergencyPhone }}" placeholder="(713) 555-0100" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.985 0.005 135); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 13px 14px;" />
+                </label>
+              </div>
+              <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                <button type="button" onClick="{{ saveAccount }}" style="font: inherit; font-size: 16px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 13px 24px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Save changes</button>
+                <sc-if value="{{ accountSaved }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size: 15px; color: oklch(0.42 0.05 155);">Saved.</span>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 28px; max-width: 720px;">
+            <h2 style="margin: 0 0 6px; font-size: 19px; font-weight: 600;">Notifications</h2>
+            <p style="margin: 0 0 22px; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">Choose how each kind of notice reaches you. Emergency notices always go to both email and text.</p>
+            <div style="background: oklch(0.985 0.005 135); border: 1px solid oklch(0.9 0.012 145); border-radius: 12px; padding: 20px 22px; margin-bottom: 22px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px 20px; align-items: center;">
+              <span>
+                <span style="display: block; font-size: 16px; font-weight: 600; margin-bottom: 4px;">Permission to receive text messages</span>
+                <span style="display: block; font-size: 14px; line-height: 1.6; color: oklch(0.5 0.012 150);">{{ smsOptInStatus }}</span>
+              </span>
+              <button type="button" onClick="{{ toggleSmsOptIn }}" style="font: inherit; font-size: 14px; font-weight: 500; background: none; border: 1px solid oklch(0.8 0.02 150); border-radius: 999px; padding: 11px 18px; cursor: pointer; color: oklch(0.32 0.02 150); white-space: nowrap;" style-hover="border-color: oklch(0.5 0.04 155);">{{ smsOptInAction }}</button>
+              <span style="grid-column: 1 / -1; font-size: 13px; line-height: 1.6; color: oklch(0.55 0.012 150);">Message and data rates may apply. Message frequency varies. Reply STOP to unsubscribe or HELP for help. Texts go to {{ acctPhone }}.</span>
+            </div>
+            <div style="display: grid; gap: 1px; background: oklch(0.93 0.008 140); border: 1px solid oklch(0.93 0.008 140); border-radius: 12px; overflow: hidden;">
+              <div style="background: oklch(0.99 0.004 130); padding: 12px 18px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: oklch(0.56 0.015 150); flex: 1 1 150px;">Notice type</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: oklch(0.56 0.015 150); text-align: center; flex: 0 0 auto; min-width: 74px;">Email</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: oklch(0.56 0.015 150); text-align: center; flex: 0 0 auto; min-width: 74px;">Text</span>
+              </div>
+              <sc-for list="{{ notifications }}" as="n" hint-placeholder-count="5">
+                <div style="background: oklch(0.99 0.004 130); padding: 16px 18px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;">
+                  <span style="font-size: 15px; flex: 1 1 150px; min-width: 0;">{{ n.label }}</span>
+                  <button type="button" onClick="{{ n.toggleEmail }}" style="flex: 0 0 auto; min-width: 74px; text-align: center; font: inherit; font-size: 13px; font-weight: 500; border: 1px solid {{ n.emailBorder }}; background: {{ n.emailBg }}; color: {{ n.emailColor }}; border-radius: 999px; padding: 10px 15px; cursor: pointer;">{{ n.emailLabel }}</button>
+                  <button type="button" onClick="{{ n.toggleText }}" style="flex: 0 0 auto; min-width: 74px; text-align: center; font: inherit; font-size: 13px; font-weight: 500; border: 1px solid {{ n.textBorder }}; background: {{ n.textBg }}; color: {{ n.textColor }}; border-radius: 999px; padding: 10px 15px; cursor: pointer;">{{ n.textLabel }}</button>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 28px; max-width: 720px;">
+            <h2 style="margin: 0 0 6px; font-size: 19px; font-weight: 600;">Household &amp; contacts</h2>
+            <p style="margin: 0 0 22px; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">Everyone here can receive notices and speak to the office about this property. The owner of record can't be removed.</p>
+            <div style="display: grid; gap: 1px; background: oklch(0.93 0.008 140); border: 1px solid oklch(0.93 0.008 140); border-radius: 12px; overflow: hidden; margin-bottom: 20px;">
+              <sc-for list="{{ household }}" as="h" hint-placeholder-count="3">
+                <div style="background: oklch(0.99 0.004 130); padding: 18px 20px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 18px; align-items: start;">
+                  <span>
+                    <span style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
+                      <span style="font-size: 16px; font-weight: 500;">{{ h.name }}</span>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.5 0.03 155); border: 1px solid oklch(0.88 0.02 148); border-radius: 999px; padding: 2px 9px;">{{ h.role }}</span>
+                    </span>
+                    <span style="display: block; font-size: 14px; color: oklch(0.52 0.012 150); margin-top: 5px;">{{ h.contact }}</span>
+                  </span>
+                  <sc-if value="{{ h.removable }}" hint-placeholder-val="{{ true }}">
+                    <button type="button" onClick="{{ h.remove }}" style="background: none; border: none; padding: 10px 2px; font: inherit; font-size: 14px; color: oklch(0.5 0.09 30); cursor: pointer; white-space: nowrap;">Remove</button>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+
+            <sc-if value="{{ addingPerson }}" hint-placeholder-val="{{ false }}">
+              <div style="background: oklch(0.985 0.005 135); border: 1px solid oklch(0.9 0.012 145); border-radius: 12px; padding: 22px; display: grid; gap: 16px;">
+                <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px;">
+                  <span style="font-size: 16px; font-weight: 600;">Add a person</span>
+                  <button type="button" onClick="{{ cancelPerson }}" style="background: none; border: none; padding: 10px 2px; font: inherit; font-size: 14px; color: oklch(0.5 0.012 150); cursor: pointer;">Cancel</button>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px;">
+                  <label style="display: block;">
+                    <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Full name</span>
+                    <input type="text" value="{{ newPersonName }}" onChange="{{ setNewPersonName }}" placeholder="First and last" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.99 0.004 130); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px;" />
+                  </label>
+                  <label style="display: block;">
+                    <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Relationship</span>
+                    <select value="{{ newPersonRole }}" onChange="{{ setNewPersonRole }}" style="width: 100%; appearance: none; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.99 0.004 130); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 38px 12px 14px; cursor: pointer;">
+                      <option value="Co-owner">Co-owner</option>
+                      <option value="Spouse">Spouse or partner</option>
+                      <option value="Household member">Household member</option>
+                      <option value="Tenant">Tenant</option>
+                      <option value="Property manager">Property manager or agent</option>
+                      <option value="Emergency contact">Emergency contact</option>
+                    </select>
+                  </label>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px;">
+                  <label style="display: block;">
+                    <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Email</span>
+                    <input type="text" value="{{ newPersonEmail }}" onChange="{{ setNewPersonEmail }}" placeholder="name@example.com" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.99 0.004 130); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px;" />
+                  </label>
+                  <label style="display: block;">
+                    <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Mobile</span>
+                    <input type="text" value="{{ newPersonPhone }}" onChange="{{ setNewPersonPhone }}" placeholder="(713) 555-0100" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.99 0.004 130); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px;" />
+                  </label>
+                </div>
+                <sc-if value="{{ personError }}" hint-placeholder-val="{{ false }}">
+                  <p style="margin: 0; font-size: 14px; color: oklch(0.48 0.11 30);">{{ personError }}</p>
+                </sc-if>
+                <button type="button" onClick="{{ savePerson }}" style="justify-self: start; font: inherit; font-size: 15px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Add to household</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ notAddingPerson }}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: baseline;">
+                <button type="button" onClick="{{ startAddPerson }}" style="font: inherit; font-size: 15px; font-weight: 500; background: none; border: 1px solid oklch(0.8 0.02 150); border-radius: 999px; padding: 10px 20px; cursor: pointer; color: oklch(0.32 0.02 150);" style-hover="border-color: oklch(0.5 0.04 155);">Add a person</button>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 28px; max-width: 720px;">
+            <h2 style="margin: 0 0 6px; font-size: 19px; font-weight: 600;">Pets</h2>
+            <p style="margin: 0 0 22px; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">Registration is required for dogs and cats. Three pets per home, current rabies tag on file, leashed in all common areas.</p>
+            <div style="display: grid; gap: 1px; background: oklch(0.93 0.008 140); border: 1px solid oklch(0.93 0.008 140); border-radius: 12px; overflow: hidden; margin-bottom: 20px;">
+              <sc-for list="{{ pets }}" as="p" hint-placeholder-count="2">
+                <div style="background: oklch(0.99 0.004 130); padding: 18px 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); justify-items: start; gap: 8px 16px; align-items: center;">
+                  <image-slot id="{{ p.slotId }}" style="width: 112px; height: 112px;" shape="circle" placeholder="photo"></image-slot>
+                  <span>
+                    <span style="display: block; font-size: 16px; font-weight: 500;">{{ p.name }}</span>
+                    <span style="display: block; font-size: 14px; color: oklch(0.52 0.012 150); margin-top: 3px;">{{ p.detail }}</span>
+                  </span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: {{ p.statusColor }}; white-space: nowrap;">{{ p.status }}</span>
+                  <button type="button" onClick="{{ p.remove }}" style="background: none; border: none; padding: 10px 2px; font: inherit; font-size: 14px; color: oklch(0.5 0.09 30); cursor: pointer; white-space: nowrap;">Remove</button>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ addingPet }}" hint-placeholder-val="{{ false }}">
+              <div style="background: oklch(0.985 0.005 135); border: 1px solid oklch(0.9 0.012 145); border-radius: 12px; padding: 22px; display: grid; gap: 16px;">
+                <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px;">
+                  <span style="font-size: 16px; font-weight: 600;">Register a pet</span>
+                  <button type="button" onClick="{{ cancelPet }}" style="background: none; border: none; padding: 10px 2px; font: inherit; font-size: 14px; color: oklch(0.5 0.012 150); cursor: pointer;">Cancel</button>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px;">
+                  <label style="display: block;">
+                    <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Pet name</span>
+                    <input type="text" value="{{ petName }}" onChange="{{ setPetName }}" placeholder="e.g. Juniper" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.99 0.004 130); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px;" />
+                  </label>
+                  <label style="display: block;">
+                    <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Type</span>
+                    <select value="{{ petType }}" onChange="{{ setPetType }}" style="width: 100%; appearance: none; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.99 0.004 130); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 38px 12px 14px; cursor: pointer;">
+                      <option value="Dog">Dog</option>
+                      <option value="Cat">Cat</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </label>
+                  <label style="display: block;">
+                    <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Breed &amp; weight</span>
+                    <input type="text" value="{{ petBreed }}" onChange="{{ setPetBreed }}" placeholder="e.g. Beagle, 24 lb" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.99 0.004 130); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px;" />
+                  </label>
+                  <label style="display: block;">
+                    <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Rabies tag no.</span>
+                    <input type="text" value="{{ petTag }}" onChange="{{ setPetTag }}" placeholder="From the vet certificate" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.99 0.004 130); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px;" />
+                  </label>
+                </div>
+                <div style="display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; align-items: center;">
+                  <image-slot id="pet-new-photo" style="width: 112px; height: 112px;" shape="circle" placeholder="photo"></image-slot>
+                  <div style="display: grid; gap: 10px;">
+                    <span style="font-size: 14px; line-height: 1.55; color: oklch(0.45 0.012 150);">Drop a photo of your pet — it helps the office and your neighbors return them if they get out.</span>
+                    <div style="border: 1px dashed oklch(0.82 0.014 145); border-radius: 10px; padding: 14px; text-align: center;">
+                      <p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.015 150);">vaccination record — drag a file here or browse</p>
+                    </div>
+                  </div>
+                </div>
+                <sc-if value="{{ petError }}" hint-placeholder-val="{{ false }}">
+                  <p style="margin: 0; font-size: 14px; color: oklch(0.48 0.11 30);">{{ petError }}</p>
+                </sc-if>
+                <button type="button" onClick="{{ savePet }}" style="justify-self: start; font: inherit; font-size: 15px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Register pet</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ notAddingPet }}" hint-placeholder-val="{{ true }}">
+              <button type="button" onClick="{{ startAddPet }}" style="font: inherit; font-size: 15px; font-weight: 500; background: none; border: 1px solid oklch(0.8 0.02 150); border-radius: 999px; padding: 10px 20px; cursor: pointer; color: oklch(0.32 0.02 150);" style-hover="border-color: oklch(0.5 0.04 155);">Register a pet</button>
+            </sc-if>
+          </div>
+
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 28px; max-width: 720px;">
+            <h2 style="margin: 0 0 6px; font-size: 19px; font-weight: 600;">Tenants &amp; leases</h2>
+            <p style="margin: 0 0 22px; font-size: 15px; line-height: 1.6; color: oklch(0.45 0.012 150);">If you lease the home, the association needs the tenant on file and a copy of the lease. The owner stays responsible for dues and for the tenant's compliance.</p>
+            <div style="display: grid; gap: 1px; background: oklch(0.93 0.008 140); border: 1px solid oklch(0.93 0.008 140); border-radius: 12px; overflow: hidden; margin-bottom: 20px;">
+              <sc-for list="{{ leases }}" as="l" hint-placeholder-count="1">
+                <div style="background: oklch(0.99 0.004 130); padding: 18px 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); justify-items: start; gap: 8px 18px; align-items: baseline;">
+                  <span>
+                    <span style="display: block; font-size: 16px; font-weight: 500;">{{ l.tenant }}</span>
+                    <span style="display: block; font-size: 14px; color: oklch(0.52 0.012 150); margin-top: 3px;">{{ l.detail }}</span>
+                  </span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: {{ l.statusColor }}; white-space: nowrap;">{{ l.status }}</span>
+                  <sc-if value="{{ l.removable }}" hint-placeholder-val="{{ false }}">
+                    <button type="button" onClick="{{ l.remove }}" style="background: none; border: none; padding: 10px 2px; font: inherit; font-size: 14px; color: oklch(0.5 0.09 30); cursor: pointer; white-space: nowrap;">End lease</button>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ addingLease }}" hint-placeholder-val="{{ false }}">
+              <div style="background: oklch(0.985 0.005 135); border: 1px solid oklch(0.9 0.012 145); border-radius: 12px; padding: 22px; display: grid; gap: 16px;">
+                <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px;">
+                  <span style="font-size: 16px; font-weight: 600;">Register a lease</span>
+                  <button type="button" onClick="{{ cancelLease }}" style="background: none; border: none; padding: 10px 2px; font: inherit; font-size: 14px; color: oklch(0.5 0.012 150); cursor: pointer;">Cancel</button>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px;">
+                  <label style="display: block;">
+                    <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Tenant name</span>
+                    <input type="text" value="{{ leaseTenant }}" onChange="{{ setLeaseTenant }}" placeholder="First and last" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.99 0.004 130); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px;" />
+                  </label>
+                  <label style="display: block;">
+                    <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Tenant contact</span>
+                    <input type="text" value="{{ leaseContact }}" onChange="{{ setLeaseContact }}" placeholder="Email or mobile" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.99 0.004 130); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px;" />
+                  </label>
+                  <label style="display: block;">
+                    <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Lease term</span>
+                    <input type="text" value="{{ leaseTerm }}" onChange="{{ setLeaseTerm }}" placeholder="e.g. Jun 2026 – May 2027" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.99 0.004 130); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px;" />
+                  </label>
+                  <label style="display: block;">
+                    <span style="display: block; font-size: 14px; color: oklch(0.45 0.012 150); margin-bottom: 8px;">Occupants</span>
+                    <input type="text" value="{{ leaseOccupants }}" onChange="{{ setLeaseOccupants }}" placeholder="How many people" style="width: 100%; font: inherit; font-size: 16px; color: oklch(0.26 0.014 150); background: oklch(0.99 0.004 130); border: 1px solid oklch(0.86 0.012 145); border-radius: 10px; padding: 12px 14px;" />
+                  </label>
+                </div>
+                <div style="border: 1px dashed oklch(0.82 0.014 145); border-radius: 10px; padding: 18px; text-align: center;">
+                  <p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: oklch(0.55 0.015 150);">signed lease (PDF) — drag a file here or browse</p>
+                </div>
+                <sc-if value="{{ leaseError }}" hint-placeholder-val="{{ false }}">
+                  <p style="margin: 0; font-size: 14px; color: oklch(0.48 0.11 30);">{{ leaseError }}</p>
+                </sc-if>
+                <button type="button" onClick="{{ saveLease }}" style="justify-self: start; font: inherit; font-size: 15px; font-weight: 500; background: oklch(0.42 0.05 155); color: oklch(0.97 0.008 140); border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer;" style-hover="background: oklch(0.34 0.05 155);">Register lease</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ notAddingLease }}" hint-placeholder-val="{{ true }}">
+              <button type="button" onClick="{{ startAddLease }}" style="font: inherit; font-size: 15px; font-weight: 500; background: none; border: 1px solid oklch(0.8 0.02 150); border-radius: 999px; padding: 10px 20px; cursor: pointer; color: oklch(0.32 0.02 150);" style-hover="border-color: oklch(0.5 0.04 155);">Register a tenant or lease</button>
+            </sc-if>
+          </div>
+
+          <div style="background: oklch(0.99 0.004 130); border: 1px solid oklch(0.9 0.01 140); border-radius: 16px; padding: 28px; max-width: 720px;">
+            <h2 style="margin: 0 0 20px; font-size: 19px; font-weight: 600;">Sign-in &amp; security</h2>
+            <div style="display: grid; gap: 18px;">
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; padding-bottom: 18px; border-bottom: 1px solid oklch(0.95 0.006 140);">
+                <span>
+                  <span style="display: block; font-size: 16px; font-weight: 500;">Password</span>
+                  <span style="display: block; font-size: 14px; color: oklch(0.52 0.012 150); margin-top: 3px;">Last changed 8 months ago</span>
+                </span>
+                <a href="#" style="font-size: 15px;">Change</a>
+              </div>
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; padding-bottom: 18px; border-bottom: 1px solid oklch(0.95 0.006 140);">
+                <span>
+                  <span style="display: block; font-size: 16px; font-weight: 500;">Two-factor authentication</span>
+                  <span style="display: block; font-size: 14px; color: oklch(0.52 0.012 150); margin-top: 3px;">{{ twoFactorStatus }}</span>
+                </span>
+                <button type="button" onClick="{{ toggleTwoFactor }}" style="font: inherit; font-size: 14px; font-weight: 500; background: none; border: 1px solid oklch(0.8 0.02 150); border-radius: 999px; padding: 11px 18px; cursor: pointer; color: oklch(0.32 0.02 150);" style-hover="border-color: oklch(0.5 0.04 155);">{{ twoFactorAction }}</button>
+              </div>
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; padding-bottom: 18px; border-bottom: 1px solid oklch(0.95 0.006 140);">
+                <span>
+                  <span style="display: block; font-size: 16px; font-weight: 500;">Signed-in devices</span>
+                  <span style="display: block; font-size: 14px; color: oklch(0.52 0.012 150); margin-top: 3px;">3 active sessions · Houston, TX</span>
+                </span>
+                <a href="#" style="font-size: 15px;">Sign out all</a>
+              </div>
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center;">
+                <span>
+                  <span style="display: block; font-size: 16px; font-weight: 500;">Paperless statements</span>
+                  <span style="display: block; font-size: 14px; color: oklch(0.52 0.012 150); margin-top: 3px;">{{ paperlessStatus }}</span>
+                </span>
+                <button type="button" onClick="{{ togglePaperless }}" style="font: inherit; font-size: 14px; font-weight: 500; background: none; border: 1px solid oklch(0.8 0.02 150); border-radius: 999px; padding: 11px 18px; cursor: pointer; color: oklch(0.32 0.02 150);" style-hover="border-color: oklch(0.5 0.04 155);">{{ paperlessAction }}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+const PROPERTIES = [
+  { id: "sofi", name: "Sofi Lakes", address: "1420 Willow Bend Ln · Lot 214", account: "40218", balance: "$285.00", due: "April 1", cadence: "Quarterly", alert: "Water service to Willow Bend will be interrupted Thursday, 9AM–2PM, for main line repair." },
+  { id: "cypress", name: "Cypress Reserve", address: "308 Heron Ct · Lot 62", account: "51877", balance: "$0.00", due: "July 1", cadence: "Quarterly", alert: "" },
+  { id: "brookfield", name: "Brookfield Commons", address: "9B The Row", account: "22940", balance: "$140.00", due: "April 1", cadence: "Monthly", alert: "Pool closed through Saturday for resurfacing." }
+];
+
+const NAV = [
+  { id: "overview", label: "Overview", group: "Your home" },
+  { id: "payments", label: "Payments", group: "Your home" },
+  { id: "maintenance", label: "Maintenance", badge: "1", group: "Requests" },
+  { id: "architectural", label: "Architectural", group: "Requests" },
+  { id: "compliance", label: "Compliance", group: "Requests" },
+  { id: "amenities", label: "Amenities", group: "Neighborhood" },
+  { id: "access", label: "Access & guests", group: "Neighborhood" },
+  { id: "community", label: "Community", group: "Neighborhood" },
+  { id: "messages", label: "Messages", badge: "unread", group: "Inbox & records" },
+  { id: "documents", label: "Documents", group: "Inbox & records" },
+  { id: "account", label: "Account", group: "Inbox & records" }
+];
+
+const ACTIVITY = [
+  { date: "Mar 28", label: "Payment received — bank transfer", amount: "−$285.00", credit: true },
+  { date: "Mar 12", label: "Maintenance request UG-418223 opened", amount: "—", credit: true },
+  { date: "Jan 02", label: "Q1 HOA fees posted", amount: "$285.00", credit: false },
+  { date: "Dec 29", label: "Payment received — bank transfer", amount: "−$285.00", credit: true },
+  { date: "Oct 01", label: "Q4 HOA fees posted", amount: "$285.00", credit: false }
+];
+
+const UPCOMING = [
+  { date: "Apr 01", title: "Q2 HOA fees due", detail: "$285.00 · autopay is off" },
+  { date: "Apr 14", title: "Board meeting", detail: "6:30 PM, Clubhouse Annex" },
+  { date: "Apr 19", title: "Spring shred day", detail: "9AM–noon, north lot" },
+  { date: "Apr 26", title: "Pool opening weekend", detail: "Amenity tags required" }
+];
+
+const LEDGER = [
+  { date: "Mar 28", label: "Payment — bank transfer ····4471", amount: "−$285.00", balance: "$0.00", credit: true },
+  { date: "Jan 02", label: "Q1 2026 HOA fees", amount: "$285.00", balance: "$285.00", credit: false },
+  { date: "Dec 29", label: "Payment — bank transfer ····4471", amount: "−$285.00", balance: "$0.00", credit: true },
+  { date: "Oct 01", label: "Q4 2025 HOA fees", amount: "$285.00", balance: "$285.00", credit: false },
+  { date: "Jul 08", label: "Payment — Visa ····2210", amount: "−$293.41", balance: "$0.00", credit: true },
+  { date: "Jul 01", label: "Q3 2025 HOA fees + card fee", amount: "$293.41", balance: "$293.41", credit: false }
+];
+
+const REQUESTS = [
+  { ref: "UG-418223", title: "North gate keypad intermittent", detail: "Reported Mar 12 · vendor scheduled Tuesday", status: "In progress", open: true },
+  { ref: "UG-402118", title: "Streetlight out — Willow Bend cul-de-sac", detail: "Reported Feb 04 · bulb replaced Feb 09", status: "Closed", open: false },
+  { ref: "UG-391044", title: "Irrigation head spraying sidewalk", detail: "Reported Jan 22 · head realigned Jan 24", status: "Closed", open: false }
+];
+
+const APPLICATIONS = [
+  { ref: "ARC-2261", title: "Backyard pergola, cedar", detail: "Submitted Mar 02 · committee review Mar 18", status: "Approved", ok: true },
+  { ref: "ARC-2104", title: "Exterior repaint — Sandstone", detail: "Submitted Aug 2025 · closed out Oct 2025", status: "Completed", ok: true }
+];
+
+const AMENITIES = [
+  { name: "Great Hall", hours: "Daily, 8AM–10PM", fee: "$150 + $200 deposit", action: "Reserve" },
+  { name: "Pool cabanas", hours: "Seasonal, 8AM–8PM", fee: "$40 per half day", action: "Reserve" },
+  { name: "Clubhouse Annex", hours: "Daily, 7AM–9PM", fee: "No fee for owners", action: "Reserve" },
+  { name: "Tennis & pickleball", hours: "Daily, 6AM–10PM", fee: "No fee · 90-minute blocks", action: "Book a court" }
+];
+
+const RESERVATIONS = [
+  { date: "Apr 20", label: "Great Hall · 4–9PM · birthday party" },
+  { date: "May 02", label: "Pickleball court 2 · 6–7:30PM" }
+];
+
+const VEHICLES = [
+  { label: "2021 Subaru Outback · TX 4KJ-2210", tag: "Tag 214-A" },
+  { label: "2018 Honda CR-V · TX 9BR-7714", tag: "Tag 214-B" }
+];
+
+const COMPLIANCE = [
+  { date: "Feb 18", title: "Trash bins visible from street", detail: "Courtesy notice · resolved at re-inspection Feb 25", status: "Resolved", ok: true },
+  { date: "Sep 2025", title: "Lawn height over 8 inches", detail: "Courtesy notice · resolved Sep 12", status: "Resolved", ok: true },
+  { date: "May 2025", title: "Annual inspection", detail: "No findings", status: "Clear", ok: true }
+];
+
+const DOCUMENTS = [
+  { title: "Declaration of Covenants, Conditions & Restrictions", meta: "PDF · 2.4 MB · amended 2023" },
+  { title: "Bylaws of the Association", meta: "PDF · 640 KB · amended 2021" },
+  { title: "Architectural Design Guidelines", meta: "PDF · 1.1 MB · revised 2024" },
+  { title: "Collection & Late Fee Policy", meta: "PDF · 210 KB · adopted 2022" },
+  { title: "Approved Operating Budget", meta: "PDF · 380 KB · fiscal 2026" },
+  { title: "Reserve Study Summary", meta: "PDF · 720 KB · updated 2025" },
+  { title: "Board meeting minutes — archive", meta: "Folder · 36 documents" },
+  { title: "Your annual statement — 2025", meta: "PDF · 96 KB · account 40218" }
+];
+
+const THREADS = [
+  {
+    id: "t1", party: "Management office", subject: "Re: north gate keypad", date: "Mar 26", unread: true, status: "Open",
+    messages: [
+      { from: "You", mine: true, time: "Mar 12, 8:04 AM", body: "The keypad at the north gate takes three or four tries before it reads a code. It's been like this since the weekend." },
+      { from: "Elena Cruz · Community manager", mine: false, time: "Mar 12, 9:31 AM", body: "Thanks for flagging it — I've opened request UG-418223 and sent it to our access vendor. They'll diagnose whether it's the reader or the wiring." },
+      { from: "Elena Cruz · Community manager", mine: false, time: "Mar 26, 2:12 PM", body: "Vendor is confirmed for Tuesday morning, 8–11AM. The gate will run in open position while they work, so expect it propped during that window.", attachment: "vendor-schedule.pdf · 88 KB" }
+    ]
+  },
+  {
+    id: "t2", party: "Architectural Committee", subject: "Pergola application approved", date: "Mar 04", unread: true, status: "Closed",
+    messages: [
+      { from: "You", mine: true, time: "Mar 02, 6:40 PM", body: "Submitting plans for a cedar pergola off the back patio. Drawings and stain sample attached.", attachment: "pergola-plans.pdf · 1.2 MB" },
+      { from: "Architectural Committee", mine: false, time: "Mar 04, 11:15 AM", body: "Approved with two conditions: stain must match the existing trim, and the 5-foot rear setback is maintained. Let us know when the work is finished so we can close the file.", attachment: "ARC-2261-approval.pdf · 210 KB" }
+    ]
+  },
+  {
+    id: "t3", party: "Management office", subject: "Re: trash bin courtesy notice", date: "Feb 25", unread: false, status: "Closed",
+    messages: [
+      { from: "Management office", mine: false, time: "Feb 18, 10:02 AM", body: "A courtesy notice was issued for bins visible from the street. No fine — just move them behind the gate by Feb 25 and we'll close it." },
+      { from: "You", mine: true, time: "Feb 18, 7:22 PM", body: "Moved them the same evening. Thanks for the heads up." },
+      { from: "Management office", mine: false, time: "Feb 25, 9:10 AM", body: "Re-inspection complete, notice closed. Appreciate the quick fix." }
+    ]
+  },
+  {
+    id: "t4", party: "Billing", subject: "Q1 HOA fees posted", date: "Jan 05", unread: false, status: "Closed",
+    messages: [
+      { from: "Billing", mine: false, time: "Jan 05, 7:00 AM", body: "Your Q1 2026 HOA fees of $285.00 has posted and is due April 1. The statement is in Documents.", attachment: "statement-q1-2026.pdf · 96 KB" }
+    ]
+  }
+];
+
+const FILTERS = [
+  { id: "all", label: "All" },
+  { id: "unread", label: "Unread" },
+  { id: "office", label: "Office" },
+  { id: "committee", label: "Committees" }
+];
+
+const NOTIFY = [
+  { id: "billing", label: "Billing & statements" },
+  { id: "maintenance", label: "Maintenance updates" },
+  { id: "arc", label: "Architectural decisions" },
+  { id: "compliance", label: "Compliance notices" },
+  { id: "community", label: "Community news & events" },
+  { id: "meetings", label: "Meeting agendas & minutes" }
+];
+
+const HOUSEHOLD = [
+  { id: "h1", name: "Dana Whitfield", role: "Owner of record", contact: "dana.whitfield@example.com · (713) 555-0142", locked: true },
+  { id: "h2", name: "Sam Whitfield", role: "Spouse", contact: "sam.whitfield@example.com · (713) 555-0188" },
+  { id: "h3", name: "Nora Whitfield", role: "Household member", contact: "nora.w@example.com" }
+];
+
+const ANNOUNCEMENTS = [
+  { meta: "Mar 24 · Grounds", title: "Spring landscaping begins along the lake path", body: "Drought-resistant native plantings replace the seasonal beds. Crews work weekday mornings through April." },
+  { meta: "Mar 20 · Safety", title: "Touchless entry at the north gate", body: "Existing remotes keep working through the transition. Register your tag at the office or in Access & guests." },
+  { meta: "Mar 11 · Finance", title: "2026 budget adopted", body: "Dues hold at $285 per quarter. The reserve contribution rises 4% to fund the 2028 street overlay." },
+  { meta: "Feb 28 · Amenities", title: "Great Hall booking window extended", body: "Owners can now reserve up to six months out, two events per household per year." }
+];
+
+const CALENDAR = [
+  { id: "e1", date: "Apr 14", title: "Board meeting", detail: "6:30 PM · Clubhouse Annex · open forum first" },
+  { id: "e2", date: "Apr 19", title: "Spring shred day", detail: "9AM–noon · north lot · two boxes per household" },
+  { id: "e3", date: "Apr 26", title: "Pool opening weekend", detail: "8AM · amenity tags required" },
+  { id: "e4", date: "May 17", title: "Annual meeting & resident gala", detail: "6PM · Great Hall · election results and 2026 budget" }
+];
+
+const CANDIDATES = [
+  { id: "c1", name: "Marisol Reyes", note: "Incumbent · Willow Bend · reserve funding focus" },
+  { id: "c2", name: "Anthony Okafor", note: "Incumbent · Heron Court · architectural review" },
+  { id: "c3", name: "Priya Raman", note: "The Row · landscaping and traffic calming" },
+  { id: "c4", name: "Tom Delgado", note: "Lakeside Drive · vendor contract review" }
+];
+
+const BOARD = [
+  { name: "Marisol Reyes", role: "President", note: "Willow Bend · second term" },
+  { name: "Anthony Okafor", role: "Vice president", note: "Heron Court · architectural liaison" },
+  { name: "Grace Lindqvist", role: "Treasurer", note: "The Row · reviews monthly financials" },
+  { name: "Dev Patel", role: "Secretary", note: "Lakeside Drive · minutes and roster" },
+  { name: "Carol Whitfield", role: "Director", note: "Willow Bend · chairs the Social Committee" }
+];
+
+const VENDORS = [
+  { name: "Bayou Green Landscaping", trade: "Landscaping" },
+  { name: "Clearwater Pool Service", trade: "Pool" },
+  { name: "Gulf Access Systems", trade: "Gates & entry" },
+  { name: "Harris Electric Co.", trade: "Lighting" },
+  { name: "Katy Tree & Limb", trade: "Tree work" }
+];
+
+class Component extends DCLogic {
+  state = {
+    view: "overview", active: "sofi", switcherOpen: false, vw: 1200, navOpen: false,
+    payChoice: "full", payCustomAmount: "", payMethod: "ach", paySubmitted: false,
+    autopay: false, paperless: true, twoFactor: false, smsOptIn: true,
+    reqLocation: "", reqCategory: "", reqUrgency: "routine", reqDetail: "", reqSent: false, reqError: "", reqRef: "",
+    arcType: "", arcStart: "", arcContractor: "", arcDetail: "", arcSubmitted: false,
+    msgTo: "Management office", msgSubject: "", msgBody: "", msgError: "",
+    threads: THREADS, threadId: "t1", filter: "all", composing: false, replyText: "",
+    acctName: "Dana Whitfield", acctEmail: "dana.whitfield@example.com", acctPhone: "(713) 555-0142", acctMailing: "", acctEmergencyName: "Sam Whitfield", acctEmergencyPhone: "(713) 555-0188",
+    accountSaved: false,
+    reservations: RESERVATIONS,
+    bookingAmenity: "", bookingTerms: "", bookingDate: "", bookingTime: "", bookingGuests: "", bookingNote: "", bookingError: "", bookingConfirmed: false,
+    gateCode: "4 8 2 1 6", guestName: "", guestDates: "", guestPlate: "", guestError: "",
+    guestPasses: [
+      { id: "g1", name: "Marta Reyes", detail: "Apr 12–14 · TX 7PQ-4410", code: "GP-2288" },
+      { id: "g2", name: "Cleaning service — Aurora Home", detail: "Every other Friday · standing pass", code: "GP-1904" }
+    ],
+    rsvps: { e1: false, e2: true, e3: false, e4: true },
+    ballotChoice: "", voteCast: false, directoryListed: true,
+    concernType: "", concernLocation: "", concernDetail: "", concernAnonymous: false, concernSent: false, concernError: "",
+    pets: [
+      { id: "p1", name: "Juniper", detail: "Dog · Beagle mix, 24 lb · rabies tag TX-88142", status: "Registered", ok: true },
+      { id: "p2", name: "Ash", detail: "Cat · indoor · rabies tag TX-77210", status: "Renewal due", ok: false }
+    ],
+    addingPet: false, petName: "", petType: "Dog", petBreed: "", petTag: "", petError: "",
+    leases: [
+      { id: "l1", tenant: "No active lease", detail: "Owner-occupied since 2019", status: "Owner-occupied", ok: true, locked: true }
+    ],
+    addingLease: false, leaseTenant: "", leaseContact: "", leaseTerm: "", leaseOccupants: "", leaseError: "",
+    household: HOUSEHOLD, addingPerson: false, personError: "",
+    newPersonName: "", newPersonRole: "Spouse", newPersonEmail: "", newPersonPhone: "",
+    notify: { billing: { email: true, text: true }, maintenance: { email: true, text: true }, arc: { email: true, text: false }, compliance: { email: true, text: false }, community: { email: true, text: false }, meetings: { email: false, text: false } }
+  };
+
+  componentDidMount() {
+    this.onResize = () => this.setState({ vw: window.innerWidth });
+    window.addEventListener("resize", this.onResize);
+    this.setState({ vw: window.innerWidth });
+  }
+
+  componentWillUnmount() {
+    if (this.onResize) window.removeEventListener("resize", this.onResize);
+  }
+
+  field(key) {
+    return (e) => this.setState({ [key]: e.target.value });
+  }
+
+  toggleNotify(id, channel) {
+    return () => this.setState(s => {
+      const next = Object.assign({}, s.notify);
+      next[id] = Object.assign({}, next[id]);
+      next[id][channel] = !next[id][channel];
+      return { notify: next };
+    });
+  }
+
+  renderVals() {
+    const s = this.state;
+    const p = PROPERTIES.find(x => x.id === s.active) || PROPERTIES[0];
+    const view = s.view;
+    const allThreads = s.threads || THREADS;
+    const visible = allThreads.filter(t => {
+      if (s.filter === "unread") return t.unread;
+      if (s.filter === "office") return t.party === "Management office" || t.party === "Billing";
+      if (s.filter === "committee") return t.party.indexOf("Committee") > -1 || t.party === "Board liaison";
+      return true;
+    });
+    const thread = allThreads.find(t => t.id === s.threadId) || visible[0] || allThreads[0];
+    const onLabel = "On";
+    const offLabel = "Off";
+
+    const chip = (on) => ({
+      label: on ? onLabel : offLabel,
+      bg: on ? "oklch(0.93 0.03 152)" : "oklch(0.985 0.005 135)",
+      border: on ? "oklch(0.82 0.04 152)" : "oklch(0.88 0.012 145)",
+      color: on ? "oklch(0.38 0.05 155)" : "oklch(0.55 0.012 150)"
+    });
+
+    return {
+      residentName: s.acctName,
+      firstName: s.acctName.split(" ")[0],
+      initials: s.acctName.split(" ").map(w => w[0]).join("").slice(0, 2),
+      propertyName: p.name,
+      propertyAddress: p.address,
+      accountNumber: p.account,
+      balance: p.balance,
+      dueDate: p.due,
+      cadence: p.cadence,
+      alertActive: !!p.alert,
+      alertText: p.alert,
+
+      switcherOpen: s.switcherOpen,
+      toggleSwitcher: () => this.setState(st => ({ switcherOpen: !st.switcherOpen })),
+      properties: PROPERTIES.map(x => ({
+        name: x.name,
+        address: x.address,
+        mark: x.id === s.active ? "viewing" : "",
+        select: () => this.setState({ active: x.id, switcherOpen: false })
+      })),
+
+      nav: NAV.map(n => ({
+        label: n.label,
+        badge: n.badge === "unread" ? (allThreads.filter(t => t.unread).length || "") : (n.badge || ""),
+        weight: n.id === view ? "600" : "400",
+        bg: n.id === view ? "oklch(0.99 0.004 130)" : "transparent",
+        border: n.id === view ? "oklch(0.88 0.012 145)" : "transparent",
+        color: n.id === view ? "oklch(0.24 0.02 150)" : "oklch(0.42 0.012 150)",
+        go: () => { this.setState({ view: n.id, navOpen: false }); if (typeof window !== "undefined") window.scrollTo(0, 0); }
+      })),
+      mobileNav: (s.vw || 1200) < 760,
+      deskNav: !((s.vw || 1200) < 760),
+      navOpen: s.navOpen,
+      toggleNav: () => this.setState(st => ({ navOpen: !st.navOpen })),
+      navToggleLabel: s.navOpen ? "Close" : "Menu",
+      currentSection: (NAV.find(n => n.id === view) || { label: "Overview" }).label,
+      currentGroup: (NAV.find(n => n.id === view) || { group: "Your home" }).group,
+      navGroups: ["Your home", "Requests", "Neighborhood", "Inbox & records"].map(name => ({
+        name: name,
+        items: NAV.filter(n => n.group === name).map(n => ({
+          label: n.label,
+          badge: n.badge || "",
+          sheetBg: n.id === view ? "oklch(0.955 0.018 150)" : "transparent",
+          color: n.id === view ? "oklch(0.28 0.03 152)" : "oklch(0.32 0.014 150)",
+          weight: n.id === view ? "600" : "400",
+          mark: n.id === view ? "viewing" : "",
+          go: () => { this.setState({ view: n.id, navOpen: false }); if (typeof window !== "undefined") window.scrollTo(0, 0); }
+        }))
+      })),
+      viewOverview: view === "overview",
+      viewPayments: view === "payments",
+      viewMaintenance: view === "maintenance",
+      viewArchitectural: view === "architectural",
+      viewAmenities: view === "amenities",
+      viewCompliance: view === "compliance",
+      viewAccess: view === "access",
+      viewCommunity: view === "community",
+      viewDocuments: view === "documents",
+      viewMessages: view === "messages",
+      viewAccount: view === "account",
+      goPayments: () => this.setState({ view: "payments" }),
+      goMaintenance: () => this.setState({ view: "maintenance" }),
+      goArchitectural: () => this.setState({ view: "architectural" }),
+      goAmenities: () => this.setState({ view: "amenities" }),
+      goDocuments: () => this.setState({ view: "documents" }),
+      goCompliance: () => this.setState({ view: "compliance" }),
+
+      openRequestCount: String(REQUESTS.filter(r => r.open).length),
+      openRequestNote: "Gate keypad — vendor scheduled Tuesday",
+      standing: "Good standing",
+      standingNote: "No open violations · last inspection Feb 25",
+      activity: ACTIVITY.map(a => ({ date: a.date, label: a.label, amount: a.amount, color: a.credit ? "oklch(0.45 0.05 155)" : "oklch(0.35 0.014 150)" })),
+      upcoming: UPCOMING,
+
+      payAmountChoice: s.payChoice,
+      setPayAmountChoice: this.field("payChoice"),
+      payCustom: s.payChoice === "custom",
+      payCustomAmount: s.payCustomAmount,
+      setPayCustomAmount: this.field("payCustomAmount"),
+      payMethod: s.payMethod,
+      setPayMethod: this.field("payMethod"),
+      methods: [
+        { id: "ach", label: "Bank transfer ····4471", note: "Wells Fargo checking · no fee" },
+        { id: "visa", label: "Visa ····2210", note: "Expires 09/28 · 2.95% fee" }
+      ],
+      paySubmitted: s.paySubmitted,
+      payConfirmation: "Payment scheduled for today. A receipt is on its way to " + s.acctEmail + ".",
+      submitPayment: () => this.setState({ paySubmitted: true }),
+      autopayStatus: s.autopay
+        ? "On — the full balance is drafted from bank transfer ····4471 three days before each due date."
+        : "Off — you'll get an email reminder ten days before each due date.",
+      autopayAction: s.autopay ? "Turn off" : "Turn on",
+      toggleAutopay: () => this.setState(st => ({ autopay: !st.autopay })),
+      ledger: LEDGER.map(l => ({ date: l.date, label: l.label, amount: l.amount, balance: l.balance, color: l.credit ? "oklch(0.45 0.05 155)" : "oklch(0.3 0.014 150)" })),
+
+      requests: REQUESTS.map(r => ({
+        ref: r.ref, title: r.title, detail: r.detail, status: r.status,
+        statusColor: r.open ? "oklch(0.45 0.06 155)" : "oklch(0.58 0.012 150)"
+      })),
+      requestOpen: !s.reqSent,
+      requestSent: s.reqSent,
+      requestRef: s.reqRef,
+      requestError: s.reqError,
+      reqLocation: s.reqLocation,
+      reqCategory: s.reqCategory,
+      reqUrgency: s.reqUrgency,
+      reqDetail: s.reqDetail,
+      setReqLocation: this.field("reqLocation"),
+      setReqCategory: this.field("reqCategory"),
+      setReqUrgency: this.field("reqUrgency"),
+      setReqDetail: this.field("reqDetail"),
+      submitRequest: () => {
+        if (!s.reqLocation.trim() || !s.reqCategory) return this.setState({ reqError: "Tell us where the problem is and pick a category." });
+        this.setState({ reqSent: true, reqError: "", reqRef: "UG-" + Math.floor(100000 + Math.random() * 899999) });
+      },
+      resetRequest: () => this.setState({ reqSent: false, reqLocation: "", reqCategory: "", reqDetail: "", reqRef: "" }),
+
+      applications: APPLICATIONS.map(a => ({
+        ref: a.ref, title: a.title, detail: a.detail, status: a.status,
+        statusColor: a.ok ? "oklch(0.45 0.06 155)" : "oklch(0.5 0.09 60)"
+      })),
+      arcType: s.arcType, setArcType: this.field("arcType"),
+      arcStart: s.arcStart, setArcStart: this.field("arcStart"),
+      arcContractor: s.arcContractor, setArcContractor: this.field("arcContractor"),
+      arcDetail: s.arcDetail, setArcDetail: this.field("arcDetail"),
+      arcSubmitted: s.arcSubmitted,
+      arcMessage: "Application received. The committee meets twice monthly and answers within 30 days.",
+      submitArc: () => this.setState({ arcSubmitted: true }),
+
+      amenities: AMENITIES.map(a => {
+        const on = s.bookingAmenity === a.name;
+        return {
+          name: a.name, hours: a.hours, fee: a.fee,
+          action: on ? "Selected" : a.action,
+          bg: on ? "oklch(0.93 0.03 152)" : "none",
+          border: on ? "oklch(0.82 0.04 152)" : "oklch(0.78 0.02 150)",
+          color: on ? "oklch(0.36 0.05 155)" : "oklch(0.3 0.02 150)",
+          reserve: () => this.setState({ bookingAmenity: a.name, bookingTerms: a.fee + " · " + a.hours, bookingConfirmed: false, bookingError: "" })
+        };
+      }),
+      reservations: s.reservations || RESERVATIONS,
+      bookingOpen: !!s.bookingAmenity,
+      bookingForm: !!s.bookingAmenity && !s.bookingConfirmed,
+      bookingConfirmed: s.bookingConfirmed,
+      bookingAmenity: s.bookingAmenity,
+      bookingTerms: s.bookingTerms,
+      bookingDate: s.bookingDate, setBookingDate: this.field("bookingDate"),
+      bookingTime: s.bookingTime, setBookingTime: this.field("bookingTime"),
+      bookingGuests: s.bookingGuests, setBookingGuests: this.field("bookingGuests"),
+      bookingNote: s.bookingNote, setBookingNote: this.field("bookingNote"),
+      bookingError: s.bookingError,
+      bookingConfirmation: s.bookingAmenity + " is held for " + s.bookingDate + ", " + s.bookingTime + ". A confirmation and any deposit instructions are on the way by email.",
+      closeBooking: () => this.setState({ bookingAmenity: "", bookingConfirmed: false, bookingDate: "", bookingTime: "", bookingGuests: "", bookingNote: "", bookingError: "" }),
+      confirmBooking: () => {
+        if (!s.bookingDate.trim() || !s.bookingTime.trim()) return this.setState({ bookingError: "Add a date and a time." });
+        const entry = { date: s.bookingDate.trim(), label: s.bookingAmenity + " · " + s.bookingTime.trim() + (s.bookingNote.trim() ? " · " + s.bookingNote.trim() : "") };
+        this.setState(st => ({
+          reservations: (st.reservations || RESERVATIONS).concat([entry]),
+          bookingConfirmed: true
+        }));
+      },
+      vehicles: VEHICLES,
+
+      notices: COMPLIANCE.map(n => ({
+        date: n.date, title: n.title, detail: n.detail, status: n.status,
+        statusColor: n.ok ? "oklch(0.45 0.06 155)" : "oklch(0.5 0.09 60)"
+      })),
+
+      documents: DOCUMENTS,
+
+      filters: FILTERS.map(f => ({
+        label: f.label,
+        bg: f.id === s.filter ? "oklch(0.93 0.03 152)" : "oklch(0.985 0.005 135)",
+        border: f.id === s.filter ? "oklch(0.82 0.04 152)" : "oklch(0.9 0.012 145)",
+        color: f.id === s.filter ? "oklch(0.36 0.05 155)" : "oklch(0.48 0.012 150)",
+        select: () => this.setState({ filter: f.id })
+      })),
+      threads: visible.map(t => ({
+        party: t.party,
+        subject: t.subject,
+        date: t.date,
+        preview: t.messages[t.messages.length - 1].body,
+        weight: t.unread ? "600" : "500",
+        bg: t.id === s.threadId ? "oklch(0.96 0.012 148)" : "oklch(0.99 0.004 130)",
+        accent: t.unread ? "oklch(0.55 0.06 155)" : "transparent",
+        open: () => this.setState(st => ({
+          threadId: t.id,
+          composing: false,
+          replyText: "",
+          threads: st.threads.map(x => x.id === t.id ? Object.assign({}, x, { unread: false }) : x)
+        }))
+      })),
+      readingThread: !s.composing,
+      composing: s.composing,
+      startCompose: () => this.setState({ composing: true, msgSubject: "", msgBody: "", msgError: "" }),
+      cancelCompose: () => this.setState({ composing: false, msgError: "" }),
+      threadSubject: thread.subject,
+      threadMeta: thread.party + " · " + thread.messages.length + (thread.messages.length === 1 ? " message" : " messages") + " · last activity " + thread.date,
+      threadStatus: thread.status,
+      threadStatusColor: thread.status === "Open" ? "oklch(0.45 0.06 155)" : "oklch(0.6 0.012 150)",
+      threadMessages: thread.messages.map(m => ({
+        from: m.from,
+        time: m.time,
+        body: m.body,
+        attachment: m.attachment || "",
+        align: m.mine ? "end" : "start",
+        bg: m.mine ? "oklch(0.955 0.018 150)" : "oklch(0.985 0.005 135)",
+        border: m.mine ? "oklch(0.89 0.022 150)" : "oklch(0.92 0.008 140)",
+        nameColor: m.mine ? "oklch(0.4 0.05 155)" : "oklch(0.42 0.012 150)"
+      })),
+      replyText: s.replyText,
+      setReplyText: this.field("replyText"),
+      sendReply: () => {
+        if (!s.replyText.trim()) return;
+        const text = s.replyText.trim();
+        this.setState(st => ({
+          replyText: "",
+          threads: st.threads.map(t => t.id === st.threadId
+            ? Object.assign({}, t, { status: "Open", date: "Today", messages: t.messages.concat([{ from: "You", mine: true, time: "Today, just now", body: text }]) })
+            : t)
+        }));
+      },
+      messageError: s.msgError,
+      msgTo: s.msgTo, setMsgTo: this.field("msgTo"),
+      msgSubject: s.msgSubject, setMsgSubject: this.field("msgSubject"),
+      msgBody: s.msgBody, setMsgBody: this.field("msgBody"),
+      sendNewMessage: () => {
+        if (!s.msgSubject.trim() || !s.msgBody.trim()) return this.setState({ msgError: "Add a subject and a message." });
+        const id = "t" + Date.now();
+        const created = {
+          id: id, party: s.msgTo, subject: s.msgSubject.trim(), date: "Today", unread: false, status: "Open",
+          messages: [{ from: "You", mine: true, time: "Today, just now", body: s.msgBody.trim() }]
+        };
+        this.setState(st => ({
+          threads: [created].concat(st.threads),
+          threadId: id, composing: false, msgSubject: "", msgBody: "", msgError: ""
+        }));
+      },
+
+      acctName: s.acctName, setAcctName: this.field("acctName"),
+      acctEmail: s.acctEmail, setAcctEmail: this.field("acctEmail"),
+      acctPhone: s.acctPhone, setAcctPhone: this.field("acctPhone"),
+      acctMailing: s.acctMailing, setAcctMailing: this.field("acctMailing"),
+      acctEmergencyName: s.acctEmergencyName, setAcctEmergencyName: this.field("acctEmergencyName"),
+      acctEmergencyPhone: s.acctEmergencyPhone, setAcctEmergencyPhone: this.field("acctEmergencyPhone"),
+      accountSaved: s.accountSaved,
+      saveAccount: () => this.setState({ accountSaved: true }),
+
+      smsOptInStatus: s.smsOptIn
+        ? "Opted in — text alerts are on for the categories selected below."
+        : "Not opted in — we'll only email you. Emergency notices still go by email.",
+      smsOptInAction: s.smsOptIn ? "Opt out" : "Opt in",
+      toggleSmsOptIn: () => this.setState(st => ({ smsOptIn: !st.smsOptIn })),
+
+      notifications: NOTIFY.map(n => {
+        const st = s.notify[n.id] || { email: false, text: false };
+        const e = chip(st.email);
+        const t = chip(st.text);
+        return {
+          label: n.label,
+          emailLabel: e.label, emailBg: e.bg, emailBorder: e.border, emailColor: e.color,
+          textLabel: t.label, textBg: t.bg, textBorder: t.border, textColor: t.color,
+          toggleEmail: this.toggleNotify(n.id, "email"),
+          toggleText: this.toggleNotify(n.id, "text")
+        };
+      }),
+
+      gateCode: s.gateCode,
+      rotateGateCode: () => this.setState({ gateCode: String(Math.floor(10000 + Math.random() * 89999)).split("").join(" ") }),
+      guestPasses: (s.guestPasses || []).map(g => ({
+        name: g.name, detail: g.detail, code: g.code,
+        revoke: () => this.setState(st => ({ guestPasses: st.guestPasses.filter(x => x.id !== g.id) }))
+      })),
+      guestName: s.guestName, setGuestName: this.field("guestName"),
+      guestDates: s.guestDates, setGuestDates: this.field("guestDates"),
+      guestPlate: s.guestPlate, setGuestPlate: this.field("guestPlate"),
+      guestError: s.guestError,
+      issueGuestPass: () => {
+        if (!s.guestName.trim() || !s.guestDates.trim()) return this.setState({ guestError: "Add the guest's name and the dates they'll be here." });
+        const pass = {
+          id: "g" + Date.now(),
+          name: s.guestName.trim(),
+          detail: s.guestDates.trim() + (s.guestPlate.trim() ? " · " + s.guestPlate.trim() : ""),
+          code: "GP-" + Math.floor(1000 + Math.random() * 8999)
+        };
+        this.setState(st => ({ guestPasses: st.guestPasses.concat([pass]), guestName: "", guestDates: "", guestPlate: "", guestError: "" }));
+      },
+
+      announcements: ANNOUNCEMENTS,
+      calendar: CALENDAR.map(e => {
+        const on = !!s.rsvps[e.id];
+        return {
+          date: e.date, title: e.title, detail: e.detail,
+          rsvpLabel: on ? "Going" : "RSVP",
+          bg: on ? "oklch(0.93 0.03 152)" : "oklch(0.985 0.005 135)",
+          border: on ? "oklch(0.82 0.04 152)" : "oklch(0.9 0.012 145)",
+          color: on ? "oklch(0.36 0.05 155)" : "oklch(0.48 0.012 150)",
+          rsvp: () => this.setState(st => {
+            const next = Object.assign({}, st.rsvps);
+            next[e.id] = !next[e.id];
+            return { rsvps: next };
+          })
+        };
+      }),
+      voteOpen: !s.voteCast,
+      voteCast: s.voteCast,
+      voteConfirmation: "Ballot recorded for " + (CANDIDATES.find(c => c.id === s.ballotChoice) || { name: "your selection" }).name + ". Results are announced at the annual meeting on May 17.",
+      ballot: CANDIDATES.map(c => ({
+        name: c.name, note: c.note,
+        mark: c.id === s.ballotChoice ? "selected" : "",
+        bg: c.id === s.ballotChoice ? "oklch(0.96 0.018 150)" : "oklch(0.99 0.004 130)",
+        border: c.id === s.ballotChoice ? "oklch(0.72 0.05 152)" : "oklch(0.9 0.012 145)",
+        choose: () => this.setState({ ballotChoice: c.id })
+      })),
+      castVote: () => { if (s.ballotChoice) this.setState({ voteCast: true }); },
+      board: BOARD,
+      vendors: VENDORS,
+      directoryStatus: s.directoryListed
+        ? "You're listed. Neighbors can see your name and street — never your email, phone or balance."
+        : "You're hidden. You can still see neighbors who chose to be listed.",
+      directoryAction: s.directoryListed ? "Hide me" : "List me",
+      toggleDirectory: () => this.setState(st => ({ directoryListed: !st.directoryListed })),
+
+      concernOpen: !s.concernSent,
+      concernSent: s.concernSent,
+      concernError: s.concernError,
+      concernType: s.concernType, setConcernType: this.field("concernType"),
+      concernLocation: s.concernLocation, setConcernLocation: this.field("concernLocation"),
+      concernDetail: s.concernDetail, setConcernDetail: this.field("concernDetail"),
+      anonLabel: s.concernAnonymous ? "Anonymous" : "Include my name",
+      anonBg: s.concernAnonymous ? "oklch(0.93 0.03 152)" : "oklch(0.99 0.004 130)",
+      anonBorder: s.concernAnonymous ? "oklch(0.82 0.04 152)" : "oklch(0.88 0.012 145)",
+      anonColor: s.concernAnonymous ? "oklch(0.36 0.05 155)" : "oklch(0.48 0.012 150)",
+      toggleAnonymous: () => this.setState(st => ({ concernAnonymous: !st.concernAnonymous })),
+      submitConcern: () => {
+        if (!s.concernType) return this.setState({ concernError: "Pick the kind of issue." });
+        if (!s.concernLocation.trim()) return this.setState({ concernError: "Tell us where it is." });
+        this.setState({ concernSent: true, concernError: "" });
+      },
+      resetConcern: () => this.setState({ concernSent: false, concernType: "", concernLocation: "", concernDetail: "" }),
+
+      household: (s.household || HOUSEHOLD).map(h => ({
+        name: h.name,
+        role: h.role,
+        contact: h.contact || "No contact details on file",
+        removable: !h.locked,
+        remove: () => this.setState(st => ({ household: st.household.filter(x => x.id !== h.id) }))
+      })),
+      pets: (s.pets || []).map(p => ({
+        name: p.name, detail: p.detail, status: p.status, slotId: "pet-" + p.id,
+        statusColor: p.ok ? "oklch(0.45 0.06 155)" : "oklch(0.5 0.09 60)",
+        remove: () => this.setState(st => ({ pets: st.pets.filter(x => x.id !== p.id) }))
+      })),
+      addingPet: s.addingPet,
+      notAddingPet: !s.addingPet,
+      startAddPet: () => this.setState({ addingPet: true, petError: "" }),
+      cancelPet: () => this.setState({ addingPet: false, petError: "", petName: "", petBreed: "", petTag: "" }),
+      petError: s.petError,
+      petName: s.petName, setPetName: this.field("petName"),
+      petType: s.petType, setPetType: this.field("petType"),
+      petBreed: s.petBreed, setPetBreed: this.field("petBreed"),
+      petTag: s.petTag, setPetTag: this.field("petTag"),
+      savePet: () => {
+        if (!s.petName.trim()) return this.setState({ petError: "Add the pet's name." });
+        if (!s.petTag.trim()) return this.setState({ petError: "A current rabies tag number is required." });
+        const detail = [s.petType, s.petBreed.trim(), "rabies tag " + s.petTag.trim()].filter(Boolean).join(" · ");
+        this.setState(st => ({
+          pets: st.pets.concat([{ id: "p" + Date.now(), name: st.petName.trim(), detail: detail, status: "Registered", ok: true }]),
+          addingPet: false, petName: "", petBreed: "", petTag: "", petError: ""
+        }));
+      },
+
+      leases: (s.leases || []).map(l => ({
+        tenant: l.tenant, detail: l.detail, status: l.status,
+        statusColor: l.ok ? "oklch(0.45 0.06 155)" : "oklch(0.5 0.09 60)",
+        removable: !l.locked,
+        remove: () => this.setState(st => {
+          const rest = st.leases.filter(x => x.id !== l.id);
+          return { leases: rest.length ? rest : [{ id: "l0", tenant: "No active lease", detail: "Owner-occupied", status: "Owner-occupied", ok: true, locked: true }] };
+        })
+      })),
+      addingLease: s.addingLease,
+      notAddingLease: !s.addingLease,
+      startAddLease: () => this.setState({ addingLease: true, leaseError: "" }),
+      cancelLease: () => this.setState({ addingLease: false, leaseError: "", leaseTenant: "", leaseContact: "", leaseTerm: "", leaseOccupants: "" }),
+      leaseError: s.leaseError,
+      leaseTenant: s.leaseTenant, setLeaseTenant: this.field("leaseTenant"),
+      leaseContact: s.leaseContact, setLeaseContact: this.field("leaseContact"),
+      leaseTerm: s.leaseTerm, setLeaseTerm: this.field("leaseTerm"),
+      leaseOccupants: s.leaseOccupants, setLeaseOccupants: this.field("leaseOccupants"),
+      saveLease: () => {
+        if (!s.leaseTenant.trim() || !s.leaseContact.trim()) return this.setState({ leaseError: "Add the tenant's name and a way to reach them." });
+        if (!s.leaseTerm.trim()) return this.setState({ leaseError: "Add the lease term." });
+        const detail = [s.leaseTerm.trim(), s.leaseContact.trim(), s.leaseOccupants.trim() ? s.leaseOccupants.trim() + " occupants" : ""].filter(Boolean).join(" · ");
+        this.setState(st => ({
+          leases: st.leases.filter(x => !x.locked).concat([{ id: "l" + Date.now(), tenant: st.leaseTenant.trim(), detail: detail, status: "Active", ok: true }]),
+          addingLease: false, leaseTenant: "", leaseContact: "", leaseTerm: "", leaseOccupants: "", leaseError: ""
+        }));
+      },
+
+      addingPerson: s.addingPerson,
+      notAddingPerson: !s.addingPerson,
+      startAddPerson: () => this.setState({ addingPerson: true, personError: "" }),
+      cancelPerson: () => this.setState({ addingPerson: false, personError: "", newPersonName: "", newPersonEmail: "", newPersonPhone: "" }),
+      personError: s.personError,
+      newPersonName: s.newPersonName, setNewPersonName: this.field("newPersonName"),
+      newPersonRole: s.newPersonRole, setNewPersonRole: this.field("newPersonRole"),
+      newPersonEmail: s.newPersonEmail, setNewPersonEmail: this.field("newPersonEmail"),
+      newPersonPhone: s.newPersonPhone, setNewPersonPhone: this.field("newPersonPhone"),
+      savePerson: () => {
+        if (!s.newPersonName.trim()) return this.setState({ personError: "Add a name." });
+        if (!s.newPersonEmail.trim() && !s.newPersonPhone.trim()) return this.setState({ personError: "Add an email or a mobile number so we can reach them." });
+        const contact = [s.newPersonEmail.trim(), s.newPersonPhone.trim()].filter(Boolean).join(" · ");
+        const person = { id: "h" + Date.now(), name: s.newPersonName.trim(), role: s.newPersonRole, contact: contact };
+        this.setState(st => ({
+          household: st.household.concat([person]),
+          addingPerson: false, personError: "", newPersonName: "", newPersonEmail: "", newPersonPhone: ""
+        }));
+      },
+      twoFactorStatus: s.twoFactor ? "On — codes sent by text to " + s.acctPhone : "Off — we recommend turning this on",
+      twoFactorAction: s.twoFactor ? "Turn off" : "Turn on",
+      toggleTwoFactor: () => this.setState(st => ({ twoFactor: !st.twoFactor })),
+      paperlessStatus: s.paperless ? "On — statements are emailed, nothing is mailed" : "Off — statements are mailed to your address",
+      paperlessAction: s.paperless ? "Turn off" : "Turn on",
+      togglePaperless: () => this.setState(st => ({ paperless: !st.paperless }))
+    };
+  }
+}
+</script>
+</body>
+</html>

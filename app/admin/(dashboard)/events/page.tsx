@@ -77,7 +77,7 @@ export default async function AdminEventsPage() {
           <div className="flex flex-wrap gap-2">
             <Link
               href="/admin/events/new"
-              className="bg-gradient-to-br from-secondary to-secondary-fixed-dim text-white px-8 py-4 rounded-md shadow-xl shadow-secondary/20 flex items-center gap-3 font-bold text-sm tracking-wide"
+              className="bg-secondary hover:bg-secondary-hover text-white px-8 py-4 rounded-md shadow-xl shadow-secondary/20 flex items-center gap-3 font-bold text-sm tracking-wide"
             >
               <span className="material-symbols-outlined">calendar_add_on</span>
               Post new event

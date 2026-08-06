@@ -44,7 +44,7 @@ export function DocumentLibraryHeader({
         </button>
         <button
           onClick={onUploadClick}
-          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-br from-secondary to-secondary-fixed-dim px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-secondary/20 transition-transform active:scale-95"
+          className="inline-flex items-center gap-2 rounded-lg bg-secondary hover:bg-secondary-hover px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-secondary/20 transition-transform active:scale-95"
         >
           <span className="material-symbols-outlined text-[18px]">upload_file</span>
           Upload Document

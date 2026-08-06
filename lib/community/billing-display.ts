@@ -45,7 +45,7 @@ function ordinal(n: number): string {
 
 export function formatAssessmentLine(m: Pick<HoaDashboardMetricsRow, "hoa_fee_amount_cents">): string | null {
   if (m.hoa_fee_amount_cents == null || m.hoa_fee_amount_cents <= 0) return null;
-  return `Assessment: ${formatUsdFromCents(m.hoa_fee_amount_cents)}`;
+  return `HOA fee: ${formatUsdFromCents(m.hoa_fee_amount_cents)}`;
 }
 
 /**

@@ -30,9 +30,11 @@ function UnityGridManagementSvg({
       ? "h-8 w-auto sm:h-9"
       : "h-7 w-auto sm:h-9";
 
+  // "fixed" sage tones are light, so they only read on dark backgrounds;
+  // on the stone surfaces the wordmark needs the deep sage.
   const wordClass = isOnDark
     ? "fill-secondary-fixed"
-    : "fill-secondary-fixed-dim dark:fill-secondary-fixed";
+    : "fill-secondary dark:fill-secondary-fixed";
 
   return (
     <svg

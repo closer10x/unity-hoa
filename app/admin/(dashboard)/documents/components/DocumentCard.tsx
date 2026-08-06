@@ -15,7 +15,7 @@ type Props = {
 
 const ACCESS_BADGE_STYLES: Record<string, string> = {
   public: "bg-green-50 text-green-700 border-green-200",
-  resident: "bg-blue-50 text-blue-700 border-blue-200",
+  resident: "bg-secondary-container text-on-secondary-container border-secondary-fixed",
   board: "bg-amber-50 text-amber-700 border-amber-200",
   manager_only: "bg-purple-50 text-purple-700 border-purple-200",
 };
@@ -36,7 +36,7 @@ export function DocumentCard({ document: doc, isSelected, onSelect, onClick, onD
       className={`group relative rounded-xl border bg-white p-4 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-pointer ${
         isSelected
           ? "border-secondary ring-2 ring-secondary/20"
-          : "border-gray-200 hover:border-gray-300"
+          : "border-outline-variant hover:border-outline"
       } ${doc.is_pinned ? "bg-amber-50/30" : ""}`}
       onClick={() => onClick(doc)}
       role="button"
@@ -101,7 +101,7 @@ export function DocumentCard({ document: doc, isSelected, onSelect, onClick, onD
         </span>
         <span
           className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${
-            ACCESS_BADGE_STYLES[doc.access_level] ?? "bg-gray-50 text-gray-700"
+            ACCESS_BADGE_STYLES[doc.access_level] ?? "bg-surface-container-low text-on-surface"
           }`}
         >
           {ACCESS_LABELS[doc.access_level]}
@@ -149,7 +149,7 @@ export function DocumentCard({ document: doc, isSelected, onSelect, onClick, onD
       )}
 
       {/* Stats + actions */}
-      <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+      <div className="mt-3 flex items-center justify-between border-t border-outline-variant pt-3">
         <div className="flex items-center gap-3 text-[11px] text-on-surface-variant">
           <span className="flex items-center gap-0.5">
             <span className="material-symbols-outlined text-[14px]">visibility</span>

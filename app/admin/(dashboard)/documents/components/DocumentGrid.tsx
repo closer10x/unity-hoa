@@ -86,7 +86,7 @@ export function DocumentGrid({
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className={`animate-pulse rounded-xl border border-gray-100 bg-white ${
+              className={`animate-pulse rounded-xl border border-outline-variant bg-white ${
                 viewMode === "grid" ? "p-4 h-48" : "px-4 py-3 h-16 flex items-center gap-4"
               }`}
             >

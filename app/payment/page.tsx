@@ -134,7 +134,7 @@ export default async function PaymentPage({ searchParams }: PageProps) {
                 Pay your HOA dues
               </h1>
               <p className="max-w-md text-lg text-on-surface-variant">
-                Association assessments may be billed monthly or annually—enter
+                HOA fees may be billed monthly or annually—enter
                 the amount that matches your notice. Your payment supports the
                 standards and services of Unity HOA Management.
               </p>
@@ -226,7 +226,7 @@ export default async function PaymentPage({ searchParams }: PageProps) {
         </span>
         <Link
           className="flex flex-col items-center justify-center text-on-surface-variant opacity-70"
-          href="/events"
+          href="/admin/login"
         >
           <span className="material-symbols-outlined">domain</span>
           <span className="mt-1 text-[10px] font-medium uppercase tracking-widest">
@@ -235,7 +235,7 @@ export default async function PaymentPage({ searchParams }: PageProps) {
         </Link>
         <Link
           className="flex flex-col items-center justify-center text-on-surface-variant opacity-70"
-          href="/contact"
+          href="/admin/login"
         >
           <span className="material-symbols-outlined">person</span>
           <span className="mt-1 text-[10px] font-medium uppercase tracking-widest">

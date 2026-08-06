@@ -152,7 +152,7 @@ export function ManageUploadLinksModal({ isOpen, onClose, categories }: Props) {
         aria-label="Manage upload links"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-outline-variant px-6 py-4">
           <div className="flex items-center gap-3">
             {view !== "list" && (
               <button
@@ -219,7 +219,7 @@ export function ManageUploadLinksModal({ isOpen, onClose, categories }: Props) {
                   return (
                     <div
                       key={link.id}
-                      className={`rounded-xl border p-4 space-y-3 ${inactive ? "border-gray-200 bg-gray-50/50 opacity-70" : "border-gray-200"}`}
+                      className={`rounded-xl border p-4 space-y-3 ${inactive ? "border-outline-variant bg-surface-container-low/50 opacity-70" : "border-outline-variant"}`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
@@ -227,7 +227,7 @@ export function ManageUploadLinksModal({ isOpen, onClose, categories }: Props) {
                             <span className="material-symbols-outlined text-[18px] text-secondary">lock</span>
                             <p className="text-sm font-semibold text-on-surface truncate">{link.label}</p>
                             {!link.is_active && (
-                              <span className="shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-medium text-gray-600 uppercase">Inactive</span>
+                              <span className="shrink-0 rounded-full bg-surface-container-high px-2 py-0.5 text-[10px] font-medium text-on-surface-variant uppercase">Inactive</span>
                             )}
                             {isExpired && link.is_active && (
                               <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700 uppercase">Expired</span>
@@ -490,7 +490,7 @@ export function ManageUploadLinksModal({ isOpen, onClose, categories }: Props) {
                   const text = `Upload Link: ${getUploadUrl(createdLink.id)}\nPassword: ${createdLink.password}`;
                   copyToClipboard(text, "success-both");
                 }}
-                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-br from-secondary to-secondary-fixed-dim px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-secondary/20 transition-transform active:scale-95"
+                className="inline-flex items-center gap-2 rounded-lg bg-secondary hover:bg-secondary-hover px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-secondary/20 transition-transform active:scale-95"
               >
                 <span className="material-symbols-outlined text-[16px]">
                   {copiedId === "success-both" ? "check" : "content_copy"}
@@ -503,7 +503,7 @@ export function ManageUploadLinksModal({ isOpen, onClose, categories }: Props) {
 
         {/* Footer */}
         {view === "create" && (
-          <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4 bg-white">
+          <div className="flex items-center justify-between border-t border-outline-variant px-6 py-4 bg-white">
             <button
               onClick={() => { setView("list"); resetCreateForm(); }}
               className="rounded-lg border border-outline-variant/50 px-4 py-2 text-sm font-medium text-on-surface hover:bg-surface-container-low"
@@ -513,7 +513,7 @@ export function ManageUploadLinksModal({ isOpen, onClose, categories }: Props) {
             <button
               onClick={handleCreate}
               disabled={creating}
-              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-br from-secondary to-secondary-fixed-dim px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-secondary/20 transition-transform active:scale-95 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-secondary hover:bg-secondary-hover px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-secondary/20 transition-transform active:scale-95 disabled:opacity-50"
             >
               {creating ? (
                 <>
@@ -531,7 +531,7 @@ export function ManageUploadLinksModal({ isOpen, onClose, categories }: Props) {
         )}
 
         {view === "success" && (
-          <div className="flex items-center justify-center border-t border-gray-200 px-6 py-4 bg-white">
+          <div className="flex items-center justify-center border-t border-outline-variant px-6 py-4 bg-white">
             <button
               onClick={() => { setView("list"); resetCreateForm(); setCreatedLink(null); }}
               className="rounded-lg border border-outline-variant/50 px-4 py-2 text-sm font-medium text-on-surface hover:bg-surface-container-low"

@@ -1,257 +1,282 @@
-import Image from "next/image";
 import Link from "next/link";
-import { MaintenanceRequestCard } from "@/components/marketing/maintenance-request-card";
 
-const HERO_IMG = "/images/hero-neighborhood.png";
+import { DuesLookupCard } from "@/components/site/DuesLookupCard";
+import { HeroMedia } from "@/components/site/HeroMedia";
+import { PhotoPlaceholder } from "@/components/site/PhotoPlaceholder";
+
+const QUICK_LINKS = [
+  {
+    href: "/admin/login",
+    title: "File a maintenance request",
+    detail: "Common areas, gates, lighting and amenities.",
+  },
+  {
+    href: "/admin/login",
+    title: "Bylaws, CC&Rs and rules",
+    detail: "Every governing document, current and downloadable.",
+  },
+  {
+    href: "/admin/login",
+    title: "What Unity Grid handles",
+    detail: "Finances, grounds, rules and records for your association.",
+  },
+] as const;
+
+const CAPABILITIES = [
+  {
+    n: "01",
+    title: "Dues & finances",
+    detail:
+      "Dues billing, collections and a reserve budget the board can read in one sitting.",
+  },
+  {
+    n: "02",
+    title: "Grounds & upkeep",
+    detail:
+      "Landscaping, pool service, gates and lighting — scheduled, inspected and tracked.",
+  },
+  {
+    n: "03",
+    title: "Rules & review",
+    detail:
+      "Architectural applications, violation notices and covenant enforcement, applied evenly.",
+  },
+  {
+    n: "04",
+    title: "Meetings & records",
+    detail:
+      "Agendas, minutes and the document library, kept current and open to every owner.",
+  },
+] as const;
+
+const BOARD_ROWS = [
+  {
+    mark: "2nd Tue",
+    title: "Board meeting",
+    detail: " — 6:30 PM, Clubhouse Annex",
+    action: "Agenda",
+    href: "/admin/login",
+  },
+  {
+    mark: "Open",
+    title: "Committee seats",
+    detail: " — Architectural & Social",
+    action: "Volunteer",
+    href: "/admin/login",
+  },
+  {
+    mark: "Anytime",
+    title: "Message the board",
+    detail: " — routed with your lot details",
+    action: "Write",
+    href: "/admin/login",
+  },
+] as const;
 
 const NEWS = [
   {
-    img: "https://assets.cdn.filesafe.space/UDLy42WzcIR1mhm3rtQu/media/698cd4137f6dcf15b62049f2.png",
-    alt: "Sofi Lakes planned community and modern homes",
-    date: "March 24, 2024",
-    tag: "Community Update",
-    title: "Spring Landscaping Initiative: Enhancing Our Common Spaces",
-    excerpt:
-      "The board has approved the new seasonal planting schedule focusing on drought-resistant native species...",
+    meta: "Mar 24 · Community",
+    title: "Spring landscaping begins along the lake path",
+    detail:
+      "Drought-resistant native plantings replace seasonal beds at the north entry.",
   },
   {
-    img: "https://assets.cdn.filesafe.space/UDLy42WzcIR1mhm3rtQu/media/698cda8930ec4a3052391da1.png",
-    alt: "Resort-style pool at Sofi Lakes",
-    date: "March 18, 2024",
-    tag: "Events",
-    title: "Annual Resident Gala & Homeowner Meeting",
-    excerpt:
-      "Join us at the Great Hall for our annual celebration followed by the presentation of the 2024 budget...",
+    meta: "Mar 18 · Events",
+    title: "Resident gala and annual homeowner meeting",
+    detail:
+      "Dinner at the Great Hall, followed by the 2024 budget presentation.",
   },
   {
-    img: "https://assets.cdn.filesafe.space/UDLy42WzcIR1mhm3rtQu/media/698ceec952c95201aa14551a.png",
-    alt: "Play area for families at Sofi Lakes",
-    date: "March 12, 2024",
-    tag: "Safety",
-    title: "New Security Enhancements for North Gate Access",
-    excerpt:
-      "In response to community feedback, we are implementing a new touchless entry system for all residents...",
+    meta: "Mar 12 · Safety",
+    title: "Touchless entry arrives at the north gate",
+    detail: "Existing remotes keep working through the transition period.",
   },
 ] as const;
+
+/**
+ * Every section pads the full-bleed outer element and centres a 1200px inner
+ * column, so all content shares one left edge. Putting the padding and the
+ * max-width on the same element would inset these columns past the header.
+ */
+const PAD = "px-4 sm:px-6 md:px-8";
+const COLUMN = "mx-auto w-full max-w-[1200px]";
 
 export default function HomePage() {
   return (
     <main>
-      <section className="relative w-full min-h-[870px] flex items-center overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <Image
-            alt="Aerial view of the neighborhood at dusk, homes along a lake and tree-lined horizon"
-            className="object-cover"
-            src={HERO_IMG}
-            fill
-            sizes="100vw"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/40 to-transparent" />
+      <section className={`${PAD} pt-5 md:pt-8`}>
+        <div className={COLUMN}>
+          <HeroMedia />
         </div>
-        <div className="relative z-10 max-w-7xl mx-auto px-8 w-full py-24">
-          <div className="max-w-2xl">
-            <span className="inline-block px-3 py-1 bg-secondary/20 text-secondary-fixed-dim text-[11px] uppercase tracking-wider font-bold mb-6 rounded">
-              Premier Living Experience
-            </span>
-            <p className="text-slate-200 text-lg mb-10 font-body max-w-lg leading-relaxed">
-              Unity Grid Management modernizes HOA management with streamlined
-              operations, transparent financials, and technology-driven systems
-              that reduce board workload and improve community performance.
-            </p>
-            <div className="flex flex-wrap gap-4">
+      </section>
+
+      <section className={`${PAD} pt-8 pb-10 md:pt-14 md:pb-[76px]`}>
+        <div
+          className={`${COLUMN} grid grid-cols-[repeat(auto-fit,minmax(340px,1fr))] items-start gap-16`}
+        >
+          <div>
+          <p className="mb-6 font-label text-xs uppercase tracking-[0.14em] text-secondary-muted">
+            Managed communities · Greater Houston
+          </p>
+          <h1 className="mb-6 text-[clamp(38px,4.4vw,60px)] leading-[1.05] font-semibold tracking-[-0.028em] text-balance">
+            Everything for your home, in one place.
+          </h1>
+          <p className="mb-[34px] max-w-[50ch] text-[19px] leading-relaxed text-on-surface-variant text-pretty">
+            Pay your HOA dues, ask for a repair, or read the rules — without
+            hunting for a phone number. Unity Grid runs the day-to-day of your
+            association so the neighborhood stays well kept and the board stays
+            out of the weeds.
+          </p>
+
+          <div className="mb-[30px] grid gap-px overflow-hidden rounded-[14px] border border-outline-variant bg-outline-variant">
+            {QUICK_LINKS.map((item) => (
               <Link
-                href="/services"
-                className="inline-flex bg-gradient-to-br from-secondary to-secondary-fixed-dim text-on-secondary px-8 py-4 rounded-md font-bold transition-all hover:scale-[1.02]"
+                key={item.title}
+                href={item.href}
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-4 bg-surface-container-lowest px-[22px] py-5 text-on-surface transition-colors hover:bg-surface-container-high"
               >
-                Explore Services
+                <span>
+                  <strong className="text-base font-semibold">
+                    {item.title}
+                  </strong>
+                  <span className="mt-[3px] block text-sm text-on-surface-variant">
+                    {item.detail}
+                  </span>
+                </span>
+                <span
+                  aria-hidden
+                  className="font-label text-xs text-secondary-muted"
+                >
+                  →
+                </span>
               </Link>
-              <Link
-                href="/governance"
-                className="inline-flex bg-white/10 backdrop-blur-md text-white border border-white/20 px-8 py-4 rounded-md font-bold hover:bg-white/20 transition-all"
-              >
-                Association Bylaws
-              </Link>
+            ))}
             </div>
+          </div>
+
+          {/* Centered so its top meets the headline and its bottom meets the
+              quick-links box, instead of hanging from the eyebrow line. */}
+          <div className="self-center">
+            <DuesLookupCard />
           </div>
         </div>
       </section>
 
-      <section className="py-24 bg-surface-container-low">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
-            <div>
-              <p className="text-[11px] uppercase tracking-widest font-bold text-secondary mb-2">
-                Resident Services
-              </p>
-              <h2 className="text-4xl font-bold text-on-surface">
-                Community Dashboard
-              </h2>
-            </div>
-            <p className="max-w-md text-on-surface-variant font-body italic text-right">
-              Access essential services and streamline your living experience
-              with our digital management tools.
+      <section className="border-y border-outline-variant bg-surface-container-highest px-4 py-12 sm:px-6 md:px-8 md:py-24">
+        <div className="mx-auto grid w-full max-w-[1200px] grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-start gap-[72px]">
+          <div>
+            <p className="mb-5 font-label text-xs uppercase tracking-[0.14em] text-secondary-muted">
+              What Unity Grid does
             </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-6">
+            <h2 className="mb-5 text-[clamp(30px,3vw,40px)] leading-[1.12] font-semibold tracking-[-0.025em] text-balance">
+              A management office that neighbors can actually reach.
+            </h2>
+            <p className="mb-6 max-w-[42ch] text-[17px] leading-relaxed text-on-surface-variant text-pretty">
+              We handle the money, the vendors and the paperwork behind the
+              association. Residents get straight answers; the volunteer board
+              gets its evenings back.
+            </p>
             <Link
               href="/payment"
-              aria-label="Pay assessments — make payment"
-              className="md:col-span-2 lg:col-span-2 bg-surface-container-lowest p-8 rounded-xl shadow-sm hover:translate-y-[-4px] transition-transform flex flex-col justify-between group no-underline text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
+              className="text-base font-medium text-secondary hover:underline"
             >
-              <div className="mb-12">
-                <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center mb-6 group-hover:bg-secondary/20 transition-colors">
-                  <span
-                    className="material-symbols-outlined text-secondary"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    payments
-                  </span>
-                </div>
-                <h3 className="text-xl font-bold mb-2">Pay Assessments</h3>
-                <p className="text-sm text-on-surface-variant">
-                  Secure, easy online payments for your monthly dues and
-                  community fees.
-                </p>
-              </div>
-              <span className="text-secondary font-bold text-sm flex items-center">
-                Make Payment{" "}
-                <span className="material-symbols-outlined ml-2 text-sm">
-                  arrow_forward
-                </span>
-              </span>
+              Pay your HOA fee →
             </Link>
-            <MaintenanceRequestCard />
-            <div className="md:col-span-4 lg:col-span-2 bg-primary text-white p-8 rounded-xl shadow-sm hover:translate-y-[-4px] transition-transform flex flex-col justify-between group relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/10 rounded-full translate-x-16 -translate-y-16" />
-              <div className="mb-12 relative z-10">
-                <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center mb-6">
-                  <span
-                    className="material-symbols-outlined text-secondary-fixed-dim"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    description
-                  </span>
-                </div>
-                <h3 className="text-xl font-bold mb-2">Bylaws & Rules</h3>
-                <p className="text-sm text-slate-300">
-                  Browse and download official community guidelines and governing
-                  documents.
-                </p>
-              </div>
-              <Link
-                href="/governance"
-                className="text-secondary-fixed-dim font-bold text-sm flex items-center relative z-10"
-              >
-                View Library{" "}
-                <span className="material-symbols-outlined ml-2 text-sm">
-                  open_in_new
-                </span>
-              </Link>
-            </div>
           </div>
-        </div>
-      </section>
 
-      <section className="py-24 bg-surface">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="flex items-center justify-between mb-16 flex-wrap gap-4">
-            <h2 className="text-4xl font-bold">Latest Community News</h2>
-            <Link
-              href="/events"
-              className="text-secondary font-bold text-sm flex items-center hover:translate-x-1 transition-transform"
-            >
-              Browse Archives{" "}
-              <span className="material-symbols-outlined ml-1">chevron_right</span>
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-            {NEWS.map((item) => (
-              <article key={item.title} className="flex flex-col">
-                <div className="aspect-[16/10] overflow-hidden rounded-xl mb-6 bg-surface-container relative">
-                  <Image
-                    alt={item.alt}
-                    className="object-cover grayscale hover:grayscale-0 transition-all duration-500"
-                    src={item.img}
-                    fill
-                    sizes="(min-width: 1024px) 33vw, 100vw"
-                  />
-                </div>
-                <div className="flex items-center gap-4 mb-3 flex-wrap">
-                  <span className="text-[11px] uppercase tracking-widest font-bold text-on-surface-variant">
-                    {item.date}
-                  </span>
-                  <span className="w-1 h-1 bg-outline-variant rounded-full" />
-                  <span className="text-[11px] uppercase tracking-widest font-bold text-secondary">
-                    {item.tag}
-                  </span>
-                </div>
-                <h3 className="text-xl font-bold mb-3 hover:text-secondary transition-colors cursor-pointer leading-tight">
-                  {item.title}
-                </h3>
-                <p className="text-on-surface-variant text-sm leading-relaxed mb-6">
-                  {item.excerpt}
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-x-12 gap-y-10">
+            {CAPABILITIES.map((c) => (
+              <div key={c.n}>
+                <p className="mb-3 font-label text-xs text-secondary-muted">
+                  {c.n}
                 </p>
-                <Link
-                  href="/events"
-                  className="mt-auto text-on-surface font-semibold text-sm underline underline-offset-4 decoration-secondary/30 hover:decoration-secondary"
-                >
-                  Read Story
-                </Link>
-              </article>
+                <p className="mb-2 text-lg font-semibold">{c.title}</p>
+                <p className="text-[15px] leading-relaxed text-on-surface-variant">
+                  {c.detail}
+                </p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-24 bg-surface-container-highest">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-            <div>
-              <h2 className="text-4xl font-bold mb-6">Your Voice Matters.</h2>
-              <p className="text-on-surface-variant text-lg mb-10 leading-relaxed">
-                Unity Grid Management is governed by a dedicated board of
-                residents committed to maintaining our community&apos;s beauty
-                and value. Reach out with suggestions, questions, or concerns.
-              </p>
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-4 p-4 bg-surface-container-lowest rounded-lg border border-outline-variant/10">
-                  <span className="material-symbols-outlined text-secondary">
-                    forum
-                  </span>
-                  <div>
-                    <p className="text-sm font-bold">Monthly Board Meeting</p>
-                    <p className="text-xs text-on-surface-variant">
-                      Every 2nd Tuesday at 6:30 PM, Clubhouse Annex
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 p-4 bg-surface-container-lowest rounded-lg border border-outline-variant/10">
-                  <span className="material-symbols-outlined text-secondary">
-                    volunteer_activism
-                  </span>
-                  <div>
-                    <p className="text-sm font-bold">Committee Opportunities</p>
-                    <p className="text-xs text-on-surface-variant">
-                      Join the Architectural or Social committees today.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-primary-container p-12 rounded-2xl text-white">
-              <h3 className="text-2xl font-bold mb-4">Contact the Board</h3>
-              <p className="text-sm text-slate-300 mb-8 leading-relaxed">
-                Use the community contact form so your message reaches the
-                management office and board liaisons with the right context.
-              </p>
-              <Link
-                href="/contact"
-                className="inline-flex w-full justify-center bg-secondary text-white font-bold py-4 rounded-md transition-all hover:bg-secondary/90"
+      <section className={`${PAD} py-12 md:py-24`}>
+        <div
+          className={`${COLUMN} grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] items-center gap-16`}
+        >
+          <PhotoPlaceholder label="photo — neighborhood at dusk" ratio="4 / 3" />
+
+          <div>
+          <p className="mb-5 font-label text-xs uppercase tracking-[0.14em] text-secondary-muted">
+            Your voice
+          </p>
+          <h2 className="mb-5 text-[clamp(30px,3vw,40px)] leading-[1.12] font-semibold tracking-[-0.025em] text-balance">
+            The board is your neighbors. Come say something.
+          </h2>
+          <p className="mb-8 max-w-[48ch] text-[17px] leading-relaxed text-on-surface-variant text-pretty">
+            Every owner is welcome at the monthly meeting, and committee seats
+            open through the year. Bring a suggestion, a question, or a
+            complaint — all three are useful.
+          </p>
+
+          <div className="grid gap-px overflow-hidden rounded-[14px] border border-outline-variant bg-outline-variant">
+            {BOARD_ROWS.map((row) => (
+              <div
+                key={row.title}
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-5 gap-y-1.5 bg-surface-container-lowest px-6 py-[22px]"
               >
-                Open contact form
-              </Link>
+                <span>
+                  <span className="mr-3.5 font-label text-xs text-secondary-muted">
+                    {row.mark}
+                  </span>
+                  <strong className="font-semibold">{row.title}</strong>
+                  <span className="text-on-surface-variant">{row.detail}</span>
+                </span>
+                <Link
+                  href={row.href}
+                  className="text-[15px] whitespace-nowrap text-secondary hover:underline"
+                >
+                  {row.action}
+                </Link>
+              </div>
+            ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className={`border-t border-outline-variant ${PAD} py-10 md:py-[72px]`}>
+        <div className="mx-auto w-full max-w-[1200px]">
+          <div className="mb-8 flex flex-wrap items-baseline justify-between gap-6">
+            <h2 className="text-[22px] font-semibold tracking-[-0.015em]">
+              Community news
+            </h2>
+            <Link
+              href="/admin/login"
+              className="text-[15px] text-secondary hover:underline"
+            >
+              All updates &amp; events
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-10">
+            {NEWS.map((item) => (
+              <Link
+                key={item.title}
+                href="/admin/login"
+                className="block text-on-surface"
+              >
+                <p className="mb-2.5 font-label text-xs text-outline">
+                  {item.meta}
+                </p>
+                <p className="mb-1.5 text-[17px] leading-snug font-semibold">
+                  {item.title}
+                </p>
+                <p className="text-[15px] leading-relaxed text-on-surface-variant">
+                  {item.detail}
+                </p>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
