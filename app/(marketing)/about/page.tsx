@@ -24,9 +24,7 @@ const PRINCIPLES = [
 ] as const;
 
 const COMMUNITIES = [
-  { name: "Sofi Lakes", meta: "390 doors · Katy · managed since 2026" },
-  { name: "Morrison Crossing", meta: "212 doors · Katy · managed since 2026" },
-  { name: "Lakebend", meta: "148 doors · Fulshear · onboarding" },
+  { name: "Sofi Lakes", meta: "Katy, Texas" },
 ] as const;
 
 export default function AboutPage() {
@@ -81,6 +79,11 @@ export default function AboutPage() {
               </div>
             ))}
           </div>
+          <p className="mt-6 max-w-[62ch] text-[15px] leading-relaxed text-on-surface-variant text-pretty">
+            On a board that&apos;s shopping for management? We&apos;re glad to
+            walk through how we work and put together a proposal for your
+            community.
+          </p>
         </div>
       </section>
     </main>

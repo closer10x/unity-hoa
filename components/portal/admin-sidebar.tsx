@@ -29,17 +29,17 @@ export const NAV_GROUPS = [
     group: "Money",
     items: [
       { href: "/admin/finances", label: "Accounting", built: true },
-      { href: "/admin/legal", label: "Legal & liens", built: false },
+      { href: "/admin/legal", label: "Legal & liens", built: true },
     ],
   },
   {
     group: "Property",
     items: [
       { href: "/admin/maintenance", label: "Work orders", built: true },
-      { href: "/admin/architectural", label: "Architectural", built: false },
-      { href: "/admin/violations", label: "Violations", built: false },
-      { href: "/admin/bookings", label: "Bookings", built: false },
-      { href: "/admin/vendors", label: "Vendors", built: false },
+      { href: "/admin/architectural", label: "Architectural", built: true },
+      { href: "/admin/violations", label: "Violations", built: true },
+      { href: "/admin/bookings", label: "Bookings", built: true },
+      { href: "/admin/vendors", label: "Vendors", built: true },
     ],
   },
   {
@@ -47,14 +47,14 @@ export const NAV_GROUPS = [
     items: [
       { href: "/admin/owners", label: "Owners", built: true },
       { href: "/admin/announcements", label: "Communications", built: true },
-      { href: "/admin/board", label: "Board & meetings", built: false },
+      { href: "/admin/board", label: "Board & meetings", built: true },
     ],
   },
   {
     group: "Office",
     items: [
       { href: "/admin/documents", label: "Documents", built: true },
-      { href: "/admin/communities", label: "Communities", built: false },
+      { href: "/admin/communities", label: "Communities", built: true },
       { href: "/admin/settings/employees", label: "Team", built: true },
     ],
   },

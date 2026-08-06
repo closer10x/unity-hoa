@@ -6,12 +6,12 @@ import { PageIntro, SECTION_COL, SECTION_PAD } from "@/components/site/PageIntro
 export const metadata: Metadata = { title: "Governance" };
 
 const DOCUMENTS = [
-  { title: "Declaration of Covenants, Conditions & Restrictions", meta: "PDF · 1.4 MB · amended 2024" },
-  { title: "Bylaws", meta: "PDF · 480 KB · amended 2023" },
-  { title: "Architectural guidelines", meta: "PDF · 720 KB · current" },
-  { title: "Community rules & regulations", meta: "PDF · 310 KB · current" },
-  { title: "Annual budget", meta: "PDF · 220 KB · 2026" },
-  { title: "Reserve study", meta: "PDF · 1.1 MB · 2025" },
+  { title: "Declaration of Covenants, Conditions & Restrictions", meta: "PDF" },
+  { title: "Bylaws", meta: "PDF" },
+  { title: "Architectural guidelines", meta: "PDF" },
+  { title: "Community rules & regulations", meta: "PDF" },
+  { title: "Annual budget", meta: "PDF" },
+  { title: "Reserve study", meta: "PDF" },
 ] as const;
 
 const ARC_STEPS = [
@@ -22,10 +22,10 @@ const ARC_STEPS = [
 ] as const;
 
 const BOARD = [
-  { name: "Phillip Dautrich", role: "President", note: "Term through the 2027 annual meeting" },
-  { name: "William Robert Jackson", role: "Vice president", note: "Term through the 2027 annual meeting" },
-  { name: "Renee Alvarado", role: "Treasurer", note: "Term through the 2026 annual meeting" },
-  { name: "Susan Ngo", role: "Secretary", note: "Term through the 2026 annual meeting" },
+  { name: "Phillip Dautrich", role: "President", note: "Volunteer homeowner, elected by the membership" },
+  { name: "William Robert Jackson", role: "Vice president", note: "Volunteer homeowner, elected by the membership" },
+  { name: "Renee Alvarado", role: "Treasurer", note: "Volunteer homeowner, elected by the membership" },
+  { name: "Susan Ngo", role: "Secretary", note: "Volunteer homeowner, elected by the membership" },
 ] as const;
 
 export default function GovernancePage() {
@@ -144,9 +144,9 @@ export default function GovernancePage() {
           </div>
 
           <p className="max-w-[70ch] text-[15px] leading-relaxed text-on-surface-variant text-pretty">
-            Board meetings are held the second Tuesday of each month at 6:30 PM
-            in the Clubhouse Annex. Owners may speak during the open forum at
-            the start of each meeting.{" "}
+            The board meets monthly; the schedule and location are posted with
+            each agenda. Owners may speak during the open forum at the start of
+            each meeting.{" "}
             <Link href="/contact" className="text-secondary hover:underline">
               Ask to be on the agenda
             </Link>

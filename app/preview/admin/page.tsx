@@ -4,16 +4,30 @@ import { AdminSidebar } from "@/components/portal/admin-sidebar";
 import { AdminDashboard } from "@/components/portal/dashboard/admin-dashboard";
 import { PREVIEW_DASHBOARD } from "@/components/portal/dashboard/preview-fixture";
 import { OwnersManager } from "@/components/portal/owners/owners-manager";
+import { SectionByKey, type SectionKey } from "@/components/portal/section-by-key";
 
 /**
  * DEV-ONLY preview of the admin portal.
  *
  * The real admin routes are behind `requireAdminUser()`, which needs Supabase
- * credentials and a signed-in admin. This renders the same shell with fixture
- * data so the UI can be reviewed locally. `?section=owners` switches sections.
+ * credentials and a signed-in admin. This renders the same shell and sections
+ * with fixture data so the UI can be reviewed locally.
  *
  * It 404s outside development and must not ship as a way into the portal.
  */
+
+const TABS = [
+  { key: "", label: "Dashboard" },
+  { key: "owners", label: "Owners" },
+  { key: "architectural", label: "Architectural" },
+  { key: "violations", label: "Violations" },
+  { key: "bookings", label: "Bookings" },
+  { key: "vendors", label: "Vendors" },
+  { key: "legal", label: "Legal" },
+  { key: "board", label: "Board" },
+  { key: "communities", label: "Communities" },
+] as const;
+
 export default async function AdminPreviewPage({
   searchParams,
 }: {
@@ -21,8 +35,8 @@ export default async function AdminPreviewPage({
 }) {
   if (process.env.NODE_ENV === "production") notFound();
 
-  const { section } = await searchParams;
-  const showOwners = section === "owners";
+  const { section = "" } = await searchParams;
+  const isSection = (TABS.some((t) => t.key === section) && section !== "" && section !== "owners");
 
   return (
     <>
@@ -49,37 +63,30 @@ export default async function AdminPreviewPage({
           </div>
         </header>
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-outline-variant bg-secondary-container px-4 py-2.5 sm:px-6 md:px-8">
-          <p className="font-label text-[11px] uppercase tracking-[0.12em] text-on-secondary-container">
+        <div className="border-b border-outline-variant bg-secondary-container px-4 py-2.5 sm:px-6 md:px-8">
+          <p className="mb-2 font-label text-[11px] uppercase tracking-[0.12em] text-on-secondary-container">
             Preview only — fixture data, no Supabase connection
           </p>
-          <span className="flex gap-3 text-sm">
-            <a
-              href="/preview/admin"
-              className={
-                showOwners
-                  ? "text-on-secondary-container hover:underline"
-                  : "font-semibold text-on-secondary-container underline"
-              }
-            >
-              Dashboard
-            </a>
-            <a
-              href="/preview/admin?section=owners"
-              className={
-                showOwners
-                  ? "font-semibold text-on-secondary-container underline"
-                  : "text-on-secondary-container hover:underline"
-              }
-            >
-              Owners
-            </a>
-          </span>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            {TABS.map((t) => (
+              <a
+                key={t.key}
+                href={t.key ? `/preview/admin?section=${t.key}` : "/preview/admin"}
+                className={
+                  section === t.key
+                    ? "font-semibold text-on-secondary-container underline"
+                    : "text-on-secondary-container hover:underline"
+                }
+              >
+                {t.label}
+              </a>
+            ))}
+          </div>
         </div>
 
         <div className="px-4 py-6 sm:px-6 md:px-8">
           <div className="mx-auto w-full max-w-[1520px]">
-            {showOwners ? (
+            {section === "owners" ? (
               <>
                 <p className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">
                   People
@@ -89,6 +96,8 @@ export default async function AdminPreviewPage({
                 </h1>
                 <OwnersManager actingStaff="Preview Admin" />
               </>
+            ) : isSection ? (
+              <SectionByKey sectionKey={section as SectionKey} actingStaff="Preview Admin" />
             ) : (
               <AdminDashboard scopeLabel="All communities" {...PREVIEW_DASHBOARD} />
             )}

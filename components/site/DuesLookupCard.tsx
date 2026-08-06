@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { COMMUNITIES } from "@/lib/accounts/account-number";
@@ -61,6 +62,7 @@ export function DuesLookupCard({
   initialState?: State;
   residentOwnsMultiple?: boolean;
 }) {
+  const router = useRouter();
   const [state, setState] = useState<State>(initialState);
   const [community, setCommunity] = useState("");
   const [account, setAccount] = useState("");
@@ -73,7 +75,10 @@ export function DuesLookupCard({
     if (!account.trim() || !street.trim())
       return setError("Add your account number and street number.");
     setError(null);
-    setState("result");
+    // No dues-lookup API yet, so rather than showing the fixture balance,
+    // send the resident on to the payment page. The "result" and "account"
+    // states stay reachable via initialState for when real data exists.
+    router.push("/payment");
   }
 
   return (

@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import { DuesLookupCard } from "@/components/site/DuesLookupCard";
 import { HeroMedia } from "@/components/site/HeroMedia";
-import { PhotoPlaceholder } from "@/components/site/PhotoPlaceholder";
 
 const QUICK_LINKS = [
   {
@@ -51,16 +50,16 @@ const CAPABILITIES = [
 
 const BOARD_ROWS = [
   {
-    mark: "2nd Tue",
+    mark: "Monthly",
     title: "Board meeting",
-    detail: " — 6:30 PM, Clubhouse Annex",
+    detail: " — every owner is welcome; agendas post before each session",
     action: "Agenda",
     href: "/admin/login",
   },
   {
     mark: "Open",
     title: "Committee seats",
-    detail: " — Architectural & Social",
+    detail: " — Architectural & Social committees welcome volunteers",
     action: "Volunteer",
     href: "/admin/login",
   },
@@ -70,26 +69,6 @@ const BOARD_ROWS = [
     detail: " — routed with your lot details",
     action: "Write",
     href: "/admin/login",
-  },
-] as const;
-
-const NEWS = [
-  {
-    meta: "Mar 24 · Community",
-    title: "Spring landscaping begins along the lake path",
-    detail:
-      "Drought-resistant native plantings replace seasonal beds at the north entry.",
-  },
-  {
-    meta: "Mar 18 · Events",
-    title: "Resident gala and annual homeowner meeting",
-    detail:
-      "Dinner at the Great Hall, followed by the 2024 budget presentation.",
-  },
-  {
-    meta: "Mar 12 · Safety",
-    title: "Touchless entry arrives at the north gate",
-    detail: "Existing remotes keep working through the transition period.",
   },
 ] as const;
 
@@ -204,7 +183,14 @@ export default function HomePage() {
         <div
           className={`${COLUMN} grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] items-center gap-16`}
         >
-          <PhotoPlaceholder label="photo — neighborhood at dusk" ratio="4 / 3" />
+          <div className="overflow-hidden rounded-[18px] border border-outline-variant bg-surface-container-high">
+            <img
+              className="block h-full w-full object-cover"
+              style={{ aspectRatio: "4 / 3" }}
+              src="/images/community-pool.webp"
+              alt="Families enjoying the community pool on a sunny afternoon"
+            />
+          </div>
 
           <div>
           <p className="mb-5 font-label text-xs uppercase tracking-[0.14em] text-secondary-muted">
@@ -259,24 +245,15 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-10">
-            {NEWS.map((item) => (
-              <Link
-                key={item.title}
-                href="/admin/login"
-                className="block text-on-surface"
-              >
-                <p className="mb-2.5 font-label text-xs text-outline">
-                  {item.meta}
-                </p>
-                <p className="mb-1.5 text-[17px] leading-snug font-semibold">
-                  {item.title}
-                </p>
-                <p className="text-[15px] leading-relaxed text-on-surface-variant">
-                  {item.detail}
-                </p>
-              </Link>
-            ))}
+          <div className="rounded-[14px] border border-outline-variant bg-surface-container-lowest px-6 py-10 md:px-10">
+            <p className="mb-2.5 font-label text-xs uppercase tracking-[0.12em] text-outline">
+              No posts yet
+            </p>
+            <p className="max-w-[62ch] text-[17px] leading-relaxed text-on-surface-variant text-pretty">
+              Announcements from your association are published here as they
+              happen — meeting recaps, service notices and community updates.
+              Registered residents also receive every notice by email.
+            </p>
           </div>
         </div>
       </section>
