@@ -257,6 +257,31 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <section className={`border-t border-outline-variant ${PAD} py-10 md:py-[72px]`}>
+        <div className={COLUMN}>
+          <div className="flex flex-wrap items-center justify-between gap-x-16 gap-y-6 rounded-[18px] border border-outline-variant bg-surface-container-lowest px-6 py-8 md:px-10">
+            <div className="min-w-0 flex-[1_1_340px]">
+              <p className="mb-2.5 font-label text-xs uppercase tracking-[0.14em] text-secondary-muted">
+                Administration
+              </p>
+              <p className="mb-2 text-[22px] font-semibold tracking-[-0.015em]">
+                Board members &amp; management staff
+              </p>
+              <p className="max-w-[52ch] text-[15px] leading-relaxed text-on-surface-variant text-pretty">
+                Announcements, events, maintenance, finances and community
+                records are managed from the administrator portal.
+              </p>
+            </div>
+            <Link
+              href="/admin/login"
+              className="rounded-[10px] bg-secondary px-6 py-[13px] text-base font-medium text-on-secondary transition-colors hover:bg-secondary-hover"
+            >
+              Sign in to administration
+            </Link>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

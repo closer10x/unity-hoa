@@ -4,6 +4,7 @@ import React from "react";
 import { NAV, NAV_GROUPS } from "@/lib/admin-portal/fixtures";
 import { useStore } from "@/lib/admin-portal/store";
 import { color, font, radius } from "@/lib/admin-portal/tokens";
+import { NavIcon } from "@/components/admin/ui/NavIcon";
 
 function Badge({ children }: { children: React.ReactNode }) {
   return (
@@ -41,7 +42,10 @@ export function Sidebar() {
               color: on ? "oklch(0.28 0.03 152)" : "oklch(0.32 0.014 150)",
               borderRadius: radius.md, padding: "11px 14px", cursor: "pointer",
             }}>
-            <span style={{ fontWeight: on ? 600 : 400 }}>{n.label}</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+              <NavIcon id={n.id} />
+              <span style={{ fontWeight: on ? 600 : 400 }}>{n.label}</span>
+            </span>
             {"badge" in n && n.badge ? <Badge>{n.badge}</Badge> : null}
           </button>
         );
@@ -102,7 +106,10 @@ export function MobileNav() {
                       color: on ? "oklch(0.28 0.03 152)" : "oklch(0.32 0.014 150)",
                       borderRadius: radius.md, padding: "13px 14px", cursor: "pointer",
                     }}>
-                    <span style={{ fontWeight: on ? 600 : 400 }}>{n.label}</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                      <NavIcon id={n.id} />
+                      <span style={{ fontWeight: on ? 600 : 400 }}>{n.label}</span>
+                    </span>
                     <span style={{ display: "flex", alignItems: "center", gap: 8, flex: "0 0 auto" }}>
                       {"badge" in n && n.badge ? <Badge>{n.badge}</Badge> : null}
                       {on ? <span style={{ fontFamily: font.mono, fontSize: 12, color: "oklch(0.5 0.04 155)" }}>viewing</span> : null}
