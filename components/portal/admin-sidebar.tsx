@@ -74,31 +74,27 @@ export function AdminSidebar({ notifications }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    /* Handoff shell: an in-flow sticky column, flex 1 1 236px, capped at
-       236px, laid out as a grid with 10px between groups. Not a fixed rail —
-       and no media queries, so it wraps intrinsically below ~700px. */
+    /* In-flow sticky column, flex 1 1 236px capped at 236px, laid out as a
+       grid with 10px between groups. Stays in the flex flow so it still wraps
+       intrinsically below ~700px — no media queries.
+
+       It pins under the sticky header and takes its own scrollbar, so a long
+       nav never scrolls away with the page. --admin-header-h is published by
+       AdminHeader so the offset is not a magic number. */
     <aside
-      className="sticky top-[88px] grid min-w-0 content-start gap-2.5 self-start"
-      style={{ flex: "1 1 236px", maxWidth: "236px" }}
+      className="sticky grid min-w-0 content-start gap-2.5 self-start overflow-y-auto rounded-2xl border border-outline-variant bg-surface-container-lowest p-4"
+      style={{
+        flex: "1 1 236px",
+        maxWidth: "236px",
+        top: "calc(var(--admin-header-h, 70px) + 12px)",
+        maxHeight: "calc(100dvh - var(--admin-header-h, 70px) - 32px)",
+      }}
     >
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <Link href="/admin" className="flex min-w-0 items-baseline gap-2.5">
-          <span
-            aria-hidden
-            className="inline-block size-[11px] shrink-0 rounded-[2px] bg-secondary"
-          />
-          <span className="min-w-0">
-            <span className="block text-[17px] font-semibold tracking-[-0.01em] text-on-surface">
-              Unity Grid
-            </span>
-            <span className="mt-0.5 block font-label text-[10px] uppercase tracking-[0.12em] text-outline">
-              Management
-            </span>
-          </span>
-        </Link>
-        <div className="shrink-0 pt-0.5">
-          <AdminNotificationsBell initial={notifications} />
-        </div>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <p className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">
+          Sections
+        </p>
+        <AdminNotificationsBell initial={notifications} />
       </div>
 
       <nav className="grid content-start gap-2.5">

@@ -1,4 +1,4 @@
-import { AdminHeader } from "@/components/portal/admin-header";
+import { AdminHeader, ADMIN_HEADER_H } from "@/components/portal/admin-header";
 import { AdminSidebar } from "@/components/portal/admin-sidebar";
 import { requireAdminUser } from "@/lib/auth/require-admin";
 import { loadAdminNotificationsForHeader } from "@/lib/notifications/load";
@@ -33,7 +33,10 @@ export default async function AdminDashboardLayout({
   }
 
   return (
-    <div className="min-h-screen">
+    <div
+      className="min-h-screen"
+      style={{ "--admin-header-h": `${ADMIN_HEADER_H}px` } as React.CSSProperties}
+    >
       <AdminHeader
         email={session.user.email ?? undefined}
         displayName={session.profile.display_name ?? undefined}

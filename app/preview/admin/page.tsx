@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { AdminHeader, ADMIN_HEADER_H } from "@/components/portal/admin-header";
 import { AdminSidebar } from "@/components/portal/admin-sidebar";
 import { AdminDashboard } from "@/components/portal/dashboard/admin-dashboard";
 import { PREVIEW_DASHBOARD } from "@/components/portal/dashboard/preview-fixture";
@@ -47,27 +48,11 @@ export default async function AdminPreviewPage({
 
   return (
     <>
-      <div className="min-h-screen">
-        <header className="sticky top-0 z-20 border-b border-outline-variant bg-surface px-4 py-3.5 sm:px-6 md:px-8">
-          <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
-            <select
-              aria-label="Scope"
-              defaultValue="all"
-              className="cursor-pointer appearance-none rounded-[10px] border border-outline-strong bg-surface px-3.5 py-2 text-[15px] text-on-surface"
-            >
-              <option value="all">All communities</option>
-              <option value="sofi-lakes">Sofi Lakes</option>
-            </select>
-            <div className="min-w-0 text-right">
-              <p className="text-[15px] font-medium text-on-surface">
-                Preview Admin
-              </p>
-              <p className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">
-                Administrator
-              </p>
-            </div>
-          </div>
-        </header>
+      <div
+        className="min-h-screen"
+        style={{ "--admin-header-h": `${ADMIN_HEADER_H}px` } as React.CSSProperties}
+      >
+        <AdminHeader displayName="Preview Admin" email="preview@unitygrid.local" />
 
         <div className="border-b border-outline-variant bg-secondary-container px-4 py-2.5 sm:px-6 md:px-8">
           <p className="mb-2 font-label text-[11px] uppercase tracking-[0.12em] text-on-secondary-container">
