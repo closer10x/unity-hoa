@@ -18,7 +18,7 @@ const COLUMNS = [
   {
     heading: "Company",
     links: [
-      { href: "mailto:info@sofilakes.com", label: "Contact" },
+      { href: "mailto:info@unitygridmanagement.com", label: "Contact" },
       { href: "tel:7132083539", label: "713-208-3539" },
     ],
   },
@@ -51,10 +51,10 @@ export function SiteFooter() {
             </span>
             <span>
               <a
-                href="mailto:info@sofilakes.com"
+                href="mailto:info@unitygridmanagement.com"
                 className="text-shell-accent hover:underline"
               >
-                info@sofilakes.com
+                info@unitygridmanagement.com
               </a>
             </span>
             <span className="text-on-shell-variant">Mon–Fri, 9AM–5PM</span>
