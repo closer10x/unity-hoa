@@ -209,12 +209,12 @@ export default function HomePage() {
             {BOARD_ROWS.map((row) => (
               <div
                 key={row.title}
-                className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-5 gap-y-1.5 bg-surface-container-lowest px-6 py-[22px]"
+                className="grid grid-cols-[76px_minmax(0,1fr)_auto] items-baseline gap-x-5 gap-y-1.5 bg-surface-container-lowest px-6 py-[22px]"
               >
+                <span className="font-label text-xs text-secondary-muted">
+                  {row.mark}
+                </span>
                 <span>
-                  <span className="mr-3.5 font-label text-xs text-secondary-muted">
-                    {row.mark}
-                  </span>
                   <strong className="font-semibold">{row.title}</strong>
                   <span className="text-on-surface-variant">{row.detail}</span>
                 </span>

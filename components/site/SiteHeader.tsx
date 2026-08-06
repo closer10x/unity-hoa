@@ -81,12 +81,14 @@ export function SiteHeader() {
           >
             Sign in
           </span>
-          <Link
-            href="/payment"
-            className="whitespace-nowrap rounded-full bg-secondary px-5 py-2.5 text-[15px] font-medium text-on-secondary transition-colors hover:bg-secondary-hover"
+          {/* Disabled until the resident portal exists. */}
+          <span
+            aria-disabled
+            title="The resident portal isn’t available yet"
+            className="cursor-not-allowed whitespace-nowrap rounded-full bg-surface-container-high px-5 py-2.5 text-[15px] font-medium text-outline"
           >
             Resident portal
-          </Link>
+          </span>
         </div>
 
         <button
