@@ -107,7 +107,7 @@ export default function HomePage() {
             out of the weeds.
           </p>
 
-          <div className="mb-[30px] grid gap-px overflow-hidden rounded-[14px] border border-outline-variant bg-outline-variant">
+          <div className="grid gap-px overflow-hidden rounded-[14px] border border-outline-variant bg-outline-variant">
             {QUICK_LINKS.map((item) => (
               <Link
                 key={item.title}
@@ -133,9 +133,9 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Centered so its top meets the headline and its bottom meets the
-              quick-links box, instead of hanging from the eyebrow line. */}
-          <div className="self-center">
+          {/* Bottom-aligned with the quick-links box so the two columns end on
+              the same line. */}
+          <div className="self-end">
             <DuesLookupCard />
           </div>
         </div>
