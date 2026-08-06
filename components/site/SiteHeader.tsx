@@ -94,7 +94,8 @@ export function SiteHeader() {
         <button
           type="button"
           id="site-mobile-menu-button"
-          className="rounded-xl border border-outline-strong px-3.5 py-2 font-label text-xs uppercase tracking-[0.1em] text-on-surface transition-colors hover:border-outline md:hidden"
+          /* min-h-11 = 44px: the handoff's floor for primary controls. */
+          className="min-h-11 rounded-xl border border-outline-strong px-4 font-label text-xs uppercase tracking-[0.1em] text-on-surface transition-colors hover:border-outline md:hidden"
           aria-expanded={navOpen}
           aria-controls="site-mobile-nav"
           onClick={() => setNavOpen((o) => !o)}
