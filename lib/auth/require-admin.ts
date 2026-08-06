@@ -16,7 +16,34 @@ export type AdminSession = {
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
 };
 
+/**
+ * Local development only: with no Supabase project configured there is no way
+ * to sign in, so the portal — which runs on fixtures — would be unreachable.
+ * Rather than gate it behind an auth system that cannot answer, fall through
+ * to a stub session.
+ *
+ * Both conditions are required, so this can never apply in production: the
+ * build is production and, once keys exist, the real check runs instead.
+ */
+const ALLOW_UNCONFIGURED_DEV_ACCESS =
+  process.env.NODE_ENV !== "production" && !isSupabaseAuthConfigured();
+
+const DEV_SESSION: AdminSession = {
+  user: { id: "dev-local", email: "dev@localhost" },
+  profile: {
+    role: "admin",
+    display_name: "Local dev",
+    avatar_path: null,
+  },
+  // No client exists without configuration; nothing on this path queries it.
+  supabase: null as unknown as AdminSession["supabase"],
+};
+
 export const requireAdminUser = cache(async (): Promise<AdminSession> => {
+  if (ALLOW_UNCONFIGURED_DEV_ACCESS) {
+    return DEV_SESSION;
+  }
+
   if (!isSupabaseAuthConfigured()) {
     redirect("/admin/login?error=config");
   }

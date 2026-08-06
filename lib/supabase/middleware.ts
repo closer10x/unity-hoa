@@ -32,7 +32,17 @@ export async function updateSession(request: NextRequest) {
   const url = getSupabaseUrl();
   const anonKey = getSupabaseAnonKey();
 
+  // Local development with no Supabase project: there is no way to sign in, so
+  // redirecting here would make the portal unreachable. Let it through and let
+  // requireAdminUser hand back its dev session. Never applies in production,
+  // and never once keys are present.
+  const allowUnconfiguredDevAccess =
+    process.env.NODE_ENV !== "production" && (!url || !anonKey);
+
   if (isAdminArea && !isAdminLogin && (!url || !anonKey)) {
+    if (allowUnconfiguredDevAccess) {
+      return NextResponse.next({ request });
+    }
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/admin/login";
     redirectUrl.searchParams.set("error", "config");
