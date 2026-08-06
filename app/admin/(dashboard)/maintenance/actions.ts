@@ -555,3 +555,63 @@ function parseStatus(v: FormDataEntryValue | null): WorkOrderStatus | null {
   ];
   return allowed.includes(s as WorkOrderStatus) ? (s as WorkOrderStatus) : null;
 }
+
+/**
+ * Status-only transition for the Work orders list, per handoff rule 2.
+ *
+ * `updateWorkOrder` rewrites every column, so it is the wrong tool for a
+ * "Take action…" change — a partial form would blank unrelated fields. This
+ * touches `status` alone and keeps the same side effects: due-notifications
+ * are cleared on close, and the change is announced to the notification feed
+ * with the acting account recorded by `requireAdminUser`.
+ */
+export async function setWorkOrderStatus(
+  id: string,
+  status: WorkOrderStatus,
+): Promise<{ ok: true } | { error: string }> {
+  try {
+    if (!isSupabaseConfigured()) {
+      return { error: "Supabase is not configured" };
+    }
+    await requireAdminUser();
+    const supabase = createServiceClient();
+
+    const { data: prevRow, error: prevErr } = await supabase
+      .from("work_orders")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (prevErr || !prevRow) {
+      return { error: prevErr?.message ?? "Work order not found" };
+    }
+    const before = prevRow as WorkOrderRow;
+    if (before.status === status) return { ok: true };
+
+    const { error } = await supabase
+      .from("work_orders")
+      .update({ status })
+      .eq("id", id);
+    if (error) return { error: error.message };
+
+    if (status === "completed" || status === "cancelled") {
+      await deleteDueNotificationsForWorkOrder(supabase, id);
+    }
+
+    await enqueueAdminNotification(supabase, {
+      kind: "work_order_updated",
+      title: "Work order updated",
+      body: `${before.work_order_number}: status ${before.status} → ${status}`,
+      href: `/admin/maintenance/${id}`,
+      entity_type: "work_order",
+      entity_id: id,
+      metadata: { from: before.status, to: status },
+    });
+
+    revalidatePath("/admin/maintenance");
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (err) {
+    rethrowIfRedirect(err);
+    return { error: err instanceof Error ? err.message : "Update failed" };
+  }
+}

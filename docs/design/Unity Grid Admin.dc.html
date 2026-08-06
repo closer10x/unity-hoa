@@ -76,8 +76,9 @@
 
   <div style="max-width: 1520px; margin: 0 auto; width: 100%; display: flex; flex-wrap: wrap; align-items: flex-start; gap: clamp(20px, 3vw, 40px); padding: clamp(16px, 3vw, 32px);">
 
-    <sc-if value="{{ deskNav }}" hint-placeholder-val="{{ true }}">
-    <aside style="position: sticky; top: 88px; align-self: start; flex: 1 1 200px; display: flex; flex-wrap: wrap; gap: 6px;">
+    <aside style="position: sticky; top: 88px; align-self: start; flex: 1 1 236px; min-width: 0; max-width: 100%; display: grid; gap: 10px; align-content: start;">
+      <sc-if value="{{ deskNav }}" hint-placeholder-val="{{ true }}">
+    <div style="display: grid; gap: 4px; align-content: start;">
       <sc-for list="{{ nav }}" as="n" hint-placeholder-count="10">
         <button type="button" onClick="{{ n.go }}" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex: 1 1 150px; text-align: left; font: inherit; font-size: 15px; border: 1px solid {{ n.border }}; background: {{ n.bg }}; color: {{ n.color }}; border-radius: 10px; padding: 11px 14px; cursor: pointer;" style-hover="border-color: oklch(0.82 0.02 150);">
           <span style="font-weight: {{ n.weight }};">{{ n.label }}</span>
@@ -86,8 +87,8 @@
           </sc-if>
         </button>
       </sc-for>
-    </aside>
-    </sc-if>
+      </div>
+      </sc-if>
 
     <sc-if value="{{ mobileNav }}" hint-placeholder-val="{{ false }}">
       <div style="flex: 1 1 100%; display: grid; gap: 10px;">
@@ -125,12 +126,7 @@
         </sc-if>
       </div>
     </sc-if>
-        </button>
-            </sc-for>
-          </div>
-        </sc-if>
-      </div>
-    </sc-if>
+    </aside>
 
     <main style="flex: 999 1 420px; min-width: 0; display: grid; gap: clamp(20px, 3vw, 28px); align-content: start;">
 

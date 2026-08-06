@@ -74,8 +74,14 @@ export function AdminSidebar({ notifications }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed top-0 left-0 z-40 hidden h-full min-h-screen w-64 flex-col gap-2 overflow-y-auto border-r border-outline-variant bg-surface p-6 md:flex">
-      <div className="mb-8 flex items-start justify-between gap-2">
+    /* Handoff shell: an in-flow sticky column, flex 1 1 236px, capped at
+       236px, laid out as a grid with 10px between groups. Not a fixed rail —
+       and no media queries, so it wraps intrinsically below ~700px. */
+    <aside
+      className="sticky top-[88px] grid min-w-0 content-start gap-2.5 self-start"
+      style={{ flex: "1 1 236px", maxWidth: "236px" }}
+    >
+      <div className="mb-2 flex items-start justify-between gap-2">
         <Link href="/admin" className="flex min-w-0 items-baseline gap-2.5">
           <span
             aria-hidden
@@ -95,9 +101,9 @@ export function AdminSidebar({ notifications }: SidebarProps) {
         </div>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-6">
+      <nav className="grid content-start gap-2.5">
         {NAV_GROUPS.map(({ group, items }) => (
-          <div key={group} className="flex flex-col gap-1">
+          <div key={group} className="grid content-start gap-1">
             <p className="mb-1 px-3 font-label text-[10px] uppercase tracking-[0.12em] text-outline">
               {group}
             </p>

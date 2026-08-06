@@ -8,6 +8,15 @@ import {
   signProfileAvatarUrl,
 } from "@/lib/supabase/server";
 
+/**
+ * Admin shell, per docs/design/handoff.md "Application shell".
+ *
+ * Body is `display: flex; flex-wrap: wrap; align-items: flex-start` with a
+ * fluid gap and padding. The sidebar is `flex: 1 1 236px` and sticky; main is
+ * `flex: 999 1 420px; min-width: 0` — the lopsided grow factor keeps the
+ * sidebar at its natural width on desktop and forces a clean wrap below about
+ * 700px. Intrinsic layout, no media queries.
+ */
 export default async function AdminDashboardLayout({
   children,
 }: {
@@ -24,16 +33,24 @@ export default async function AdminDashboardLayout({
   }
 
   return (
-    <>
-      <AdminSidebar notifications={notifications} />
-      <main className="md:ml-64 min-h-screen flex flex-col">
-        <AdminHeader
-          email={session.user.email ?? undefined}
-          displayName={session.profile.display_name ?? undefined}
-          avatarUrl={headerAvatarUrl}
-        />
-        {children}
-      </main>
-    </>
+    <div className="min-h-screen">
+      <AdminHeader
+        email={session.user.email ?? undefined}
+        displayName={session.profile.display_name ?? undefined}
+        avatarUrl={headerAvatarUrl}
+      />
+      <div
+        className="mx-auto flex w-full max-w-[1520px] flex-wrap items-start"
+        style={{
+          gap: "clamp(20px, 3vw, 40px)",
+          padding: "clamp(16px, 3vw, 32px)",
+        }}
+      >
+        <AdminSidebar notifications={notifications} />
+        <main className="min-w-0" style={{ flex: "999 1 420px" }}>
+          {children}
+        </main>
+      </div>
+    </div>
   );
 }

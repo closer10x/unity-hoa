@@ -1,63 +1,67 @@
 import type { Metadata } from "next";
 
 import {
-  getWorkOrderStats,
   listWorkOrders,
+  setWorkOrderStatus,
 } from "@/app/admin/(dashboard)/maintenance/actions";
-import { MaintenanceDashboard } from "@/components/portal/maintenance/maintenance-dashboard";
-import { MaintenanceNotConfigured } from "@/components/portal/maintenance/maintenance-not-configured";
-import { listActiveEmployees } from "@/app/admin/(dashboard)/settings/employees/actions";
-import { isSupabaseConfigured } from "@/lib/supabase/server";
-import { ALL_STATUSES, type WorkOrderStatus } from "@/lib/types/maintenance";
+import {
+  WorkOrdersSection,
+  type WorkOrderView,
+} from "@/components/portal/work-orders/work-orders-section";
+import { requireAdminUser } from "@/lib/auth/require-admin";
+import { PRIORITY_LABELS } from "@/lib/types/maintenance";
+import type { WorkOrderStatus } from "@/lib/types/maintenance";
 
-export const metadata: Metadata = {
-  title: "Maintenance",
-};
+export const metadata: Metadata = { title: "Work orders" };
 
 export const dynamic = "force-dynamic";
 
-function parseStatus(raw: string | undefined): WorkOrderStatus | "all" {
-  if (!raw) return "all";
-  return (ALL_STATUSES as readonly string[]).includes(raw)
-    ? (raw as WorkOrderStatus)
-    : "all";
+function daysOpen(iso: string | null): string {
+  if (!iso) return "—";
+  const d = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000));
+  return `${d}d open`;
 }
 
-type PageProps = {
-  searchParams?: Promise<{ status?: string }>;
-};
+export default async function WorkOrdersPage() {
+  const session = await requireAdminUser();
+  const actingStaff =
+    session.profile.display_name?.trim() || session.user.email || "this account";
 
-export default async function AdminMaintenancePage({ searchParams }: PageProps) {
-  const sp = searchParams ? await searchParams : undefined;
-  const filterStatus = parseStatus(sp?.status);
+  const res = await listWorkOrders();
+  const items = res && "items" in res ? res.items : [];
+  const error = res && "error" in res ? res.error : null;
 
-  if (!isSupabaseConfigured()) {
-    return (
-      <div className="p-8">
-        <MaintenanceNotConfigured />
-      </div>
-    );
+  const rows: WorkOrderView[] = items.map((w) => ({
+    id: w.id,
+    ref: w.work_order_number,
+    title: w.title,
+    detail:
+      w.location ?? w.description?.slice(0, 90) ?? "No location recorded",
+    assignee: w.assignee_name,
+    status: w.status,
+    priority: PRIORITY_LABELS[w.priority],
+    age: daysOpen(w.created_at),
+  }));
+
+  async function setStatus(id: string, status: WorkOrderStatus) {
+    "use server";
+    return setWorkOrderStatus(id, status);
   }
 
-  const [stats, listRes, empRes] = await Promise.all([
-    getWorkOrderStats(),
-    listWorkOrders({ status: filterStatus }),
-    listActiveEmployees(),
-  ]);
-
-  const listError = "error" in listRes ? listRes.error : null;
-  const items = "items" in listRes ? listRes.items : [];
-  const employees = "items" in empRes ? empRes.items : [];
-
   return (
-    <div className="p-8">
-      <MaintenanceDashboard
-        stats={stats}
-        items={items}
-        employees={employees}
-        filterStatus={filterStatus}
-        listError={listError}
-      />
+    <div className="px-4 py-6 sm:px-6 md:px-8">
+      <div className="mx-auto w-full max-w-[1520px]">
+        {error ? (
+          <p className="mb-6 rounded-xl border border-outline-variant bg-secondary-container px-5 py-4 text-sm text-on-secondary-container">
+            {error}
+          </p>
+        ) : null}
+        <WorkOrdersSection
+          rows={rows}
+          actingStaff={actingStaff}
+          setStatus={setStatus}
+        />
+      </div>
     </div>
   );
 }

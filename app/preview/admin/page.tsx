@@ -4,6 +4,8 @@ import { AdminSidebar } from "@/components/portal/admin-sidebar";
 import { AdminDashboard } from "@/components/portal/dashboard/admin-dashboard";
 import { PREVIEW_DASHBOARD } from "@/components/portal/dashboard/preview-fixture";
 import { OwnersManager } from "@/components/portal/owners/owners-manager";
+import { WorkOrdersSection } from "@/components/portal/work-orders/work-orders-section";
+import { PREVIEW_WORK_ORDERS } from "@/components/portal/work-orders/preview-fixture";
 import { SectionByKey, type SectionKey } from "@/components/portal/section-by-key";
 
 /**
@@ -19,6 +21,7 @@ import { SectionByKey, type SectionKey } from "@/components/portal/section-by-ke
 const TABS = [
   { key: "", label: "Dashboard" },
   { key: "owners", label: "Owners" },
+  { key: "workorders", label: "Work orders" },
   { key: "architectural", label: "Architectural" },
   { key: "violations", label: "Violations" },
   { key: "bookings", label: "Bookings" },
@@ -36,12 +39,15 @@ export default async function AdminPreviewPage({
   if (process.env.NODE_ENV === "production") notFound();
 
   const { section = "" } = await searchParams;
-  const isSection = (TABS.some((t) => t.key === section) && section !== "" && section !== "owners");
+  const isSection =
+    TABS.some((t) => t.key === section) &&
+    section !== "" &&
+    section !== "owners" &&
+    section !== "workorders";
 
   return (
     <>
-      <AdminSidebar notifications={{ items: [], unreadCount: 0 }} />
-      <main className="flex min-h-screen flex-col md:ml-64">
+      <div className="min-h-screen">
         <header className="sticky top-0 z-20 border-b border-outline-variant bg-surface px-4 py-3.5 sm:px-6 md:px-8">
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
             <select
@@ -84,9 +90,18 @@ export default async function AdminPreviewPage({
           </div>
         </div>
 
-        <div className="px-4 py-6 sm:px-6 md:px-8">
-          <div className="mx-auto w-full max-w-[1520px]">
-            {section === "owners" ? (
+        <div
+          className="mx-auto flex w-full max-w-[1520px] flex-wrap items-start"
+          style={{ gap: "clamp(20px, 3vw, 40px)", padding: "clamp(16px, 3vw, 32px)" }}
+        >
+          <AdminSidebar notifications={{ items: [], unreadCount: 0 }} />
+          <main className="min-w-0" style={{ flex: "999 1 420px" }}>
+            {section === "workorders" ? (
+              <WorkOrdersSection
+                rows={PREVIEW_WORK_ORDERS}
+                actingStaff="Preview Admin"
+              />
+            ) : section === "owners" ? (
               <>
                 <p className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">
                   People
@@ -101,9 +116,9 @@ export default async function AdminPreviewPage({
             ) : (
               <AdminDashboard scopeLabel="All communities" {...PREVIEW_DASHBOARD} />
             )}
-          </div>
+          </main>
         </div>
-      </main>
+      </div>
     </>
   );
 }
