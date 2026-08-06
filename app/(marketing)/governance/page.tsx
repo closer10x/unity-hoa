@@ -39,20 +39,42 @@ export default function GovernancePage() {
 
       <section className={`${SECTION_PAD} pb-12 md:pb-20`}>
         <div className={SECTION_COL}>
-          <h2 className="mb-6 text-[22px] font-semibold tracking-[-0.015em]">
-            Document library
-          </h2>
+          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-4">
+            <h2 className="text-[22px] font-semibold tracking-[-0.015em]">
+              Document library
+            </h2>
+            <span className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">
+              Sign-in required
+            </span>
+          </div>
+
+          <p className="mb-6 max-w-[62ch] text-[15px] leading-relaxed text-on-surface-variant text-pretty">
+            Governing documents are available to registered residents. Sign in
+            with your resident account to download them, or{" "}
+            <Link href="/contact" className="text-secondary hover:underline">
+              ask the office
+            </Link>{" "}
+            for a copy.
+          </p>
+
           <div className="grid gap-px overflow-hidden rounded-[14px] border border-outline-variant bg-outline-variant">
             {DOCUMENTS.map((d) => (
               <div
                 key={d.title}
-                className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] items-baseline justify-items-start gap-x-[18px] gap-y-2 bg-surface-container-lowest px-6 py-5 hover:bg-row-hover"
+                className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] items-baseline justify-items-start gap-x-[18px] gap-y-2 bg-surface-container-lowest px-6 py-5"
               >
                 <span className="text-base font-medium">{d.title}</span>
                 <span className="font-label text-xs text-status-neutral">
                   {d.meta}
                 </span>
-                <span className="text-[15px] text-secondary">Download</span>
+                {/* Downloads stay gated until resident auth exists. */}
+                <span
+                  aria-disabled
+                  title="Resident sign-in isn’t available yet"
+                  className="cursor-not-allowed font-label text-xs uppercase tracking-[0.12em] text-outline"
+                >
+                  Sign in to download
+                </span>
               </div>
             ))}
           </div>
