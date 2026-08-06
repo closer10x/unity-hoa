@@ -82,13 +82,8 @@ export function AdminSidebar({ notifications }: SidebarProps) {
        nav never scrolls away with the page. --admin-header-h is published by
        AdminHeader so the offset is not a magic number. */
     <aside
-      className="sticky grid min-w-0 content-start gap-2.5 self-start overflow-y-auto rounded-2xl border border-outline-variant bg-surface-container-lowest p-4"
-      style={{
-        flex: "1 1 236px",
-        maxWidth: "236px",
-        top: "calc(var(--admin-header-h, 70px) + 12px)",
-        maxHeight: "calc(100dvh - var(--admin-header-h, 70px) - 32px)",
-      }}
+      className="grid max-h-full min-w-0 content-start gap-2.5 self-stretch overflow-y-auto rounded-2xl border border-outline-variant bg-surface-container-lowest p-4"
+      style={{ flex: "1 1 236px", maxWidth: "236px" }}
     >
       <div className="mb-1 flex items-center justify-between gap-2">
         <p className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">

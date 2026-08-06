@@ -49,7 +49,7 @@ export default async function AdminPreviewPage({
   return (
     <>
       <div
-        className="min-h-screen"
+        className="flex h-[100dvh] flex-col overflow-hidden"
         style={{ "--admin-header-h": `${ADMIN_HEADER_H}px` } as React.CSSProperties}
       >
         <AdminHeader displayName="Preview Admin" email="preview@unitygrid.local" />
@@ -76,11 +76,14 @@ export default async function AdminPreviewPage({
         </div>
 
         <div
-          className="mx-auto flex w-full max-w-[1520px] flex-wrap items-start"
-          style={{ gap: "clamp(20px, 3vw, 40px)", padding: "clamp(16px, 3vw, 32px)" }}
+          className="mx-auto flex w-full min-h-0 max-w-[1520px] flex-1 flex-wrap items-stretch overflow-hidden"
+          style={{
+            gap: "clamp(20px, 3vw, 40px)",
+            padding: "clamp(16px, 3vw, 32px)",
+          }}
         >
           <AdminSidebar notifications={{ items: [], unreadCount: 0 }} />
-          <main className="min-w-0" style={{ flex: "999 1 420px" }}>
+          <main className="max-h-full min-h-0 min-w-0 overflow-y-auto" style={{ flex: "999 1 420px" }}>
             {section === "workorders" ? (
               <WorkOrdersSection
                 rows={PREVIEW_WORK_ORDERS}
