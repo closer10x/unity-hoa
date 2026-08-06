@@ -36,10 +36,13 @@ export default function Shell() {
   return (
     <>
       <Header />
+      {/* Left-aligned, not centred: centring made the whole shell shift a few
+          pixels whenever a section's height brought the scrollbar in or out,
+          so the nav appeared to jump between sections. */}
       <div style={{
         display: "flex", flexWrap: "wrap", alignItems: "flex-start",
         gap: "clamp(20px, 3vw, 40px)", padding: pad.shell,
-        maxWidth: 1520, margin: "0 auto",
+        maxWidth: 1520, marginInline: 0,
       }}>
         {s.isMobile ? <MobileNav /> : <Sidebar />}
         <main style={{ flex: "999 1 420px", minWidth: 0, display: "grid", gap: pad.gap, alignContent: "start" }}>

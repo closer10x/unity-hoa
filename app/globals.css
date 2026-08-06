@@ -131,6 +131,12 @@
     "opsz" 24;
 }
 
+/* Reserve the scrollbar track so pages that scroll and pages that don't
+   share one layout width — otherwise content shifts as you navigate. */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   font-family: var(--font-body);
 }

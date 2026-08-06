@@ -17,9 +17,17 @@ function Badge({ children }: { children: React.ReactNode }) {
 export function Sidebar() {
   const s = useStore();
   return (
+    /* Reads as its own surface, the way cards do against the stone page, and
+       takes its own scrollbar so a long nav never drags the page with it. */
     <aside style={{
       position: "sticky", top: 88, alignSelf: "flex-start",
       flex: "0 1 236px", minWidth: 200, display: "grid", gap: 4,
+      background: color.surface,
+      border: `1px solid ${color.hairline}`,
+      borderRadius: radius.card,
+      padding: 10,
+      maxHeight: "calc(100dvh - 108px)",
+      overflowY: "auto",
     }}>
       {NAV.map((n) => {
         const on = n.id === s.view;
