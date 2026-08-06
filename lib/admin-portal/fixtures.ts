@@ -11,6 +11,7 @@ export const CURRENT_USER = "Elena Cruz · community manager";
 
 export const NAV = [
   { id: "dashboard", label: "Dashboard", group: "Today" },
+  { id: "owners", label: "Owners", group: "People" },
   { id: "calendar", label: "Calendar", group: "Today" },
   { id: "accounting", label: "Accounting", badge: "12", group: "Money" },
   { id: "legal", label: "Legal & liens", badge: "4", group: "Money" },
@@ -19,7 +20,6 @@ export const NAV = [
   { id: "violations", label: "Violations", badge: "5", group: "Property" },
   { id: "bookings", label: "Bookings", badge: "2", group: "Property" },
   { id: "vendors", label: "Vendors", group: "Property" },
-  { id: "owners", label: "Owners", group: "People" },
   { id: "comms", label: "Communications", group: "People" },
   { id: "board", label: "Board & meetings", badge: "2", group: "People" },
   { id: "docs", label: "Documents", group: "Office" },
