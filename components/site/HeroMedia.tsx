@@ -6,9 +6,15 @@
 export function HeroMedia() {
   return (
     <div className="relative overflow-hidden rounded-[18px] border border-outline-variant bg-surface-container-high">
+      {/* Capped to about half the 21:9 height so the hero doesn't dominate the
+          fold. object-cover crops rather than squashing, and the cap is fluid
+          so it stays a sensible band on narrow screens. */}
       <video
         className="block h-full w-full object-cover"
-        style={{ aspectRatio: "21 / 9" }}
+        style={{
+          aspectRatio: "21 / 9",
+          maxHeight: "clamp(170px, 22vw, 270px)",
+        }}
         src="/video/hero-drone.mp4"
         autoPlay
         muted
