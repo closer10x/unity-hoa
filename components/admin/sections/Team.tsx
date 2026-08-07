@@ -209,7 +209,9 @@ export default function Team() {
         </AddDrawer>
 
         {s.staff.map((p) => (
-          <Row key={p.id}>
+          /* Tight vertical rhythm: when the action cluster wraps under the
+             name at narrower widths, the row shouldn't balloon. */
+          <Row key={p.id} style={{ padding: `10px ${pad.card}`, rowGap: 4, alignItems: "center" }}>
             <RowMain label={p.name} detail={p.email} />
             <Mono size={12} style={{ color: color.neutral }}>{p.role}</Mono>
             <span style={{ fontSize: 14, color: color.inkTertiary, overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -218,12 +220,12 @@ export default function Team() {
             <Status tone={!p.active ? "neutral" : p.load > 7 ? "attention" : "positive"}>
               {p.active ? `${p.load} open` : "Disabled"}
             </Status>
-            <span style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <Pill style={{ padding: "8px 16px", fontSize: 14 }}
+            <span style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+              <Pill style={{ padding: "6px 13px", fontSize: 13 }}
                 onClick={() => (editing === p.id ? setEditing(null) : openEdit(p))}>
                 {editing === p.id ? "Close" : "Edit"}
               </Pill>
-              <Pill style={{ padding: "8px 16px", fontSize: 14 }}
+              <Pill style={{ padding: "6px 13px", fontSize: 13 }}
                 onClick={() => {
                   s.setStaff((prev) => prev.map((x) => x.id === p.id ? { ...x, active: !x.active } : x));
                   s.audit(`${p.active ? "Disabled" : "Enabled"} account for ${p.name}`);
