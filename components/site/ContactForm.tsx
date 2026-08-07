@@ -27,6 +27,7 @@ export function ContactForm({ initialTopic = "" }: { initialTopic?: string }) {
   const [community, setCommunity] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [topic, setTopic] = useState(
     TOPICS.some((t) => t.value === initialTopic) ? initialTopic : "",
   );
@@ -51,6 +52,7 @@ export function ContactForm({ initialTopic = "" }: { initialTopic?: string }) {
           community,
           name: name.trim(),
           email: email.trim(),
+          phone: phone.trim(),
           topic,
           message: body.trim(),
         }),
@@ -136,6 +138,17 @@ export function ContactForm({ initialTopic = "" }: { initialTopic?: string }) {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+          />
+        </label>
+        <label className="block w-full">
+          <span className={LABEL}>Phone</span>
+          <input
+            className={FIELD}
+            type="tel"
+            placeholder="(713) 555-0100"
+            autoComplete="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
           />
         </label>
       </div>

@@ -25,6 +25,7 @@ export async function POST(req: Request) {
     community?: string;
     name?: string;
     email?: string;
+    phone?: string;
     topic?: string;
     message?: string;
   };
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
   const community = body.community?.trim() ?? "";
   const name = body.name?.trim() ?? "";
   const email = body.email?.trim() ?? "";
+  const phone = body.phone?.trim() ?? "";
   const topic = body.topic?.trim() ?? "";
   const message = body.message?.trim() ?? "";
   if (!community || !name || !EMAIL_RE.test(email) || !message) {
@@ -65,6 +67,7 @@ export async function POST(req: Request) {
     <h1 style="font-size:18px;margin:0 0 12px">${escapeHtml(topicLabel)} — ${escapeHtml(communityName)}</h1>
     <table style="border-collapse:collapse;width:100%;max-width:560px">
       <tr><td style="padding:6px 0;font-weight:600;width:120px">From</td><td style="padding:6px 0">${escapeHtml(name)} · ${escapeHtml(email)}</td></tr>
+      <tr><td style="padding:6px 0;font-weight:600">Phone</td><td style="padding:6px 0">${phone ? escapeHtml(phone) : "—"}</td></tr>
       <tr><td style="padding:6px 0;font-weight:600;vertical-align:top">Message</td><td style="padding:6px 0">${escapeHtml(message).replaceAll("\n", "<br />")}</td></tr>
     </table>
   </div>`.trim();

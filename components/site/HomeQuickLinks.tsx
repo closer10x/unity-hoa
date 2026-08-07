@@ -37,6 +37,7 @@ export function HomeQuickLinks() {
   const [community, setCommunity] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -59,6 +60,7 @@ export function HomeQuickLinks() {
           name: name.trim(),
           email: email.trim(),
           topic: "maintenance",
+          phone: phone.trim(),
           message: message.trim(),
         }),
       });
@@ -152,6 +154,17 @@ export function HomeQuickLinks() {
                     autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                  />
+                </label>
+                <label className="block w-full">
+                  <span className={LABEL}>Phone</span>
+                  <input
+                    className={FIELD}
+                    type="tel"
+                    placeholder="(713) 555-0100"
+                    autoComplete="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                   />
                 </label>
               </div>
