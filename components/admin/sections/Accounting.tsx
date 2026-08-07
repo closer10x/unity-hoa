@@ -36,6 +36,16 @@ function todayISO(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/** Sub-navigation inside Accounting — one surface per job, less scrolling. */
+const ACCOUNTING_TABS = [
+  { id: "overview", label: "Overview" },
+  { id: "ledger", label: "General ledger" },
+  { id: "reports", label: "Reports" },
+  { id: "fees", label: "Fee schedule" },
+  { id: "bank", label: "Bank accounts" },
+] as const;
+type AccountingTab = (typeof ACCOUNTING_TABS)[number]["id"];
+
 export default function Accounting() {
   const s = useStore();
 
@@ -110,9 +120,33 @@ export default function Accounting() {
   /* ----- delinquency ladder ----- */
   const [pending, setPending] = useState<PendingConfirm | null>(null);
 
+  /* ----- sub-navigation ----- */
+  const [tab, setTab] = useState<AccountingTab>("overview");
+
   return (
     <>
       <PageTitle title="Accounting" lede={`Receivables, the general ledger and bank activity for ${s.scopeLabel}.`} />
+
+      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", borderBottom: `1px solid ${color.hairline}` }}>
+        {ACCOUNTING_TABS.map((t) => (
+          <button key={t.id} type="button"
+            onClick={() => setTab(t.id)}
+            aria-current={tab === t.id ? "page" : undefined}
+            style={{
+              font: "inherit", fontSize: 15, fontWeight: 500, cursor: "pointer",
+              background: "none", border: "none", padding: "10px 14px 12px",
+              color: tab === t.id ? color.ink : color.inkTertiary,
+              boxShadow: tab === t.id ? `inset 0 -2px 0 ${color.accent}` : "none",
+              whiteSpace: "nowrap",
+            }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "overview" ? (
+      <>
+      <LedgerTiles />
 
       <Card>
         <CardHead title="Take a payment" meta={`Phone, walk-in or mailed check · posted by ${s.currentUser.split(" · ")[0]}`} />
@@ -276,12 +310,6 @@ export default function Accounting() {
         </div>
       </Card>
 
-      <LedgerTiles />
-      <LedgerCard />
-      <ReportsCard />
-      <FeeCard />
-      <BankCard />
-
       <Tiles min={180}>
         {AGING.map((a) => <Tile key={a.label} label={a.label} value={a.amount} />)}
       </Tiles>
@@ -342,6 +370,18 @@ export default function Accounting() {
           ))}
         </Card>
       ) : null}
+      </>
+      ) : null}
+
+      {tab === "ledger" ? (
+        <>
+          <LedgerTiles />
+          <LedgerCard />
+        </>
+      ) : null}
+      {tab === "reports" ? <ReportsCard /> : null}
+      {tab === "fees" ? <FeeCard /> : null}
+      {tab === "bank" ? <BankCard /> : null}
     </>
   );
 }
@@ -879,6 +919,8 @@ function ReportsCard() {
 
 function FeeCard() {
   const s = useStore();
+  // Collapsible via the chevron; open by default now that it has its own tab.
+  const [openCard, setOpenCard] = useState(true);
   const [drawer, setDrawer] = useState(false);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -908,10 +950,42 @@ function FeeCard() {
     s.audit(`Fee schedule: ${f.active ? "retired" : "restored"} ${f.name}`);
   }
 
+  const activeCount = s.fees.filter((f) => f.active).length;
+
   return (
     <Card>
       <CardHead title="Fee schedule"
-        meta="The association's named fees — quick-picks on the payment and ledger forms" />
+        meta={openCard
+          ? "The association's named fees — quick-picks on the payment and ledger forms"
+          : `${activeCount} active fee${activeCount === 1 ? "" : "s"} on the payment and ledger forms`}>
+        <button
+          type="button"
+          onClick={() => setOpenCard((v) => !v)}
+          aria-expanded={openCard}
+          aria-label={openCard ? "Collapse the fee schedule" : "Expand the fee schedule"}
+          style={{
+            background: "none", border: "none", padding: "8px 2px",
+            cursor: "pointer", color: "oklch(0.44 0.045 155)",
+            display: "inline-flex", alignItems: "center",
+          }}
+        >
+          {/* Chevron matches the nav icons: one stroke weight, currentColor. */}
+          <svg
+            width={17} height={17} viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth={1.5}
+            strokeLinecap="round" strokeLinejoin="round"
+            aria-hidden focusable={false}
+            style={{
+              transform: openCard ? "rotate(180deg)" : "none",
+              transition: "transform 140ms ease",
+            }}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+      </CardHead>
+      {!openCard ? null : (
+      <>
       <AddDrawer open={drawer} onOpen={() => { setDrawer(true); setError(""); }}
         onCancel={() => { setDrawer(false); setError(""); }}
         openLabel="Add a fee"
@@ -960,6 +1034,8 @@ function FeeCard() {
           ) : null}
         </React.Fragment>
       ))}
+      </>
+      )}
     </Card>
   );
 }
@@ -968,6 +1044,8 @@ function FeeCard() {
 
 function BankCard() {
   const s = useStore();
+  // Collapsible via the chevron; open by default in its own tab.
+  const [openCard, setOpenCard] = useState(true);
   const [busy, setBusy] = useState<"connect" | "sync" | null>(null);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
@@ -1030,8 +1108,38 @@ function BankCard() {
 
   return (
     <Card>
-      <CardHead title="Bank accounts" meta="Connected through Plaid · transactions import into the ledger" />
-
+      <CardHead title="Bank accounts"
+        meta={openCard
+          ? "Connected through Plaid · transactions import into the ledger"
+          : `${active.length} linked account${active.length === 1 ? "" : "s"} syncing into the ledger`}>
+        <button
+          type="button"
+          onClick={() => setOpenCard((v) => !v)}
+          aria-expanded={openCard}
+          aria-label={openCard ? "Collapse bank accounts" : "Expand bank accounts"}
+          style={{
+            background: "none", border: "none", padding: "8px 2px",
+            cursor: "pointer", color: "oklch(0.44 0.045 155)",
+            display: "inline-flex", alignItems: "center",
+          }}
+        >
+          {/* Chevron matches the nav icons: one stroke weight, currentColor. */}
+          <svg
+            width={17} height={17} viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth={1.5}
+            strokeLinecap="round" strokeLinejoin="round"
+            aria-hidden focusable={false}
+            style={{
+              transform: openCard ? "rotate(180deg)" : "none",
+              transition: "transform 140ms ease",
+            }}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+      </CardHead>
+      {!openCard ? null : (
+      <>
       <div style={{ padding: "18px 24px", borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
         <Primary onClick={connect} style={{ opacity: busy === "connect" ? 0.7 : 1 }}>
           {busy === "connect" ? "Opening your bank…" : "Connect a bank account"}
@@ -1081,6 +1189,8 @@ function BankCard() {
           ) : null}
         </React.Fragment>
       ))}
+      </>
+      )}
     </Card>
   );
 }
