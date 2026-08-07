@@ -76,7 +76,7 @@ export default function Header() {
                     <span style={{ fontFamily: font.mono, fontSize: 12, color: "oklch(0.5 0.04 155)" }}>viewing</span>
                   </span>
                   <span style={{ display: "block", fontSize: 13, color: color.inkTertiary, marginTop: 2 }}>
-                    {s.property.address}
+                    {s.property.mailingAddress || s.property.address}
                   </span>
                 </button>
               </div>
