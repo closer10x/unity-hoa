@@ -44,7 +44,7 @@ export default function Amenities() {
         amenity,
         time.trim(),
         eventType.toLowerCase(),
-        guests.trim() ? `${guests.trim()} guests` : "",
+        guests ? `${guests} ${guests === "1" ? "guest" : "guests"}` : "",
         flagCount ? `${flagCount} requirement${flagCount === 1 ? "" : "s"}` : "",
       ].filter(Boolean).join(" · "),
       status: "Requested",
@@ -88,7 +88,13 @@ export default function Amenities() {
             <Field label="Time window"><Input value={time} onChange={setTime} placeholder="e.g. 4–9PM" /></Field>
           </FieldGrid>
           <FieldGrid>
-            <Field label="Guests"><Input value={guests} onChange={setGuests} placeholder="Approx. count" /></Field>
+            <Field label="Guests">
+              <Select value={guests} onChange={setGuests} placeholder="How many people?"
+                options={Array.from({ length: 10 }, (_, i) => ({
+                  id: String(i + 1),
+                  label: `${i + 1} ${i === 0 ? "person" : "people"}`,
+                }))} />
+            </Field>
             <Field label="Event type">
               <Select value={eventType} onChange={setEventType}
                 options={EVENTS.map((e) => ({ id: e, label: e }))} />
