@@ -6,6 +6,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server-user";
 
 export type AdminProfile = {
   role: string;
+  /** Drives per-section permissions; null (pre-migration account) = full access. */
+  staff_role: string | null;
   display_name: string | null;
   avatar_path: string | null;
 };
@@ -32,6 +34,7 @@ const DEV_SESSION: AdminSession = {
   user: { id: "dev-local", email: "dev@localhost" },
   profile: {
     role: "admin",
+    staff_role: "Administrator",
     display_name: "Local dev",
     avatar_path: null,
   },
@@ -72,6 +75,7 @@ export const requireAdminUser = cache(async (): Promise<AdminSession> => {
 
   const row = profile as {
     role: string;
+    staff_role?: string | null;
     display_name?: string | null;
     avatar_path?: string | null;
   };
@@ -80,6 +84,7 @@ export const requireAdminUser = cache(async (): Promise<AdminSession> => {
     user: { id: user.id, email: user.email },
     profile: {
       role: row.role,
+      staff_role: row.staff_role ?? null,
       display_name: row.display_name ?? null,
       avatar_path: row.avatar_path ?? null,
     },

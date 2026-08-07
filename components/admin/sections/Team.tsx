@@ -21,6 +21,7 @@ export default function Team() {
   const [error, setError] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [role, setRole] = useState<StaffRole>("Community manager");
   const [comms, setComms] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
@@ -36,7 +37,7 @@ export default function Team() {
       const res = await fetch("/api/team-invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), email: email.trim(), role }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), role, phone: phone.trim() }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; emailError?: string };
       if (!res.ok || !data.ok) {
@@ -57,7 +58,7 @@ export default function Team() {
         setError(`Account created, but the welcome email failed: ${data.emailError}`);
         return;
       }
-      setOpen(false); setName(""); setEmail(""); setComms([]);
+      setOpen(false); setName(""); setEmail(""); setPhone(""); setComms([]);
     } finally {
       setSending(false);
     }
@@ -75,6 +76,7 @@ export default function Team() {
           <FieldGrid>
             <Field label="Name"><Input value={name} onChange={setName} placeholder="First and last" /></Field>
             <Field label="Work email"><Input value={email} onChange={setEmail} placeholder="name@unitygrid.com" /></Field>
+            <Field label="Cell (for text notifications)"><Input value={phone} onChange={setPhone} placeholder="(713) 555-0100" /></Field>
             <Field label="Role">
               <Select value={role} onChange={(v) => setRole(v as StaffRole)} options={ROLES.map((r) => ({ id: r, label: r }))} />
             </Field>

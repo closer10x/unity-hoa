@@ -17,6 +17,7 @@ function Badge({ children }: { children: React.ReactNode }) {
 /** Desktop rail. Sticky, natural width; the main column's grow factor keeps it there. */
 export function Sidebar() {
   const s = useStore();
+  const items = NAV.filter((n) => s.allowedSections.includes(n.id));
   return (
     /* Reads as its own surface, the way cards do against the stone page, and
        takes its own scrollbar so a long nav never drags the page with it. */
@@ -30,7 +31,7 @@ export function Sidebar() {
       maxHeight: "calc(100dvh - 108px)",
       overflowY: "auto",
     }}>
-      {NAV.map((n) => {
+      {items.map((n) => {
         const on = n.id === s.view;
         return (
           <button key={n.id} type="button" onClick={() => s.setView(n.id)}
@@ -60,8 +61,9 @@ export function Sidebar() {
  */
 export function MobileNav() {
   const s = useStore();
-  const current = NAV.find((n) => n.id === s.view) ?? NAV[0];
-  const openTotal = NAV.reduce((t, n) => t + (("badge" in n && n.badge) ? parseInt(n.badge, 10) || 0 : 0), 0);
+  const items = NAV.filter((n) => s.allowedSections.includes(n.id));
+  const current = items.find((n) => n.id === s.view) ?? items[0] ?? NAV[0];
+  const openTotal = items.reduce((t, n) => t + (("badge" in n && n.badge) ? parseInt(n.badge, 10) || 0 : 0), 0);
 
   return (
     <div style={{ flex: "1 1 100%", display: "grid", gap: 10 }}>
@@ -90,12 +92,12 @@ export function MobileNav() {
           borderRadius: radius.xl, padding: 6, maxHeight: "66vh", overflowY: "auto",
           boxShadow: "0 12px 32px oklch(0.4 0.02 150 / 0.1)",
         }}>
-          {NAV_GROUPS.map((group) => (
+          {NAV_GROUPS.filter((group) => items.some((n) => n.group === group)).map((group) => (
             <div key={group} style={{ display: "grid", gap: 2, padding: "8px 6px 10px" }}>
               <span style={{ fontFamily: font.mono, fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "oklch(0.6 0.015 150)", padding: "0 8px 6px" }}>
                 {group}
               </span>
-              {NAV.filter((n) => n.group === group).map((n) => {
+              {items.filter((n) => n.group === group).map((n) => {
                 const on = n.id === s.view;
                 return (
                   <button key={n.id} type="button" onClick={() => s.setView(n.id)}

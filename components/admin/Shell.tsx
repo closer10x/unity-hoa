@@ -31,7 +31,12 @@ const SECTIONS: Record<string, React.ComponentType> = {
 
 export default function Shell() {
   const s = useStore();
-  const Section = SECTIONS[s.view] ?? Dashboard;
+  // Server-resolved permissions: a section outside this account's allowed
+  // list can never render, even if s.view is forced to it.
+  const view = s.allowedSections.includes(s.view)
+    ? s.view
+    : s.allowedSections[0] ?? "dashboard";
+  const Section = SECTIONS[view] ?? Dashboard;
 
   return (
     <>

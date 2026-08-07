@@ -2,6 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import * as fx from "./fixtures";
+import { ALL_SECTIONS } from "./permissions";
 import { MOBILE_BREAKPOINT } from "./tokens";
 import type {
   ArcApp, AuditEntry, Booking, CalEvent, Community, Delinquent, Director, Doc,
@@ -85,12 +86,28 @@ interface Store {
   stamp: () => string;
   uid: (prefix: string) => string;
   currentUser: string;
+
+  /** Section ids this account may open; resolved server-side from staff_role. */
+  allowedSections: string[];
 }
 
 const Ctx = createContext<Store | null>(null);
 
-export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [view, setViewRaw] = useState("dashboard");
+export function StoreProvider({
+  children,
+  allowedSections,
+  currentUser,
+}: {
+  children: React.ReactNode;
+  /** From the server session (sectionsForRole). Defaults to everything for
+      contexts without a session, e.g. the unconfigured-dev fallback. */
+  allowedSections?: string[];
+  /** The signed-in account, used to stamp audit entries. */
+  currentUser?: string;
+}) {
+  const allowed = allowedSections ?? [...ALL_SECTIONS];
+  const actor = currentUser?.trim() || fx.CURRENT_USER;
+  const [view, setViewRaw] = useState(allowed[0] ?? "dashboard");
   const [scope, setScope] = useState("all");
   const [vw, setVw] = useState(1200);
   const [navOpen, setNavOpen] = useState(false);
@@ -122,8 +139,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const audit = useCallback((text: string) => {
-    setAuditLog((prev) => [{ id: uid("au"), text, who: fx.CURRENT_USER, time: stamp() }, ...prev]);
-  }, []);
+    setAuditLog((prev) => [{ id: uid("au"), text, who: actor, time: stamp() }, ...prev]);
+  }, [actor]);
 
   const setView = useCallback((v: string) => {
     setViewRaw(v);
@@ -156,7 +173,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     legalCases, setLegalCases, vendors, setVendors, docs, setDocs,
     communities, setCommunities, portfolios, setPortfolios, staff, setStaff,
     customEvents, setCustomEvents, eventMoves, setEventMoves,
-    auditLog, audit, stamp, uid, currentUser: fx.CURRENT_USER,
+    auditLog, audit, stamp, uid, currentUser: actor,
+    allowedSections: allowed,
   };
 
   // setPayments is used by the payment flow via the exported hook below

@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 
+import { isStaffRole, canManageStaff } from "@/lib/admin-portal/permissions";
 import { sendWelcomeEmailViaResend } from "@/lib/email/send-welcome-email";
 import { isSupabaseAuthConfigured } from "@/lib/supabase/keys";
 import { requireServiceSupabase } from "@/lib/supabase/service";
@@ -20,7 +21,7 @@ function generateTempPassword(): string {
   return randomBytes(9).toString("base64url");
 }
 
-async function callerIsAdmin(): Promise<boolean> {
+async function callerMayInvite(): Promise<boolean> {
   if (!isSupabaseAuthConfigured()) return false;
   const supabase = await createSupabaseServerClient();
   const {
@@ -29,18 +30,23 @@ async function callerIsAdmin(): Promise<boolean> {
   if (!user) return false;
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, staff_role")
     .eq("id", user.id)
     .maybeSingle();
-  return profile?.role === "admin";
+  // Portal access plus the Administrator staff role (only Administrators
+  // manage staff accounts). Null staff_role = account predating roles.
+  return (
+    profile?.role === "admin" &&
+    canManageStaff(profile.staff_role as string | null)
+  );
 }
 
 export async function POST(req: Request) {
-  if (!(await callerIsAdmin())) {
+  if (!(await callerMayInvite())) {
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   }
 
-  let body: { name?: string; email?: string; role?: string };
+  let body: { name?: string; email?: string; role?: string; phone?: string };
   try {
     body = await req.json();
   } catch {
@@ -49,9 +55,16 @@ export async function POST(req: Request) {
   const name = body.name?.trim() ?? "";
   const email = body.email?.trim().toLowerCase() ?? "";
   const role = body.role?.trim() ?? "";
-  if (!name || !EMAIL_RE.test(email) || !role) {
+  const phone = body.phone?.trim() ?? "";
+  if (!name || !EMAIL_RE.test(email) || !isStaffRole(role)) {
     return NextResponse.json(
-      { error: "Name, a valid work email and a role are required." },
+      { error: "Name, a valid work email and a valid role are required." },
+      { status: 400 },
+    );
+  }
+  if (phone && !/^[\d\s()+.-]{7,20}$/.test(phone)) {
+    return NextResponse.json(
+      { error: "The cell number doesn't look like a phone number." },
       { status: 400 },
     );
   }
@@ -73,11 +86,17 @@ export async function POST(req: Request) {
     );
   }
 
-  // Portal access + display name. Staff sign in through the admin portal, so
-  // their profile role is "admin"; the finer staff role lives in employees.
+  // Portal access + display name + staff_role (drives section permissions)
+  // + cell for SMS notifications.
   const { error: profileErr } = await service
     .from("profiles")
-    .upsert({ id: created.user.id, role: "admin", display_name: name });
+    .upsert({
+      id: created.user.id,
+      role: "admin",
+      staff_role: role,
+      display_name: name,
+      ...(phone ? { phone } : {}),
+    });
   if (profileErr) {
     return NextResponse.json(
       { error: `Account created but profile setup failed: ${profileErr.message}` },
@@ -87,7 +106,7 @@ export async function POST(req: Request) {
 
   const { error: employeeErr } = await service
     .from("employees")
-    .insert({ name, email, role, active: true });
+    .insert({ name, email, role, active: true, ...(phone ? { phone } : {}) });
   if (employeeErr) {
     return NextResponse.json(
       { error: `Account created but employee record failed: ${employeeErr.message}` },
