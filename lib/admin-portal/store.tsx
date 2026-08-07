@@ -6,6 +6,7 @@ import { ALL_SECTIONS } from "./permissions";
 import { MOBILE_BREAKPOINT } from "./tokens";
 import type {
   AddressSuggestion,
+  StaffRole,
   ArcApp, AuditEntry, BankAccount, Booking, CalEvent, Community, Delinquent,
   Director, Doc, LedgerEntry, LegalCase, Meeting, Owner, Payment,
   PendingConfirm, Portfolio, Staff, Vendor, Violation, WorkOrder,
@@ -91,6 +92,10 @@ interface Store {
   stamp: () => string;
   uid: (prefix: string) => string;
   currentUser: string;
+  /** The signed-in account's staff role, from the server session. */
+  currentRole: StaffRole | null;
+  /** Destructive actions are Administrator-only. */
+  isAdministrator: boolean;
   /** Known addresses from the lots roster, for add-form autofill. */
   addressBook: AddressSuggestion[];
   /** Dashboard tiles computed server-side from live reads. */
@@ -106,6 +111,7 @@ export function StoreProvider({
   children,
   allowedSections,
   currentUser,
+  currentRole = null,
   initialData,
 }: {
   children: React.ReactNode;
@@ -114,6 +120,8 @@ export function StoreProvider({
   allowedSections?: string[];
   /** The signed-in account, used to stamp audit entries. */
   currentUser?: string;
+  /** staff_role from the session; gates destructive actions. */
+  currentRole?: StaffRole | null;
   /**
    * Collections read from the database on the server. Sections whose tables
    * do not exist yet are simply absent here and stay empty — the fixtures are
@@ -137,7 +145,17 @@ export function StoreProvider({
   }>;
 }) {
   const allowed = allowedSections ?? [...ALL_SECTIONS];
-  const actor = currentUser?.trim() || fx.CURRENT_USER;
+  const account = currentUser?.trim() || fx.CURRENT_USER;
+  /* Rule 4 wants who did it — the account and the capacity they acted in.
+     Composed here rather than by each caller, so entries cannot drift into
+     "someone@example.com" with the role missing. */
+  const actor =
+    currentRole && !account.includes(currentRole)
+      ? `${account} · ${currentRole}`
+      : account;
+  /* Only Administrators may delete. Anything else — including an unset role —
+     gets the read/act surface without the destructive one. */
+  const isAdministrator = currentRole === "Administrator";
   const [view, setViewRaw] = useState(allowed[0] ?? "dashboard");
   const [scope, setScope] = useState("all");
   const [vw, setVw] = useState(1200);
@@ -209,7 +227,7 @@ export function StoreProvider({
     communities, setCommunities, portfolios, setPortfolios, staff, setStaff,
     customEvents, setCustomEvents, eventMoves, setEventMoves,
     ledger, setLedger, bankAccounts, setBankAccounts,
-    auditLog, audit, stamp, uid, currentUser: actor, metrics, addressBook,
+    auditLog, audit, stamp, uid, currentUser: actor, currentRole, isAdministrator, metrics, addressBook,
     allowedSections: allowed,
   };
 

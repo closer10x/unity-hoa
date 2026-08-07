@@ -428,7 +428,7 @@ function LedgerCard() {
         onCancel={() => { setDrawer(false); setError(""); }}
         openLabel="Add an entry"
         title="New ledger entry"
-        note={note || "Record income or an expense — bank imports land here automatically."}>
+        note="Record income or an expense — bank imports land here automatically.">
         <div style={{ display: "grid", gap: 16 }}>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <Chip on={kind === "expense"} onClick={() => { setKind("expense"); setCategory(EXPENSE_CATEGORIES[0]); }}>Expense</Chip>

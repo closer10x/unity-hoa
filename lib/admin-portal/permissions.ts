@@ -55,3 +55,17 @@ export function sectionsForRole(
 export function canManageStaff(staffRole: string | null | undefined): boolean {
   return staffRole == null || staffRole === "" || staffRole === "Administrator";
 }
+
+const STAFF_ROLES = [
+  "Administrator", "Community manager", "Assistant manager",
+  "Maintenance tech", "Inspector", "Accounting", "Front desk",
+] as const;
+
+/**
+ * Narrows the session's free-text staff_role to a known role. Anything
+ * unrecognised returns null, which the portal treats as "no elevated rights"
+ * rather than guessing — a typo in the column must not grant delete.
+ */
+export function asStaffRole(value: string | null | undefined): StaffRole | null {
+  return STAFF_ROLES.find((r) => r === value) ?? null;
+}

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import Shell from "@/components/admin/Shell";
-import { sectionsForRole } from "@/lib/admin-portal/permissions";
+import { asStaffRole, sectionsForRole } from "@/lib/admin-portal/permissions";
 import { loadPortalData } from "@/lib/admin-portal/server-data";
 import { StoreProvider } from "@/lib/admin-portal/store";
 import { requireAdminUser } from "@/lib/auth/require-admin";
@@ -21,6 +21,7 @@ export default async function AdminPortalPage() {
   const session = await requireAdminUser();
   const data = await loadPortalData();
   const staffRole = session.profile.staff_role;
+  const role = asStaffRole(staffRole);
   const actor =
     session.profile.display_name?.trim() ||
     session.user.email ||
@@ -29,7 +30,8 @@ export default async function AdminPortalPage() {
   return (
     <StoreProvider
       allowedSections={[...sectionsForRole(staffRole)]}
-      currentUser={staffRole ? `${actor} · ${staffRole}` : actor}
+      currentUser={actor}
+      currentRole={role}
       initialData={data}
     >
       <Shell />

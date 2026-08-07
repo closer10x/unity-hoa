@@ -157,14 +157,27 @@ const inputStyle: React.CSSProperties = {
 };
 
 export function Input({
-  value, onChange, placeholder, readOnly = false, mono = false,
+  value, onChange, placeholder, readOnly = false, mono = false, suggestions,
 }: {
   value: string; onChange: (v: string) => void; placeholder?: string;
   /** System-assigned values: shown, never typed into. */
   readOnly?: boolean;
   mono?: boolean;
+  /** Known addresses; typing offers them and fills the whole line. */
+  suggestions?: AddressSuggestion[];
 }) {
-  return (
+  const typed = value.trim().toLowerCase();
+  const matches =
+    !suggestions || typed.length < 1
+      ? []
+      : suggestions
+          .filter((a) => {
+            const line = `${a.streetNo} ${a.street}`.toLowerCase();
+            return line.includes(typed) && line !== typed;
+          })
+          .slice(0, 6);
+
+  const field = (
     <input
       type="text"
       value={value}
@@ -181,6 +194,30 @@ export function Input({
           : null),
       }}
     />
+  );
+
+  if (matches.length === 0) return field;
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      {field}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {matches.map((a) => (
+          <button
+            key={a.label}
+            type="button"
+            onClick={() => onChange(`${a.streetNo} ${a.street}`.trim())}
+            style={{
+              font: "inherit", fontSize: 14, cursor: "pointer",
+              background: color.surfaceSunken,
+              border: `1px solid ${color.hairline}`,
+              borderRadius: 999, padding: "7px 14px", color: color.ink,
+            }}
+          >
+            {a.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -210,10 +247,91 @@ export function ErrorLine({ children }: { children: React.ReactNode }) {
   return <p style={{ margin: 0, fontSize: 14, color: color.critical }}>{children}</p>;
 }
 
-export function DropZone({ children }: { children: React.ReactNode }) {
+/**
+ * File drop zone. Accepts a drag, a click-to-browse, and — with `camera` — a
+ * "Take a photo" action that opens the device camera directly, which is how an
+ * inspector standing at the property will actually use it.
+ *
+ * `capture="environment"` asks for the rear camera. Desktop browsers ignore it
+ * and fall back to the file picker, so the same control works everywhere; the
+ * button is only rendered where a capture-capable input is likely, and is
+ * harmless if it degrades.
+ *
+ * Files are held in component state and named back to the user. Nothing is
+ * uploaded yet — that needs a storage bucket and a signed-upload route.
+ */
+export function DropZone({
+  children, camera = false, onFiles,
+}: {
+  children: React.ReactNode;
+  /** Offer a direct camera capture alongside browse. */
+  camera?: boolean;
+  onFiles?: (files: File[]) => void;
+}) {
+  const [picked, setPicked] = React.useState<string[]>([]);
+  const [over, setOver] = React.useState(false);
+  const browseRef = React.useRef<HTMLInputElement>(null);
+  const cameraRef = React.useRef<HTMLInputElement>(null);
+
+  const take = (list: FileList | null) => {
+    const files = Array.from(list ?? []);
+    if (files.length === 0) return;
+    setPicked((prev) => [...prev, ...files.map((f) => f.name)]);
+    onFiles?.(files);
+  };
+
   return (
-    <div style={{ border: `1px dashed oklch(0.82 0.014 145)`, borderRadius: radius.md, padding: 18, textAlign: "center" }}>
-      <Mono style={{ color: color.inkQuaternary }}>{children}</Mono>
+    <div style={{ display: "grid", gap: 10 }}>
+      <div
+        onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => { e.preventDefault(); setOver(false); take(e.dataTransfer.files); }}
+        onClick={() => browseRef.current?.click()}
+        style={{
+          border: `1px dashed ${over ? color.accent : "oklch(0.82 0.014 145)"}`,
+          background: over ? color.accentTint : undefined,
+          borderRadius: radius.md, padding: 18, textAlign: "center", cursor: "pointer",
+        }}
+      >
+        <Mono style={{ color: color.inkQuaternary }}>{children}</Mono>
+      </div>
+
+      <input
+        ref={browseRef}
+        type="file"
+        multiple
+        accept="image/*,application/pdf"
+        onChange={(e) => take(e.target.files)}
+        style={{ display: "none" }}
+      />
+
+      {camera ? (
+        <>
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={(e) => take(e.target.files)}
+            style={{ display: "none" }}
+          />
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <Pill onClick={() => cameraRef.current?.click()}>Take a photo</Pill>
+            <Pill onClick={() => browseRef.current?.click()}>Choose files</Pill>
+          </div>
+        </>
+      ) : null}
+
+      {picked.length > 0 ? (
+        <div style={{ display: "grid", gap: 4 }}>
+          {picked.map((n, i) => (
+            <Mono key={`${n}-${i}`} size={12} style={{ color: color.neutral }}>{n}</Mono>
+          ))}
+          <span style={{ fontSize: 13, color: color.attention }}>
+            Held in this form only — file upload is not wired up yet.
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }

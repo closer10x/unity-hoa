@@ -8,6 +8,7 @@ import { useStore } from "@/lib/admin-portal/store";
 import { color, font, pad } from "@/lib/admin-portal/tokens";
 import type { Staff, StaffRole } from "@/lib/admin-portal/types";
 import {
+  ConfirmBar,
   AddDrawer, Card, CardHead, Chip, Empty, ErrorLine, Field, FieldGrid, Input,
   Mono, PageTitle, Pill, Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
@@ -19,6 +20,8 @@ const ROLES: StaffRole[] = [
 
 export default function Team() {
   const s = useStore();
+  /* Rule 3: deletion always confirms. Only one row confirms at a time. */
+  const [removing, setRemoving] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [name, setName] = useState("");
@@ -126,16 +129,38 @@ export default function Team() {
                 }}>
                 {p.active ? "Disable" : "Enable"}
               </Pill>
-              <TextButton tone="destructive"
-                onClick={() => {
-                  s.setStaff((prev) => prev.filter((x) => x.id !== p.id));
-                  s.audit(`Removed staff account for ${p.name}`);
-                }}>
-                Remove
-              </TextButton>
+              {/* Removing an account is Administrator-only; everyone else can
+                  disable it, which is reversible. */}
+              {s.isAdministrator ? (
+                <TextButton tone="destructive" onClick={() => setRemoving(p.id)}>
+                  Remove
+                </TextButton>
+              ) : (
+                <span
+                  title="Only an Administrator can remove a staff account"
+                  style={{ fontSize: 14, color: color.inkQuaternary, padding: "10px 2px", whiteSpace: "nowrap" }}
+                >
+                  Remove
+                </span>
+              )}
             </span>
           </Row>
         ))}
+        {s.staff.map((p) =>
+          removing === p.id ? (
+            <ConfirmBar
+              key={`confirm-${p.id}`}
+              text={`Are you sure you want to delete ${p.name}? This removes the staff account and their access. Work already logged against them stays in the audit trail.`}
+              confirmLabel="Yes, delete this account"
+              onCancel={() => setRemoving(null)}
+              onConfirm={() => {
+                s.setStaff((prev) => prev.filter((x) => x.id !== p.id));
+                s.audit(`Removed staff account for ${p.name}`);
+                setRemoving(null);
+              }}
+            />
+          ) : null,
+        )}
       </Card>
 
       <Card>

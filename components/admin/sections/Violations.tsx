@@ -19,6 +19,13 @@ const TYPES = [
   "Noise or nuisance", "Other",
 ];
 
+/* Cure periods are counted in whole days and are legally significant, so this
+   is a fixed 1–30 list rather than free text that could hold "two weeks". */
+const CURE_DAYS = Array.from({ length: 30 }, (_, i) => {
+  const n = i + 1;
+  return { id: `${n} day${n === 1 ? "" : "s"}`, label: `${n} day${n === 1 ? "" : "s"}` };
+});
+
 export default function Violations() {
   const s = useStore();
   const [query, setQuery] = useState("");
@@ -74,7 +81,9 @@ export default function Violations() {
             <Field label="Community">
               <Select value={comm} onChange={setComm} options={s.communities.map((c) => ({ id: c.name, label: c.name }))} />
             </Field>
-            <Field label="Address or lot"><Input value={address} onChange={setAddress} placeholder="e.g. 1109 Willow Bend" /></Field>
+            <Field label="Address or lot">
+              <Input value={address} onChange={setAddress} placeholder="e.g. 1109 Willow Bend" suggestions={s.addressBook} />
+            </Field>
             <Field label="Violation type">
               <Select value={type} onChange={setType} placeholder="Select a type…" options={TYPES.map((t) => ({ id: t, label: t }))} />
             </Field>
@@ -86,17 +95,24 @@ export default function Violations() {
                 { id: "Resident report", label: "Resident report" },
                 { id: "Board referral", label: "Board referral" },
                 { id: "Vendor report", label: "Vendor report" },
+                { id: "Other", label: "Other" },
               ]} />
             </Field>
             <Field label="Inspector">
               <Select value={inspector} onChange={setInspector} options={s.staff.filter((p) => p.active).map((p) => ({ id: p.name, label: p.name }))} />
             </Field>
-            <Field label="Cure by"><Input value={cure} onChange={setCure} placeholder="e.g. 14 days" /></Field>
+            <Field label="Cure by">
+              <Select
+                value={cure}
+                onChange={setCure}
+                options={CURE_DAYS}
+              />
+            </Field>
           </FieldGrid>
           <Field label="Notes for the file">
             <Area value={note} onChange={setNote} placeholder="What was observed, and the CC&amp;R section it falls under." />
           </Field>
-          <DropZone>inspection photos — drag files here (timestamped in the file)</DropZone>
+          <DropZone camera>inspection photos — take one now, or drag files here (timestamped in the file)</DropZone>
           {error ? <ErrorLine>{error}</ErrorLine> : null}
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <Primary onClick={logFinding}>Log finding</Primary>
@@ -143,7 +159,7 @@ export default function Violations() {
                   <div style={{ display: "grid", gap: 10 }}>
                     <Eyebrow>Photos &amp; attachments</Eyebrow>
                     {v.photos.length === 0 ? (
-                      <DropZone>no photos on this file yet — drag files here</DropZone>
+                      <DropZone camera>no photos on this file yet — take one now, or drag files here</DropZone>
                     ) : (
                       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                         {v.photos.map((p, i) => (
