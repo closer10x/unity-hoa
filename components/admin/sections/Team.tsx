@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { ROLE_HINTS, ROLE_MATRIX } from "@/lib/admin-portal/actions";
+import { ROLE_HINTS } from "@/lib/admin-portal/actions";
+import { NAV } from "@/lib/admin-portal/fixtures";
+import { ALL_SECTIONS, SECTION_ACCESS } from "@/lib/admin-portal/permissions";
 import { useStore } from "@/lib/admin-portal/store";
-import { color } from "@/lib/admin-portal/tokens";
+import { color, font, pad } from "@/lib/admin-portal/tokens";
 import type { Staff, StaffRole } from "@/lib/admin-portal/types";
 import {
   AddDrawer, Card, CardHead, Chip, Empty, ErrorLine, Field, FieldGrid, Input,
@@ -25,6 +27,9 @@ export default function Team() {
   const [role, setRole] = useState<StaffRole>("Community manager");
   const [comms, setComms] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
+  // The role reference is static copy — collapsed by default so it doesn't
+  // push the audit trail off screen.
+  const [matrixOpen, setMatrixOpen] = useState(false);
 
   async function save() {
     if (!name.trim() || !email.trim()) return setError("Add a name and a work email.");
@@ -148,13 +153,71 @@ export default function Team() {
       </Card>
 
       <Card>
-        <CardHead title="What each role can reach" />
-        {ROLE_MATRIX.map((r) => (
-          <Row key={r.role} style={{ gridTemplateColumns: "180px minmax(0, 1fr)" }}>
-            <Mono size={12} style={{ color: color.neutral }}>{r.role}</Mono>
-            <span style={{ fontSize: 15, lineHeight: 1.55, color: color.inkSecondary }}>{r.access}</span>
-          </Row>
-        ))}
+        <CardHead title="What each role can reach">
+          <button
+            type="button"
+            onClick={() => setMatrixOpen((v) => !v)}
+            aria-expanded={matrixOpen}
+            aria-label={matrixOpen ? "Hide role details" : "Show role details"}
+            style={{
+              background: "none", border: "none", padding: "8px 2px",
+              cursor: "pointer", color: "oklch(0.44 0.045 155)",
+              display: "inline-flex", alignItems: "center",
+            }}
+          >
+            {/* Chevron matches the nav icons: one stroke weight, currentColor. */}
+            <svg
+              width={17} height={17} viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth={1.5}
+              strokeLinecap="round" strokeLinejoin="round"
+              aria-hidden focusable={false}
+              style={{
+                transform: matrixOpen ? "rotate(180deg)" : "none",
+                transition: "transform 140ms ease",
+              }}
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        </CardHead>
+        {matrixOpen ? (
+          /* Rendered from SECTION_ACCESS — the same map the server enforces —
+             so this table cannot drift from real permissions. */
+          <div style={{ overflowX: "auto", padding: `6px ${pad.card} 18px` }}>
+            <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 780 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left", padding: "12px 14px 10px 0", fontFamily: font.mono, fontSize: 11, fontWeight: 400, letterSpacing: "0.12em", textTransform: "uppercase", color: color.inkTertiary, whiteSpace: "nowrap" }}>
+                    Section
+                  </th>
+                  {ROLES.map((r) => (
+                    <th key={r} style={{ padding: "12px 8px 10px", fontFamily: font.mono, fontSize: 11, fontWeight: 400, letterSpacing: "0.06em", textTransform: "uppercase", color: color.inkTertiary, textAlign: "center", maxWidth: 96, lineHeight: 1.4 }}>
+                      {r}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ALL_SECTIONS.map((sec) => (
+                  <tr key={sec} style={{ borderTop: `1px solid ${color.hairlineSoft}` }}>
+                    <td style={{ padding: "10px 14px 10px 0", fontSize: 14, color: color.inkSecondary, whiteSpace: "nowrap" }}>
+                      {NAV.find((n) => n.id === sec)?.label ?? sec}
+                    </td>
+                    {ROLES.map((r) => {
+                      const has = SECTION_ACCESS[r].includes(sec);
+                      return (
+                        <td key={r} aria-label={has ? `${r} can reach` : `${r} cannot reach`}
+                          style={{ padding: "10px 8px", textAlign: "center", fontFamily: font.mono, fontSize: 13, color: has ? "oklch(0.44 0.045 155)" : color.inkQuaternary }}>
+                          {has ? "✓" : "—"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
       </Card>
     </>
   );
