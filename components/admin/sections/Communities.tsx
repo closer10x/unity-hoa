@@ -1,8 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ONBOARD_STEPS } from "@/lib/admin-portal/actions";
 import { emptyAddress, formatAddress } from "@/lib/admin-portal/address";
+import {
+  getCommunityPolicies, setCommunityPolicy, type CommunityPolicy,
+} from "@/lib/admin-portal/policy-actions";
 import { buildActionMenu, useStore } from "@/lib/admin-portal/store";
 import { color } from "@/lib/admin-portal/tokens";
 import type { Address, Community, PendingConfirm, Portfolio } from "@/lib/admin-portal/types";
@@ -31,6 +34,35 @@ export default function Communities() {
   const [cCadence, setCCadence] = useState("Quarterly");
   const [cPortfolio, setCPortfolio] = useState("");
   const [pending, setPending] = useState<PendingConfirm | null>(null);
+
+  /* per-community feature policy */
+  const [policies, setPolicies] = useState<CommunityPolicy[]>([]);
+  const [policyError, setPolicyError] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    getCommunityPolicies(s.communities.map((c) => c.id)).then((res) => {
+      if (!alive) return;
+      if (res.ok) setPolicies(res.policies);
+      else setPolicyError(res.error);
+    });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.communities.length]);
+
+  async function togglePolicy(community: string, key: keyof Omit<CommunityPolicy, "community">) {
+    const current = policies.find((p) => p.community === community);
+    if (!current) return;
+    const next = { ...current, [key]: !current[key] };
+    setPolicies((prev) => prev.map((p) => (p.community === community ? next : p)));
+    const res = await setCommunityPolicy(next);
+    if (!res.ok) {
+      setPolicies((prev) => prev.map((p) => (p.community === community ? current : p)));
+      setPolicyError(res.error);
+    } else {
+      setPolicyError("");
+    }
+  }
 
   function savePortfolio() {
     if (!pName.trim()) return setPError("Name the portfolio.");
@@ -147,6 +179,38 @@ export default function Communities() {
                   }} />
               ) : null}
             </React.Fragment>
+          );
+        })}
+      </Card>
+
+      <Card>
+        <CardHead
+          title="What each community offers"
+          meta="Hidden features disappear from that community's resident portal"
+        />
+        {policyError ? (
+          <div style={{ padding: "14px 24px" }}>
+            <ErrorLine>{policyError}</ErrorLine>
+          </div>
+        ) : null}
+        {s.communities.map((c) => {
+          const p = policies.find((x) => x.community === c.id);
+          if (!p) return null;
+          return (
+            <Row key={c.id}>
+              <RowMain label={c.name} detail="Leasing, gates and guest passes" />
+              <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Chip on={p.allowLeases} onClick={() => togglePolicy(c.id, "allowLeases")}>
+                  Leasing {p.allowLeases ? "allowed" : "not permitted"}
+                </Chip>
+                <Chip on={p.allowGateCodes} onClick={() => togglePolicy(c.id, "allowGateCodes")}>
+                  Gate codes {p.allowGateCodes ? "offered" : "off"}
+                </Chip>
+                <Chip on={p.allowGuestPasses} onClick={() => togglePolicy(c.id, "allowGuestPasses")}>
+                  Guest passes {p.allowGuestPasses ? "offered" : "off"}
+                </Chip>
+              </span>
+            </Row>
           );
         })}
       </Card>

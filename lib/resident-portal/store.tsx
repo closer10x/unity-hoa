@@ -37,10 +37,12 @@ const NO_PROPERTY: Property = {
   id: "none",
   name: "Unity Grid",
   address: "No property linked yet",
+  mailingAddress: "",
   account: "",
   balance: "",
   balanceCents: null,
   due: "",
+  overdue: false,
   cadence: "",
   alert: "",
 };
@@ -93,6 +95,11 @@ interface Store {
   gateCode: string;
   setGateCode: (v: string) => void;
 
+  // community policy — what this community offers
+  leasesAllowed: boolean;
+  gateCodesAllowed: boolean;
+  guestPassesAllowed: boolean;
+
   // helpers
   stamp: () => string;
   uid: (prefix: string) => string;
@@ -115,6 +122,10 @@ export type ResidentInitialData = Partial<{
   announcements: Announcement[];
   notify: NotifyPrefs;
   smsOptIn: boolean;
+  threads: Thread[];
+  leasesAllowed: boolean;
+  gateCodesAllowed: boolean;
+  guestPassesAllowed: boolean;
 }>;
 
 export function StoreProvider({
@@ -144,7 +155,7 @@ export function StoreProvider({
   const [guestPasses, setGuestPasses] = useState<GuestPass[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const docs = initialData?.docs ?? [];
-  const [threads, setThreads] = useState<Thread[]>([]);
+  const [threads, setThreads] = useState<Thread[]>(initialData?.threads ?? []);
   const events = initialData?.events ?? [];
   const announcements = initialData?.announcements ?? [];
   const [household, setHousehold] = useState<HouseholdMember[]>(() =>
@@ -184,6 +195,9 @@ export function StoreProvider({
     household, setHousehold, pets, setPets, leases, setLeases,
     notify, setNotify, autopay, setAutopay, smsOptIn, setSmsOptIn,
     gateCode, setGateCode,
+    leasesAllowed: initialData?.leasesAllowed ?? true,
+    gateCodesAllowed: initialData?.gateCodesAllowed ?? true,
+    guestPassesAllowed: initialData?.guestPassesAllowed ?? true,
     stamp, uid, unreadCount, openRequestCount,
   };
 

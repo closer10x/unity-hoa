@@ -24,6 +24,8 @@ import type {
   LedgerEntry,
   Owner,
   Payment,
+  ResidentThread,
+  ResidentThreadMsg,
   Staff,
   StaffRole,
   WorkOrder,
@@ -72,6 +74,8 @@ export type PortalData = {
   addressBook: AddressSuggestion[];
   /** Dashboard tiles, computed from the same reads. */
   metrics: { label: string; value: string; note: string }[];
+  /** Resident conversations, answered from Communications. */
+  residentThreads: ResidentThread[];
 };
 
 const EMPTY: PortalData = {
@@ -97,6 +101,7 @@ const EMPTY: PortalData = {
   audit: [],
   fees: [],
   metrics: [],
+  residentThreads: [],
 };
 
 const usd = (cents: number) =>
@@ -428,7 +433,7 @@ const dateLabel = (d: string | null) =>
   d ? new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—";
 
 async function loadRemainingDomains(db: SupabaseClient) {
-  const [vRes, aRes, bRes, venRes, lRes, mRes, dRes, pRes, pcRes] = await Promise.all([
+  const [vRes, aRes, bRes, venRes, lRes, mRes, dRes, pRes, pcRes, mmRes] = await Promise.all([
     db.from("violations").select("*").order("opened_on", { ascending: false }),
     db.from("arc_applications").select("*").order("submitted_on", { ascending: false }),
     db.from("bookings").select("*").order("starts_at", { ascending: true }),
@@ -438,7 +443,26 @@ async function loadRemainingDomains(db: SupabaseClient) {
     db.from("directors").select("*").order("name", { ascending: true }),
     db.from("portfolios").select("*").order("name", { ascending: true }),
     db.from("portfolio_communities").select("*"),
+    db.from("meeting_minutes").select("*"),
   ]);
+
+  const minutesByMeeting = new Map(
+    ((mmRes.data ?? []) as {
+      meeting_id: string;
+      attendance: string | null;
+      body: string | null;
+      motions: string | null;
+      published: boolean;
+    }[]).map((r) => [
+      r.meeting_id,
+      {
+        attendance: r.attendance ?? "",
+        body: r.body ?? "",
+        motions: r.motions ?? "",
+        published: Boolean(r.published),
+      },
+    ]),
+  );
 
   const violations: Violation[] = (vRes.data ?? []).map((v) => ({
     id: v.id,
@@ -521,7 +545,7 @@ async function loadRemainingDomains(db: SupabaseClient) {
         new Date(m.starts_at).getTime() - new Date(m.notice_sent_at).getTime() >=
           (m.notice_required_hours ?? 0) * 3600_000,
     ),
-    minutes: null,
+    minutes: minutesByMeeting.get(m.id) ?? null,
   }));
 
   const directors: Director[] = (dRes.data ?? []).map((d) => ({
@@ -774,6 +798,7 @@ export async function loadPortalData(): Promise<PortalData> {
 
   const rest = await loadRemainingDomains(db);
   const signIns = await loadSignIns(db);
+  const residentThreads = await loadResidentThreads(db, profiles);
 
   return {
     owners,
@@ -791,5 +816,70 @@ export async function loadPortalData(): Promise<PortalData> {
     audit,
     fees,
     metrics,
+    residentThreads,
   };
+}
+
+/**
+ * Resident conversations for the Communications section. Tolerates the
+ * tables not existing yet — the card simply shows no threads.
+ */
+async function loadResidentThreads(
+  db: SupabaseClient,
+  profiles: ProfileRow[],
+): Promise<ResidentThread[]> {
+  try {
+    const [tRes, mRes] = await Promise.all([
+      db
+        .from("resident_threads")
+        .select("*")
+        .order("last_activity_at", { ascending: false })
+        .limit(200),
+      db
+        .from("resident_messages")
+        .select("*")
+        .order("created_at", { ascending: true })
+        .limit(2000),
+    ]);
+    if (tRes.error || mRes.error) return [];
+
+    const byThread = new Map<string, ResidentThreadMsg[]>();
+    for (const m of (mRes.data ?? []) as {
+      id: string; thread_id: string; author_name: string | null;
+      is_resident: boolean; body: string | null; created_at: string;
+    }[]) {
+      const list = byThread.get(m.thread_id) ?? [];
+      list.push({
+        id: m.id,
+        from: m.author_name ?? (m.is_resident ? "Resident" : "Staff"),
+        fromStaff: !m.is_resident,
+        time: stampTime(m.created_at),
+        body: m.body ?? "",
+      });
+      byThread.set(m.thread_id, list);
+    }
+
+    const names = new Map(profiles.map((p) => [p.id, p.display_name?.trim() || "Resident"]));
+
+    return ((tRes.data ?? []) as {
+      id: string; user_id: string; party: string | null; subject: string | null;
+      status: string | null; last_activity_at: string | null; created_at: string;
+    }[]).map((t) => {
+      const messages = byThread.get(t.id) ?? [];
+      const last = messages[messages.length - 1];
+      const status = t.status ?? "Open";
+      return {
+        id: t.id,
+        resident: names.get(t.user_id) ?? "Resident",
+        party: t.party ?? "Management office",
+        subject: t.subject ?? "(no subject)",
+        status,
+        date: stampTime(t.last_activity_at ?? t.created_at),
+        awaitingReply: status === "Open" && Boolean(last && !last.fromStaff),
+        messages,
+      };
+    });
+  } catch {
+    return [];
+  }
 }

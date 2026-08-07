@@ -10,7 +10,7 @@ import type {
   StaffRole,
   ArcApp, AuditEntry, BankAccount, Booking, CalEvent, Community, Delinquent,
   Director, Doc, Fee, LedgerEntry, LegalCase, Meeting, Owner, Payment,
-  PendingConfirm, Portfolio, Staff, Vendor, Violation, WorkOrder,
+  PendingConfirm, Portfolio, ResidentThread, Staff, Vendor, Violation, WorkOrder,
 } from "./types";
 
 /**
@@ -79,6 +79,8 @@ interface Store {
   setPortfolios: React.Dispatch<React.SetStateAction<Portfolio[]>>;
   staff: Staff[];
   setStaff: React.Dispatch<React.SetStateAction<Staff[]>>;
+  residentThreads: ResidentThread[];
+  setResidentThreads: React.Dispatch<React.SetStateAction<ResidentThread[]>>;
   customEvents: CalEvent[];
   setCustomEvents: React.Dispatch<React.SetStateAction<CalEvent[]>>;
   eventMoves: Record<string, string>;
@@ -161,6 +163,7 @@ export function StoreProvider({
     meetings: Meeting[];
     directors: Director[];
     portfolios: Portfolio[];
+    residentThreads: ResidentThread[];
   }>;
 }) {
   const allowed = allowedSections ?? [...ALL_SECTIONS];
@@ -195,6 +198,7 @@ export function StoreProvider({
   const [communities, setCommunities] = useState<Community[]>(initialData?.communities ?? []);
   const [portfolios, setPortfolios] = useState<Portfolio[]>(initialData?.portfolios ?? []);
   const [staff, setStaff] = useState<Staff[]>(initialData?.staff ?? []);
+  const [residentThreads, setResidentThreads] = useState<ResidentThread[]>(initialData?.residentThreads ?? []);
   const metrics = initialData?.metrics ?? [];
   const addressBook = initialData?.addressBook ?? [];
   const signIns = initialData?.signIns ?? [];
@@ -247,6 +251,7 @@ export function StoreProvider({
     bookings, setBookings, meetings, setMeetings, directors, setDirectors,
     legalCases, setLegalCases, vendors, setVendors, docs, setDocs,
     communities, setCommunities, portfolios, setPortfolios, staff, setStaff,
+    residentThreads, setResidentThreads,
     customEvents, setCustomEvents, eventMoves, setEventMoves,
     ledger, setLedger, bankAccounts, setBankAccounts,
     fees, setFees, focusOwnerId, setFocusOwnerId,

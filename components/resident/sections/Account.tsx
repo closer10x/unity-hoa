@@ -132,13 +132,23 @@ export default function Account() {
           <FieldGrid>
             <Field label="Email"><Input value={email} onChange={setEmail} placeholder="you@example.com" /></Field>
             <Field label="Mobile"><Input value={phone} onChange={setPhone} placeholder="(713) 555-0100" /></Field>
+            <Field
+              label="Text messages"
+              hint={s.smsOptIn
+                ? "Carrier message and data rates may apply. Reply STOP any time."
+                : "Without permission we only email you. Emergency notices still go by email."}
+            >
+              <Chip on={s.smsOptIn} onClick={() => s.setSmsOptIn(!s.smsOptIn)}>
+                {s.smsOptIn ? "Permission granted" : "Permit text messages"}
+              </Chip>
+            </Field>
           </FieldGrid>
           <MailingAddress
             same={mailingSame}
             onToggle={() => setMailingSame(!mailingSame)}
             value={mailing}
             onChange={setMailing}
-            propertyPreview={s.property.address}
+            propertyPreview={s.property.mailingAddress || s.property.address}
           />
           {contactError ? <ErrorLine>{contactError}</ErrorLine> : null}
           <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
@@ -151,16 +161,6 @@ export default function Account() {
       {/* ─── Notifications ───────────────────────────────────────────── */}
       <Card>
         <CardHead title="Notifications" meta="Choose how each kind of notice reaches you" />
-        <div style={{ padding: pad.card, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${color.hairlineSoft}` }}>
-          <span style={{ fontSize: 15, lineHeight: 1.6, color: color.inkSecondary, flex: "1 1 320px" }}>
-            {s.smsOptIn
-              ? "Texts are on for the categories selected below. Carrier message and data rates may apply; reply STOP any time."
-              : "You haven't opted in to text messages — we'll only email you. Emergency notices still go by email."}
-          </span>
-          <TextButton onClick={() => s.setSmsOptIn(!s.smsOptIn)}>
-            {s.smsOptIn ? "Opt out of texts" : "Permit text messages"}
-          </TextButton>
-        </div>
         <div style={{ padding: pad.card, display: "grid", gap: 12 }}>
           {NOTIFY_TYPES.map((n) => {
             const pref = s.notify[n.id] ?? { email: false, text: false };
@@ -185,7 +185,8 @@ export default function Account() {
           })}
           {!s.smsOptIn ? (
             <span style={{ fontSize: 13, color: color.inkQuaternary }}>
-              Text toggles unlock once you permit text messages above.
+              Text toggles unlock once you permit text messages next to your
+              mobile number, under Contact information.
             </span>
           ) : null}
         </div>
@@ -284,6 +285,16 @@ export default function Account() {
       </Card>
 
       {/* ─── Tenants & leases ────────────────────────────────────────── */}
+      {!s.leasesAllowed ? (
+        <Card>
+          <CardHead title="Tenants & leases" />
+          <Empty>
+            {s.property.name} doesn&rsquo;t permit leasing — homes are
+            owner-occupied under the governing documents. Questions? Message
+            the office.
+          </Empty>
+        </Card>
+      ) : (
       <Card>
         <AddDrawer
           open={leaseOpen}
@@ -320,6 +331,7 @@ export default function Account() {
           ))
         )}
       </Card>
+      )}
 
       {/* ─── Security ────────────────────────────────────────────────── */}
       <Card>

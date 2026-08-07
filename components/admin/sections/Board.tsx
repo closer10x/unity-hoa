@@ -3,13 +3,14 @@
 import React, { useState } from "react";
 import { MEETING_STEPS } from "@/lib/admin-portal/actions";
 import { emptyAddress, formatAddress } from "@/lib/admin-portal/address";
+import { createMeeting, saveMinutes, setMeetingStatus } from "@/lib/admin-portal/board-actions";
 import { buildActionMenu, useStore } from "@/lib/admin-portal/store";
-import { color, pad, radius } from "@/lib/admin-portal/tokens";
-import type { Address, Director, Meeting, PendingConfirm } from "@/lib/admin-portal/types";
+import { color, pad } from "@/lib/admin-portal/tokens";
+import type { Address, Director, MeetingStatus, PendingConfirm } from "@/lib/admin-portal/types";
 import {
   ActionSelect, AddDrawer, AddressFields, Area, Card, CardHead, ConfirmBar,
-  ErrorLine, Eyebrow, Field, FieldGrid, Input, Mono, PageTitle, Pill, Primary,
-  Row, RowMain, Select, Status, TextButton,
+  DateInput, ErrorLine, Eyebrow, Field, FieldGrid, Input, Mono, PageTitle,
+  Pill, Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
 
 const ROLES = ["President", "Vice president", "Treasurer", "Secretary", "Director at large"];
@@ -36,9 +37,11 @@ export default function Board() {
   const [mTime, setMTime] = useState("");
   const [mPlace, setMPlace] = useState("");
   const [mAddress, setMAddress] = useState("");
-  const [mNotice, setMNotice] = useState("");
   const [pending, setPending] = useState<PendingConfirm | null>(null);
+  const [flowError, setFlowError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [minutesOpen, setMinutesOpen] = useState("");
+  const [minutesSaved, setMinutesSaved] = useState("");
   const [drafts, setDrafts] = useState<Record<string, { attendance: string; body: string; motions: string }>>({});
 
   function saveDirector() {
@@ -54,19 +57,19 @@ export default function Board() {
     setDOpen(false); setDError(""); setDName(""); setDAddress(emptyAddress()); setDStart(""); setDEnd("");
   }
 
-  function saveMeeting() {
+  async function saveMeeting() {
     if (!mDate.trim()) return setMError("Add the meeting date.");
     if (!mTime.trim()) return setMError("Add a start time.");
     if (!mPlace.trim()) return setMError("Add a location.");
-    const m: Meeting = {
-      id: s.uid("m"), date: mDate.trim(), title: mType,
-      detail: `${mComm} · ${mPlace.trim()}, ${mTime.trim()}${mAddress.trim() ? ` · ${mAddress.trim()}` : ""}`,
-      status: "Scheduled",
-      notice: mNotice.trim() || "Notice not sent", noticeOk: false, minutes: null,
-    };
-    s.setMeetings((prev) => [...prev, m]);
-    s.audit(`Scheduled ${mType} on ${mDate.trim()} at ${mPlace.trim()}`);
-    setMOpen(false); setMError(""); setMDate(""); setMTime(""); setMPlace(""); setMAddress(""); setMNotice("");
+    setSaving(true);
+    const res = await createMeeting({
+      community: mComm, meetingType: mType, dateISO: mDate,
+      time: mTime, location: mPlace, address: mAddress,
+    });
+    setSaving(false);
+    if (!res.ok) return setMError(res.error);
+    s.setMeetings((prev) => [res.meeting, ...prev]);
+    setMOpen(false); setMError(""); setMDate(""); setMTime(""); setMPlace(""); setMAddress("");
   }
 
   return (
@@ -111,20 +114,21 @@ export default function Board() {
           openLabel="Schedule a meeting" title="Schedule a meeting">
           <FieldGrid>
             <Field label="Community"><Select value={mComm} onChange={setMComm} options={s.communities.map((c) => ({ id: c.name, label: c.name }))} /></Field>
-            <Field label="Meeting type"><Select value={mType} onChange={setMType} options={TYPES.map((t) => ({ id: t, label: t }))} /></Field>
-            <Field label="Date"><Input value={mDate} onChange={setMDate} placeholder="e.g. Jun 09" /></Field>
+            <Field label="Meeting type" hint="The annual meeting carries a 10-day notice window; everything else 144 hours.">
+              <Select value={mType} onChange={setMType} options={TYPES.map((t) => ({ id: t, label: t }))} />
+            </Field>
+            <Field label="Date"><DateInput value={mDate} onChange={setMDate} /></Field>
           </FieldGrid>
           <FieldGrid>
             <Field label="Start time"><Input value={mTime} onChange={setMTime} placeholder="e.g. 6:30 PM" /></Field>
             <Field label="Location"><Input value={mPlace} onChange={setMPlace} placeholder="e.g. Clubhouse Annex" /></Field>
             <Field label="Address"><Input value={mAddress} onChange={setMAddress} placeholder="e.g. 7880 Morrison Rd, Katy" /></Field>
           </FieldGrid>
-          <Field label="Notice requirement">
-            <Input value={mNotice} onChange={setMNotice} placeholder="e.g. Notice due May 30 · 144-hour window" />
-          </Field>
           {mError ? <ErrorLine>{mError}</ErrorLine> : null}
-          <Primary onClick={saveMeeting} style={{ justifySelf: "start" }}>Add to calendar</Primary>
+          <Primary onClick={saveMeeting} style={{ justifySelf: "start" }}>{saving ? "Saving…" : "Add to calendar"}</Primary>
         </AddDrawer>
+
+        {flowError ? <div style={{ padding: `12px ${pad.card} 0` }}><ErrorLine>{flowError}</ErrorLine></div> : null}
 
         {s.meetings.map((m) => {
           const menu = buildActionMenu(MEETING_STEPS, m.status, m.id, `${m.title} · ${m.date}`, pending, setPending);
@@ -146,15 +150,13 @@ export default function Board() {
 
               {menu.confirming ? (
                 <ConfirmBar text={menu.confirmText} confirmLabel={menu.confirmLabel} onCancel={menu.cancel}
-                  onConfirm={() => {
-                    const next = menu.nextValue!;
-                    s.setMeetings((prev) => prev.map((x) => x.id === m.id ? {
-                      ...x, status: next,
-                      notice: next === "Agenda published" ? "Notice sent" : x.notice,
-                      noticeOk: next === "Agenda published" ? true : x.noticeOk,
-                    } : x));
+                  onConfirm={async () => {
+                    const next = menu.nextValue! as MeetingStatus;
                     setPending(null);
-                    s.audit(`${m.title} (${m.date}) — ${next}`);
+                    setFlowError("");
+                    const res = await setMeetingStatus({ meetingId: m.id, status: next });
+                    if (!res.ok) return setFlowError(res.error);
+                    s.setMeetings((prev) => prev.map((x) => (x.id === m.id ? res.meeting : x)));
                   }} />
               ) : null}
 
@@ -176,15 +178,19 @@ export default function Board() {
                     <Area value={draft.motions} rows={3} onChange={(v) => setDrafts({ ...drafts, [m.id]: { ...draft, motions: v } })}
                       placeholder="e.g. Motion to approve the Q1 financials — passed 4-0." />
                   </Field>
-                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                    <Pill onClick={() => {
-                      s.setMeetings((prev) => prev.map((x) => x.id === m.id
-                        ? { ...x, minutes: { ...draft, published: x.minutes?.published ?? false } } : x));
-                      s.audit(`Saved minutes draft for ${m.title} (${m.date})`);
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                    <Pill onClick={async () => {
+                      setFlowError("");
+                      setMinutesSaved("");
+                      const res = await saveMinutes({ meetingId: m.id, ...draft });
+                      if (!res.ok) return setFlowError(res.error);
+                      s.setMeetings((prev) => prev.map((x) => (x.id === m.id ? { ...x, minutes: res.minutes } : x)));
+                      setMinutesSaved(m.id);
                     }}>
                       Save draft
                     </Pill>
-                    <span style={{ fontSize: 13, color: color.inkQuaternary, alignSelf: "center" }}>
+                    {minutesSaved === m.id ? <Mono size={13} style={{ color: color.positive }}>Saved</Mono> : null}
+                    <span style={{ fontSize: 13, color: color.inkQuaternary }}>
                       Publishing happens through the action dropdown, so it gets a confirmation.
                     </span>
                   </div>

@@ -5,8 +5,9 @@ import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase/server
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
-  Announcement, ComplianceNotice, DocItem, EventItem, LedgerLine, MaintReq,
-  MaintStatus, NotifyPrefs, PaymentRecord, Property, ResArcApp, Reservation,
+  Announcement, ChatMsg, ComplianceNotice, DocItem, EventItem, LedgerLine,
+  MaintReq, MaintStatus, NotifyPrefs, PaymentRecord, Property, ResArcApp,
+  Reservation, Thread,
 } from "./types";
 import { DEFAULT_NOTIFY } from "./types";
 
@@ -33,16 +34,26 @@ export type ResidentData = {
   announcements: Announcement[];
   notify: NotifyPrefs;
   smsOptIn: boolean;
+  /** Conversations with the office, incoming replies included. */
+  threads: Thread[];
+  /** Some communities prohibit leasing; hides lease registration. */
+  leasesAllowed: boolean;
+  /** Communities without gates hide the gate-code card. */
+  gateCodesAllowed: boolean;
+  /** Communities that don't issue guest passes hide that card. */
+  guestPassesAllowed: boolean;
 };
 
 const NO_PROPERTY: Property = {
   id: "none",
   name: "Unity Grid",
   address: "No property linked yet",
+  mailingAddress: "",
   account: "",
   balance: "",
   balanceCents: null,
   due: "",
+  overdue: false,
   cadence: "",
   alert: "",
 };
@@ -60,6 +71,10 @@ const EMPTY: ResidentData = {
   announcements: [],
   notify: DEFAULT_NOTIFY,
   smsOptIn: false,
+  threads: [],
+  leasesAllowed: true,
+  gateCodesAllowed: true,
+  guestPassesAllowed: true,
 };
 
 const usdExact = (cents: number) =>
@@ -103,28 +118,33 @@ const CADENCE: Record<string, string> = {
   custom: "Custom",
 };
 
-/** Next due date from a frequency + day-of-month rule. */
-function nextDue(frequency: string | null, dueDay: number | null): string {
-  if (!frequency || !CADENCE[frequency]) return "";
+/** The due-date boundaries around today for a frequency + day-of-month rule. */
+function dueBoundaries(
+  frequency: string | null,
+  dueDay: number | null,
+): { next: Date | null; last: Date | null } {
+  if (!frequency || !CADENCE[frequency]) return { next: null, last: null };
   const day = dueDay && dueDay >= 1 && dueDay <= 28 ? dueDay : 1;
   const now = new Date();
-  const candidate = (m: number) => new Date(now.getFullYear(), m, day);
-  if (frequency === "monthly") {
-    const d = candidate(now.getMonth());
-    return longDate(d >= now ? d : candidate(now.getMonth() + 1));
-  }
-  if (frequency === "quarterly") {
-    for (const m of [0, 3, 6, 9, 12]) {
-      const d = candidate(m);
-      if (d >= now) return longDate(d);
+  const months =
+    frequency === "monthly"
+      ? Array.from({ length: 26 }, (_, i) => i - 13)
+      : frequency === "quarterly"
+        ? [-12, -9, -6, -3, 0, 3, 6, 9, 12]
+        : frequency === "annual"
+          ? [-12, 0, 12]
+          : [];
+  let next: Date | null = null;
+  let last: Date | null = null;
+  for (const m of months) {
+    const d = new Date(now.getFullYear(), m, day);
+    if (d >= now) {
+      if (!next) next = d;
+    } else {
+      last = d;
     }
-    return longDate(candidate(12));
   }
-  if (frequency === "annual") {
-    const d = candidate(0);
-    return longDate(d >= now ? d : new Date(now.getFullYear() + 1, 0, day));
-  }
-  return "";
+  return { next, last };
 }
 
 async function safe<T>(fallback: T, run: () => Promise<T>): Promise<T> {
@@ -155,10 +175,13 @@ export async function loadResidentData(user: {
     lot_number: string | null;
     street_number: string | null;
     street_name: string | null;
+    city: string | null;
+    state: string | null;
+    zip: string | null;
   }, async () => {
     const { data, error } = await db
       .from("lots")
-      .select("id, community, lot_number, street_number, street_name")
+      .select("id, community, lot_number, street_number, street_name, city, state, zip")
       .eq("owner_profile_id", user.id)
       .limit(1)
       .maybeSingle();
@@ -184,22 +207,32 @@ export async function loadResidentData(user: {
     ? `${lot.street_number ?? ""} ${lot.street_name ?? ""}`.trim()
     : "";
 
+  const boundaries = dueBoundaries(
+    billing?.dues_frequency ?? null,
+    billing?.hoa_due_day_of_month ?? null,
+  );
+
   const property: Property = lot
     ? {
         id: lot.id,
         name: communityName(lot.community),
         address:
           streetLine + (lot.lot_number ? ` · Lot ${lot.lot_number}` : ""),
+        mailingAddress: [
+          streetLine,
+          lot.city,
+          [lot.state, lot.zip].filter(Boolean).join(" "),
+        ]
+          .filter(Boolean)
+          .join(", "),
         account: lot.lot_number ? `Lot ${lot.lot_number}` : "",
         balance:
           billing?.hoa_fee_amount_cents != null
             ? usdExact(billing.hoa_fee_amount_cents)
             : "",
         balanceCents: billing?.hoa_fee_amount_cents ?? null,
-        due: nextDue(
-          billing?.dues_frequency ?? null,
-          billing?.hoa_due_day_of_month ?? null,
-        ),
+        due: boundaries.next ? longDate(boundaries.next) : "",
+        overdue: false,
         cadence: billing?.dues_frequency
           ? CADENCE[billing.dues_frequency] ?? ""
           : "",
@@ -232,6 +265,26 @@ export async function loadResidentData(user: {
       credit: r.kind === "income",
     }));
   });
+
+  /* ─── Late? The last due date passed with no payment on the lot ────── */
+
+  if (lot && boundaries.last && ledger.length > 0) {
+    const overdue = await safe(false, async () => {
+      const { data, error } = await db
+        .from("finance_transactions")
+        .select("occurred_on")
+        .eq("lot_id", lot.id)
+        .eq("kind", "income")
+        .gte("occurred_on", boundaries.last!.toISOString().slice(0, 10))
+        .limit(1);
+      if (error) throw error;
+      return (data ?? []).length === 0;
+    });
+    if (overdue) {
+      property.overdue = true;
+      property.due = longDate(boundaries.last);
+    }
+  }
 
   /* ─── The resident's own portal payments ──────────────────────────── */
 
@@ -408,6 +461,38 @@ export async function loadResidentData(user: {
     });
   });
 
+  /* ─── Published meeting minutes (approved by the board) ───────────── */
+
+  const minutesDocs = await safe([] as DocItem[], async () => {
+    const { data, error } = await db
+      .from("meeting_minutes")
+      .select("meeting_id, updated_at, meetings(title, starts_at)")
+      .eq("published", true)
+      .order("updated_at", { ascending: false })
+      .limit(60);
+    if (error) throw error;
+    return (data ?? []).map((r) => {
+      const meeting = r.meetings as { title?: string; starts_at?: string } | null;
+      return {
+        id: r.meeting_id as string,
+        title: `Minutes — ${meeting?.title ?? "Board meeting"}`,
+        meta: [
+          meeting?.starts_at
+            ? new Date(meeting.starts_at).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })
+            : "",
+          "Approved by the board",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        category: "Meeting minutes",
+      };
+    });
+  });
+
   /* ─── Community events & announcements ────────────────────────────── */
 
   const events = await safe([] as EventItem[], async () => {
@@ -481,6 +566,88 @@ export async function loadResidentData(user: {
     },
   );
 
+  /* ─── Conversations with the office ────────────────────────────────── */
+
+  const threads = await safe([] as Thread[], async () => {
+    const [tRes, mRes] = await Promise.all([
+      db
+        .from("resident_threads")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("last_activity_at", { ascending: false })
+        .limit(100),
+      db
+        .from("resident_messages")
+        .select("*")
+        .order("created_at", { ascending: true })
+        .limit(1000),
+    ]);
+    if (tRes.error) throw tRes.error;
+    if (mRes.error) throw mRes.error;
+
+    const stampTime = (iso: string) => {
+      const d = new Date(iso);
+      const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      let h = d.getHours();
+      const ampm = h >= 12 ? "PM" : "AM";
+      h = h % 12 || 12;
+      return `${months[d.getMonth()]} ${d.getDate()}, ${h}:${String(d.getMinutes()).padStart(2, "0")} ${ampm}`;
+    };
+
+    const byThread = new Map<string, ChatMsg[]>();
+    for (const m of (mRes.data ?? []) as {
+      id: string; thread_id: string; author_name: string | null;
+      is_resident: boolean; body: string | null; created_at: string;
+    }[]) {
+      const list = byThread.get(m.thread_id) ?? [];
+      list.push({
+        id: m.id,
+        from: m.is_resident ? "You" : (m.author_name ?? "Management office"),
+        mine: m.is_resident,
+        time: stampTime(m.created_at),
+        body: m.body ?? "",
+      });
+      byThread.set(m.thread_id, list);
+    }
+
+    return ((tRes.data ?? []) as {
+      id: string; party: string | null; subject: string | null;
+      status: string | null; resident_unread: boolean;
+      last_activity_at: string | null; created_at: string;
+    }[]).map((t) => ({
+      id: t.id,
+      party: t.party ?? "Management office",
+      subject: t.subject ?? "(no subject)",
+      date: shortDate(t.last_activity_at ?? t.created_at),
+      unread: Boolean(t.resident_unread),
+      status: (t.status === "Closed" ? "Closed" : "Open") as Thread["status"],
+      messages: byThread.get(t.id) ?? [],
+    }));
+  });
+
+  /* ─── Community policy: is leasing allowed here? ───────────────────── */
+
+  const policy = await safe(
+    { leasesAllowed: true, gateCodesAllowed: true, guestPassesAllowed: true },
+    async () => {
+      if (!lot?.community) {
+        return { leasesAllowed: true, gateCodesAllowed: true, guestPassesAllowed: true };
+      }
+      const { data, error } = await db
+        .from("community_policies")
+        .select("allow_leases, allow_gate_codes, allow_guest_passes")
+        .eq("community", lot.community)
+        .maybeSingle();
+      if (error) throw error;
+      // No policy row means the defaults: everything is offered.
+      return {
+        leasesAllowed: data ? Boolean(data.allow_leases) : true,
+        gateCodesAllowed: data ? Boolean(data.allow_gate_codes) : true,
+        guestPassesAllowed: data ? Boolean(data.allow_guest_passes) : true,
+      };
+    },
+  );
+
   return {
     property,
     ledger,
@@ -489,11 +656,13 @@ export async function loadResidentData(user: {
     arcApps,
     notices,
     reservations,
-    docs,
+    docs: [...docs, ...minutesDocs],
     events,
     announcements,
     notify: prefs.notify,
     smsOptIn: prefs.smsOptIn,
+    threads,
+    ...policy,
   };
 }
 

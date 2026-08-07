@@ -15,6 +15,8 @@ export type Property = {
   name: string;
   /** One-line address, e.g. "1420 Willow Bend Ln · Lot 214". */
   address: string;
+  /** Full postal line, no lot number: "1420 Willow Bend Ln, Katy, Texas 77493". */
+  mailingAddress: string;
   /** Account reference shown in mono. Empty when unassigned. */
   account: string;
   /** "$285.00" — or empty when no balance is on file. */
@@ -22,6 +24,8 @@ export type Property = {
   balanceCents: number | null;
   /** Next due date, e.g. "October 1" — empty when billing is unconfigured. */
   due: string;
+  /** The last due date passed with no payment recorded on this lot. */
+  overdue: boolean;
   /** "Quarterly", "Monthly", … — empty when billing is unconfigured. */
   cadence: string;
   /** Active emergency notice for the alert band; empty when none. */

@@ -59,13 +59,14 @@ export default function Payments() {
         <div style={{ padding: pad.card, display: "grid", gap: 6 }}>
           {p.balanceCents != null ? (
             <>
-              <Eyebrow>Next HOA fee</Eyebrow>
-              <span style={{ fontFamily: font.mono, fontSize: 34, fontWeight: 400, letterSpacing: "-0.01em" }}>
+              <Eyebrow>{p.overdue ? "HOA fee past due" : "Next HOA fee"}</Eyebrow>
+              <span style={{ fontFamily: font.mono, fontSize: 34, fontWeight: 400, letterSpacing: "-0.01em", color: p.overdue ? color.critical : undefined }}>
                 {p.balance}
               </span>
-              <span style={{ fontSize: 15, color: color.inkTertiary }}>
-                {p.due ? `Due ${p.due}` : "Due date to be announced"}
-                {p.cadence ? ` · ${p.cadence} HOA fee` : ""}
+              <span style={{ fontSize: 15, color: p.overdue ? color.critical : color.inkTertiary }}>
+                {p.overdue
+                  ? `Was due ${p.due} — pay now to avoid late fees`
+                  : `${p.due ? `Due ${p.due}` : "Due date to be announced"}${p.cadence ? ` · ${p.cadence} HOA fee` : ""}`}
               </span>
             </>
           ) : (

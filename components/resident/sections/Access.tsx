@@ -57,6 +57,7 @@ export default function Access() {
     <>
       <PageTitle title="Access & guests" lede="Your gate code, guest passes, and registered vehicles." />
 
+      {s.gateCodesAllowed ? (
       <Card>
         <CardHead title="Gate code" meta="For the resident lanes and pedestrian gates" />
         <div style={{ padding: pad.card, display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
@@ -86,7 +87,9 @@ export default function Access() {
           />
         ) : null}
       </Card>
+      ) : null}
 
+      {s.guestPassesAllowed ? (
       <Card>
         <AddDrawer
           open={passOpen}
@@ -122,6 +125,7 @@ export default function Access() {
           ))
         )}
       </Card>
+      ) : null}
 
       <Card>
         <AddDrawer

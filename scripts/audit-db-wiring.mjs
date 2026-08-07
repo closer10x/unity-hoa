@@ -82,10 +82,13 @@ await probe("Community", "community_events", "id, title, description, starts_at,
 await probe("Community", "announcements", "id, title, body, published_at, status");
 await probe("Account", "notification_preferences", "user_id, announcements, maintenance_updates, billing_reminders");
 
-console.log("\n═══ Not yet in the database (client-only domains) ═══");
-for (const t of ["message_threads", "guest_passes", "resident_vehicles", "pets", "household_members", "leases"]) {
+console.log("\n═══ Resident write domains (persistence session) ═══");
+await probe("Messages", "resident_threads", "id, user_id, party, subject, status, resident_unread, last_activity_at");
+await probe("Messages", "resident_messages", "id, thread_id, author_name, is_resident, body, created_at");
+await probe("Access", "guest_passes", "id, user_id, guest_name, dates, plate, code, revoked_at");
+for (const t of ["resident_vehicles", "resident_pets", "household_members", "leases", "concern_reports", "community_policies"]) {
   const { error } = await db.from(t).select("*", { count: "exact", head: true });
-  console.log(error ? `· ${t}: no table yet (expected — persistence task in flight)` : `✓ ${t}: table exists now`);
+  console.log(error ? `· ${t}: no table yet` : `✓ ${t}: table exists`);
 }
 
 console.log("\n═══ Per-account scoping ═══");

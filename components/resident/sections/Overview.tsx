@@ -11,17 +11,19 @@ import {
 
 /** A clickable summary tile that routes into its full section. */
 function LinkTile({
-  label, value, note, onGo, action,
+  label, value, note, onGo, action, critical = false,
 }: {
   label: string; value: string; note?: string; onGo: () => void; action: string;
+  /** Past due — the figure and note render in the critical red. */
+  critical?: boolean;
 }) {
   return (
-    <div style={{ background: color.surface, border: `1px solid ${color.hairline}`, borderRadius: 14, padding: 22, display: "grid", gap: 4, alignContent: "start" }}>
+    <div style={{ background: color.surface, border: `1px solid ${critical ? "oklch(0.85 0.06 30)" : color.hairline}`, borderRadius: 14, padding: 22, display: "grid", gap: 4, alignContent: "start" }}>
       <p style={{ margin: "0 0 6px" }}><Eyebrow>{label}</Eyebrow></p>
-      <p style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: "-0.02em", fontFamily: value.startsWith("$") ? font.mono : undefined }}>
+      <p style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: "-0.02em", fontFamily: value.startsWith("$") ? font.mono : undefined, color: critical ? color.critical : undefined }}>
         {value}
       </p>
-      {note ? <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: color.inkTertiary }}>{note}</p> : null}
+      {note ? <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: critical ? color.critical : color.inkTertiary }}>{note}</p> : null}
       <span style={{ marginTop: 6 }}>
         <TextButton onClick={onGo}>{action}</TextButton>
       </span>
@@ -48,11 +50,18 @@ export default function Overview() {
 
       <Tiles min={220}>
         <LinkTile
-          label="Next HOA fee"
+          label={p.overdue ? "HOA fee past due" : "Next HOA fee"}
           value={p.balance || "—"}
-          note={p.due ? `Due ${p.due}${p.cadence ? ` · ${p.cadence} HOA fee` : ""}` : "No billing on file yet"}
+          note={
+            p.overdue
+              ? `Was due ${p.due} — pay now to avoid late fees`
+              : p.due
+                ? `Due ${p.due}${p.cadence ? ` · ${p.cadence} HOA fee` : ""}`
+                : "No billing on file yet"
+          }
           onGo={() => s.setView("payments")}
           action="Pay now"
+          critical={p.overdue}
         />
         <LinkTile
           label="Open requests"

@@ -231,3 +231,26 @@ export interface SignInEvent {
   device: string;
   at: string;
 }
+
+/** One message inside a resident conversation. */
+export interface ResidentThreadMsg {
+  id: string;
+  from: string;
+  /** Authored by staff (right-aligned in the admin view). */
+  fromStaff: boolean;
+  time: string;
+  body: string;
+}
+
+/** A resident's conversation with the office, shown in Communications. */
+export interface ResidentThread {
+  id: string;
+  resident: string;
+  party: string;
+  subject: string;
+  status: string;
+  date: string;
+  /** The resident spoke last and the thread is open. */
+  awaitingReply: boolean;
+  messages: ResidentThreadMsg[];
+}
