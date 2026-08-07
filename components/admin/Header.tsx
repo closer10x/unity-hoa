@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useStore } from "@/lib/admin-portal/store";
-import { color, font, pad } from "@/lib/admin-portal/tokens";
+import { color, pad } from "@/lib/admin-portal/tokens";
 
 /**
  * Scope switcher re-scopes every list, metric and calendar in the app.
@@ -25,12 +25,12 @@ export default function Header() {
       position: "sticky", top: 0, zIndex: 20,
     }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px 14px", flexWrap: "wrap", minWidth: 0 }}>
-        <span style={{ display: "flex", alignItems: "baseline", gap: 10, flex: "0 0 auto" }}>
-          <span style={{ width: 11, height: 11, borderRadius: 2, background: color.accent, display: "inline-block" }} />
-          <span style={{ fontWeight: 600, fontSize: 17 }}>Unity Grid</span>
-          <span style={{ fontFamily: font.mono, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: color.inkQuaternary }}>
-            management
-          </span>
+        <span style={{ display: "flex", alignItems: "center", flex: "0 0 auto" }}>
+          <img
+            src="/images/unitylogo-admin.png"
+            alt="Unity Grid Management"
+            style={{ display: "block", height: 34, width: "auto" }}
+          />
         </span>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "1 1 auto", minWidth: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>

@@ -39,20 +39,12 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-20 border-b border-outline-variant bg-surface px-4 py-4 sm:px-6 md:px-8">
       <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center justify-between gap-6">
-        <Link
-          href="/"
-          className="flex flex-none items-baseline gap-2.5 text-on-surface"
-        >
-          <span
-            aria-hidden
-            className="inline-block size-[11px] shrink-0 rounded-[2px] bg-secondary"
+        <Link href="/" className="flex flex-none items-center">
+          <img
+            src="/images/unitylogo.png"
+            alt="Unity Grid Management"
+            className="block h-10 w-auto"
           />
-          <span className="text-[17px] font-semibold tracking-[-0.01em]">
-            Unity Grid
-          </span>
-          <span className="font-label text-[11px] uppercase tracking-[0.1em] text-outline">
-            Management
-          </span>
         </Link>
 
         <nav className="hidden min-w-0 flex-auto flex-wrap items-center justify-center gap-x-6 gap-y-3.5 text-[15px] md:flex">

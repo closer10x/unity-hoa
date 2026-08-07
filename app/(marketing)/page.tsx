@@ -1,7 +1,12 @@
 import Link from "next/link";
 
+import { getPublicDuesDisplay } from "@/app/admin/(dashboard)/hoa/actions";
 import { DuesLookupCard } from "@/components/site/DuesLookupCard";
 import { HeroMedia } from "@/components/site/HeroMedia";
+import {
+  formatShortDate,
+  getPublishedAnnouncements,
+} from "@/lib/community/public-content";
 
 const QUICK_LINKS = [
   {
@@ -80,7 +85,16 @@ const BOARD_ROWS = [
 const PAD = "px-4 sm:px-6 md:px-8";
 const COLUMN = "mx-auto w-full max-w-[1200px]";
 
-export default function HomePage() {
+/* Announcements and dues config come from the database; re-render at most
+   every 5 minutes so published posts appear without a redeploy. */
+export const revalidate = 300;
+
+export default async function HomePage() {
+  const [announcements, dues] = await Promise.all([
+    getPublishedAnnouncements(3),
+    getPublicDuesDisplay(),
+  ]);
+
   return (
     <main>
       <section className={`${PAD} pt-5 md:pt-8`}>
@@ -136,7 +150,7 @@ export default function HomePage() {
           {/* Bottom-aligned with the quick-links box so the two columns end on
               the same line. */}
           <div className="self-end">
-            <DuesLookupCard />
+            <DuesLookupCard dues={dues} />
           </div>
         </div>
       </section>
@@ -245,16 +259,36 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="rounded-[14px] border border-outline-variant bg-surface-container-lowest px-6 py-10 md:px-10">
-            <p className="mb-2.5 font-label text-xs uppercase tracking-[0.12em] text-outline">
-              No posts yet
-            </p>
-            <p className="max-w-[62ch] text-[17px] leading-relaxed text-on-surface-variant text-pretty">
-              Announcements from your association are published here as they
-              happen — meeting recaps, service notices and community updates.
-              Registered residents also receive every notice by email.
-            </p>
-          </div>
+          {announcements.length > 0 ? (
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-10">
+              {announcements.map((a) => (
+                <div key={a.id}>
+                  <p className="mb-2.5 font-label text-xs text-outline">
+                    {formatShortDate(a.published_at) ?? "Announcement"}
+                  </p>
+                  <p className="mb-1.5 text-[17px] leading-snug font-semibold">
+                    {a.title}
+                  </p>
+                  {a.body ? (
+                    <p className="text-[15px] leading-relaxed text-on-surface-variant">
+                      {a.body}
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-[14px] border border-outline-variant bg-surface-container-lowest px-6 py-10 md:px-10">
+              <p className="mb-2.5 font-label text-xs uppercase tracking-[0.12em] text-outline">
+                No posts yet
+              </p>
+              <p className="max-w-[62ch] text-[17px] leading-relaxed text-on-surface-variant text-pretty">
+                Announcements from your association are published here as they
+                happen — meeting recaps, service notices and community updates.
+                Registered residents also receive every notice by email.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
