@@ -2,13 +2,14 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { emptyAddress, formatAddress, isAddressComplete } from "@/lib/admin-portal/address";
+import { getOwnerEditData, unlinkOwner, updateOwner } from "@/lib/admin-portal/owner-actions";
 import { useSearchFilter, useStore } from "@/lib/admin-portal/store";
-import { color, font } from "@/lib/admin-portal/tokens";
+import { color, radius } from "@/lib/admin-portal/tokens";
 import type { Address, Owner } from "@/lib/admin-portal/types";
 import {
-  AddDrawer, AddressFields, Card, CardHead, Chip, Empty, ErrorLine, Field,
-  FieldGrid, FilterBar, Input, MailingAddress, Mono, PageTitle, Primary, Row,
-  RowMain, Select, Status,
+  AddDrawer, AddressFields, Card, Chip, ConfirmBar, Empty, ErrorLine,
+  Field, FieldGrid, FilterBar, Input, MailingAddress, Mono, PageTitle, Primary,
+  Row, RowMain, Select, Status, TextButton,
 } from "../ui";
 
 const FILTERS = ["All", "Current", "Balance due", "Tenant on file"];
@@ -49,6 +50,67 @@ export default function Owners() {
   const [balance, setBalance] = useState("");
   const [flags, setFlags] = useState({ invite: true, welcome: true, autopay: false });
   const [sort, setSort] = useState("account");
+
+  /* ----- per-row edit drawer ----- */
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editLinked, setEditLinked] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editCurrentEmail, setEditCurrentEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [unlinkPending, setUnlinkPending] = useState(false);
+
+  async function openEdit(o: Owner) {
+    if (editId === o.id) return closeEdit();
+    setEditId(o.id);
+    setEditLoading(true);
+    setEditError("");
+    setUnlinkPending(false);
+    const res = await getOwnerEditData(o.id);
+    setEditLoading(false);
+    if (!res.ok) return setEditError(res.error);
+    setEditLinked(res.linked);
+    setEditName(res.name);
+    setEditEmail(res.email);
+    setEditCurrentEmail(res.email);
+    setEditPhone(res.phone);
+  }
+
+  function closeEdit() {
+    setEditId(null);
+    setEditError("");
+    setUnlinkPending(false);
+  }
+
+  async function saveEdit(o: Owner) {
+    setEditSaving(true);
+    setEditError("");
+    const res = await updateOwner({
+      lotId: o.id,
+      name: editName,
+      email: editEmail,
+      phone: editPhone,
+      currentEmail: editCurrentEmail,
+    });
+    setEditSaving(false);
+    if (!res.ok) return setEditError(res.error);
+    s.setOwners((prev) => prev.map((x) => (x.id === o.id ? res.owner : x)));
+    closeEdit();
+  }
+
+  async function confirmUnlink(o: Owner) {
+    setEditSaving(true);
+    setEditError("");
+    const res = await unlinkOwner({ lotId: o.id });
+    setEditSaving(false);
+    setUnlinkPending(false);
+    if (!res.ok) return setEditError(res.error);
+    s.setOwners((prev) => prev.map((x) => (x.id === o.id ? res.owner : x)));
+    closeEdit();
+  }
 
   const SORTS = [
     { id: "account", label: "Lot number" },
@@ -179,13 +241,70 @@ export default function Owners() {
           } />
 
         {visible.length === 0 ? <Empty>No owners match that search.</Empty> : visible.map((o) => (
-          <Row key={o.id}>
-            <RowMain label={o.name} detail={o.address} />
-            <span style={{ fontSize: 14, color: color.inkTertiary }}>{o.contact}</span>
-            <Mono size={15}>{o.balance}</Mono>
-            <Status tone={o.flag === "delinquent" ? "critical" : o.flag === "tenant" ? "attention" : "positive"}>{o.status}</Status>
-            <Mono size={12} style={{ color: color.inkQuaternary }}>#{o.account}</Mono>
-          </Row>
+          <React.Fragment key={o.id}>
+            <Row>
+              <RowMain label={o.name} detail={o.address} />
+              <span style={{ fontSize: 14, color: color.inkTertiary }}>{o.contact}</span>
+              <Mono size={15}>{o.balance}</Mono>
+              <Status tone={o.flag === "delinquent" ? "critical" : o.flag === "tenant" ? "attention" : "positive"}>{o.status}</Status>
+              <Mono size={12} style={{ color: color.inkQuaternary }}>#{o.account}</Mono>
+              <TextButton onClick={() => openEdit(o)}>{editId === o.id ? "Close" : "Edit"}</TextButton>
+            </Row>
+
+            {editId === o.id ? (
+              <div style={{ padding: `0 24px 20px`, borderBottom: `1px solid ${color.hairlineSoft}` }}>
+                <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: 22, display: "grid", gap: 16 }}>
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16 }}>
+                    <span style={{ fontSize: 16, fontWeight: 600 }}>
+                      {editLinked || editLoading ? `Edit resident · ${o.account}` : `No owner linked · ${o.account}`}
+                    </span>
+                    <TextButton tone="muted" onClick={closeEdit}>Cancel</TextButton>
+                  </div>
+
+                  {editLoading ? (
+                    <span style={{ fontSize: 14, color: color.inkTertiary }}>Loading…</span>
+                  ) : !editLinked ? (
+                    <span style={{ fontSize: 15, lineHeight: 1.6, color: color.inkSecondary }}>
+                      This lot has no resident linked. Use “Add a homeowner” at the
+                      top of the list to link one — the address will autofill from
+                      the roster.
+                    </span>
+                  ) : (
+                    <>
+                      <FieldGrid>
+                        <Field label="Owner name"><Input value={editName} onChange={setEditName} placeholder="Name on the deed" /></Field>
+                        <Field label="Sign-in email" hint="Changing it changes how they sign in to the portal">
+                          <Input value={editEmail} onChange={setEditEmail} placeholder="owner@example.com" />
+                        </Field>
+                        <Field label="Mobile"><Input value={editPhone} onChange={setEditPhone} placeholder="(713) 555-0100" /></Field>
+                      </FieldGrid>
+                      {editError ? <ErrorLine>{editError}</ErrorLine> : null}
+                      <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+                        <Primary onClick={() => saveEdit(o)} style={{ justifySelf: "start" }}>
+                          {editSaving ? "Saving…" : "Save changes"}
+                        </Primary>
+                        {s.isAdministrator ? (
+                          <TextButton tone="destructive" onClick={() => setUnlinkPending(true)}>
+                            Unlink owner from this lot
+                          </TextButton>
+                        ) : null}
+                      </div>
+                    </>
+                  )}
+                  {!editLoading && editError && !editLinked ? <ErrorLine>{editError}</ErrorLine> : null}
+                </div>
+              </div>
+            ) : null}
+
+            {editId === o.id && unlinkPending ? (
+              <ConfirmBar
+                text={`Are you sure? Unlinking removes ${o.name}'s portal access to ${o.address}. The lot stays in the roster and their sign-in account is kept.`}
+                confirmLabel="Yes, unlink them"
+                onCancel={() => setUnlinkPending(false)}
+                onConfirm={() => confirmUnlink(o)}
+              />
+            ) : null}
+          </React.Fragment>
         ))}
       </Card>
     </>

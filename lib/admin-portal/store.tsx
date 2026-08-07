@@ -51,6 +51,7 @@ interface Store {
   // records
   owners: Owner[];
   addOwner: (o: Owner) => void;
+  setOwners: React.Dispatch<React.SetStateAction<Owner[]>>;
   payments: Payment[];
   delinquents: Delinquent[];
   setDelinquents: React.Dispatch<React.SetStateAction<Delinquent[]>>;
@@ -241,7 +242,7 @@ export function StoreProvider({
   const value: Store = {
     view, setView, scope, setScope, scopeLabel, scopeCommunityIds,
     isMobile: vw < MOBILE_BREAKPOINT, navOpen, setNavOpen,
-    owners, addOwner, payments, delinquents, setDelinquents,
+    owners, addOwner, setOwners, payments, delinquents, setDelinquents,
     work, setWork, violations, setViolations, arcApps, setArcApps,
     bookings, setBookings, meetings, setMeetings, directors, setDirectors,
     legalCases, setLegalCases, vendors, setVendors, docs, setDocs,
