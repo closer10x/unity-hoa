@@ -3,30 +3,11 @@ import Link from "next/link";
 import { getPublicDuesDisplay } from "@/app/admin/(dashboard)/hoa/actions";
 import { DuesLookupCard } from "@/components/site/DuesLookupCard";
 import { HeroMedia } from "@/components/site/HeroMedia";
+import { HomeQuickLinks } from "@/components/site/HomeQuickLinks";
 import {
   formatShortDate,
   getPublishedAnnouncements,
 } from "@/lib/community/public-content";
-
-const QUICK_LINKS = [
-  {
-    // The public request form on the contact page — no sign-in required.
-    href: "/contact?topic=maintenance",
-    title: "File a maintenance request",
-    detail: "Common areas, gates, lighting and amenities.",
-  },
-  {
-    // Public governance page; downloads themselves stay sign-in gated there.
-    href: "/governance",
-    title: "Bylaws, CC&Rs and rules",
-    detail: "Every governing document, current and downloadable.",
-  },
-  {
-    href: "/services",
-    title: "What Unity Grid handles",
-    detail: "Finances, grounds, rules and records for your association.",
-  },
-] as const;
 
 const CAPABILITIES = [
   {
@@ -123,30 +104,9 @@ export default async function HomePage() {
             out of the weeds.
           </p>
 
-          <div className="grid gap-px overflow-hidden rounded-[14px] border border-outline-variant bg-outline-variant">
-            {QUICK_LINKS.map((item) => (
-              <Link
-                key={item.title}
-                href={item.href}
-                className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-4 bg-surface-container-lowest px-[22px] py-5 text-on-surface transition-colors hover:bg-surface-container-high"
-              >
-                <span>
-                  <strong className="text-base font-semibold">
-                    {item.title}
-                  </strong>
-                  <span className="mt-[3px] block text-sm text-on-surface-variant">
-                    {item.detail}
-                  </span>
-                </span>
-                <span
-                  aria-hidden
-                  className="font-label text-xs text-secondary-muted"
-                >
-                  →
-                </span>
-              </Link>
-            ))}
-            </div>
+          {/* The maintenance tile expands into a request form in place;
+              the other tiles link out. */}
+          <HomeQuickLinks />
           </div>
 
           {/* Bottom-aligned with the quick-links box so the two columns end on
