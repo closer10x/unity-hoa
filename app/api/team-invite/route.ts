@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { isStaffRole, canManageStaff } from "@/lib/admin-portal/permissions";
 import { sendWelcomeEmailViaResend } from "@/lib/email/send-welcome-email";
+import { sendSms } from "@/lib/sms/send-sms";
 import { isSupabaseAuthConfigured } from "@/lib/supabase/keys";
 import { requireServiceSupabase } from "@/lib/supabase/service";
 import { createSupabaseServerClient } from "@/lib/supabase/server-user";
@@ -124,10 +125,23 @@ export async function POST(req: Request) {
     loginUrl: `${siteUrl}/admin/login`,
   });
 
-  if ("error" in emailResult) {
-    // The account exists; surface the delivery failure so the admin can
-    // resend or share credentials another way.
-    return NextResponse.json({ ok: true, emailError: emailResult.error });
+  // Heads-up text when a cell was given. Credentials stay email-only; the
+  // SMS just points at the inbox. Failures never block the invite.
+  let smsError: string | undefined;
+  if (phone) {
+    const smsResult = await sendSms(
+      phone,
+      `Unity Grid Management: your admin portal account is ready. Check ${email} for your sign-in details.`,
+    );
+    if ("error" in smsResult) smsError = smsResult.error;
   }
-  return NextResponse.json({ ok: true });
+
+  const emailError = "error" in emailResult ? emailResult.error : undefined;
+  // The account exists either way; surface delivery failures so the admin
+  // can resend or share credentials another way.
+  return NextResponse.json({
+    ok: true,
+    ...(emailError ? { emailError } : {}),
+    ...(smsError ? { smsError } : {}),
+  });
 }

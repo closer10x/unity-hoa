@@ -39,7 +39,7 @@ export default function Team() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim(), email: email.trim(), role, phone: phone.trim() }),
       });
-      const data = (await res.json()) as { ok?: boolean; error?: string; emailError?: string };
+      const data = (await res.json()) as { ok?: boolean; error?: string; emailError?: string; smsError?: string };
       if (!res.ok || !data.ok) {
         setError(data.error ?? "The invite could not be sent.");
         return;
@@ -49,13 +49,17 @@ export default function Team() {
         role, communities: [...comms], active: true, load: 0,
       };
       s.setStaff((prev) => [...prev, p]);
-      s.audit(
-        data.emailError
-          ? `Invited ${p.name} as ${p.role} — account created, but the welcome email failed (${data.emailError})`
-          : `Invited ${p.name} as ${p.role} — welcome email sent with a temporary password`,
-      );
-      if (data.emailError) {
-        setError(`Account created, but the welcome email failed: ${data.emailError}`);
+      const delivery = data.emailError
+        ? `the welcome email failed (${data.emailError})`
+        : "welcome email sent with a temporary password" +
+          (phone.trim() ? (data.smsError ? "; the text notification failed" : "; text notification sent") : "");
+      s.audit(`Invited ${p.name} as ${p.role} — ${delivery}`);
+      if (data.emailError || data.smsError) {
+        setError(
+          data.emailError
+            ? `Account created, but the welcome email failed: ${data.emailError}`
+            : `Invite sent, but the text notification failed: ${data.smsError}`,
+        );
         return;
       }
       setOpen(false); setName(""); setEmail(""); setPhone(""); setComms([]);
