@@ -23,6 +23,9 @@ const MANAGER: readonly SectionId[] = [
 ];
 
 export const SECTION_ACCESS: Record<StaffRole, readonly SectionId[]> = {
+  // The business owner's account: everything, always — a new section added
+  // to ALL_SECTIONS is reachable without touching this map.
+  Owner: ALL_SECTIONS,
   Administrator: ALL_SECTIONS,
   "Community manager": MANAGER,
   // Manager minus legal referrals, liens and fee waivers.
@@ -68,13 +71,16 @@ export function resolveSections(
   return sectionsForRole(staffRole);
 }
 
-/** Only Administrators manage staff accounts (mirrors the team section gate). */
+/** Owners and Administrators manage staff accounts (mirrors the team gate). */
 export function canManageStaff(staffRole: string | null | undefined): boolean {
-  return staffRole == null || staffRole === "" || staffRole === "Administrator";
+  return (
+    staffRole == null || staffRole === "" ||
+    staffRole === "Administrator" || staffRole === "Owner"
+  );
 }
 
 const STAFF_ROLES = [
-  "Administrator", "Community manager", "Assistant manager",
+  "Owner", "Administrator", "Community manager", "Assistant manager",
   "Maintenance tech", "Inspector", "Accounting", "Front desk",
 ] as const;
 

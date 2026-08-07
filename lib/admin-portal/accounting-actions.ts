@@ -72,6 +72,8 @@ export async function addLedgerEntry(input: {
   category: string;
   description: string;
   amount: string;
+  /** The owner's lot this money belongs to (income from a resident). */
+  lotId?: string | null;
 }): Promise<Ok<Snapshot> | Fail> {
   try {
     const { db, actorName, actorId } = await adminContext();
@@ -91,6 +93,17 @@ export async function addLedgerEntry(input: {
     const description = input.description.trim();
     if (!description) return { ok: false, error: "Describe what the money was for." };
 
+    let ownerNote = "";
+    if (input.lotId) {
+      const { data: lot } = await db
+        .from("lots")
+        .select("id, lot_number")
+        .eq("id", input.lotId)
+        .maybeSingle();
+      if (!lot) return { ok: false, error: "That resident's lot is no longer on the roster." };
+      ownerNote = lot.lot_number ? ` for Lot ${lot.lot_number}` : "";
+    }
+
     const { error } = await db.from("finance_transactions").insert({
       occurred_on: occurredOn,
       kind,
@@ -98,6 +111,7 @@ export async function addLedgerEntry(input: {
       description,
       amount_cents: cents,
       source: "manual",
+      lot_id: input.lotId ?? null,
       entered_by_user_id: actorId,
       entered_by_name: actorName,
     });
@@ -105,7 +119,7 @@ export async function addLedgerEntry(input: {
 
     await writeAudit(
       db,
-      `Ledger: recorded ${usd(cents)} ${kind} (${input.category.trim() || "Other"}) — ${description}`,
+      `Ledger: recorded ${usd(cents)} ${kind} (${input.category.trim() || "Other"})${ownerNote} — ${description}`,
       actorName,
       actorId,
     );

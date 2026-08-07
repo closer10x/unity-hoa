@@ -121,6 +121,7 @@ export const DELINQ_STEPS: ActionStep[] = [
 ];
 
 export const ROLE_MATRIX: { role: string; access: string }[] = [
+  { role: "Owner", access: "The business owner's account. Everything, with no restrictions — new sections are included automatically." },
   { role: "Administrator", access: "Everything, plus staff accounts, billing setup and community onboarding." },
   { role: "Community manager", access: "Full access to their assigned communities: accounting, owners, work orders, violations, board and communications." },
   { role: "Assistant manager", access: "Same as a manager minus legal referrals, lien filings and fee waivers." },
@@ -138,6 +139,7 @@ export const ROLE_HINTS: Record<string, string> = {
   Accounting: "Ledgers, payments and budgets across every community.",
   "Front desk": "Owner lookup, bookings and message intake. No financial edits.",
   Administrator: "Everything, including staff accounts and community onboarding.",
+  Owner: "The business owner's account — everything, always, including sections added later.",
 };
 
 export const PAY_METHODS = [

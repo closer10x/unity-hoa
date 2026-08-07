@@ -6,6 +6,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
   AddressSuggestion,
+  ArcApp,
+  Booking,
+  Director,
+  LegalCase,
+  Meeting,
+  Portfolio,
+  Vendor,
+  Violation,
   AuditEntry,
   BankAccount,
   CalEvent,
@@ -33,15 +41,8 @@ export type { AddressSuggestion };
  * not. See PORTAL_SECTIONS_WITHOUT_TABLES below.
  */
 
-export const PORTAL_SECTIONS_WITHOUT_TABLES = [
-  "violations",
-  "arc",
-  "bookings",
-  "vendors",
-  "legal",
-  "board",
-  "portfolio",
-] as const;
+/** Every portal domain now has a table; nothing is fixture-only. */
+export const PORTAL_SECTIONS_WITHOUT_TABLES = [] as const;
 
 export type PortalData = {
   owners: Owner[];
@@ -54,6 +55,14 @@ export type PortalData = {
   ledger: LedgerEntry[];
   bankAccounts: BankAccount[];
   audit: AuditEntry[];
+  violations: Violation[];
+  arcApps: ArcApp[];
+  bookings: Booking[];
+  vendors: Vendor[];
+  legalCases: LegalCase[];
+  meetings: Meeting[];
+  directors: Director[];
+  portfolios: Portfolio[];
   /** Known addresses from the lots roster, for add-form autofill. */
   addressBook: AddressSuggestion[];
   /** Dashboard tiles, computed from the same reads. */
@@ -68,6 +77,14 @@ const EMPTY: PortalData = {
   calendar: [],
   payments: [],
   communities: [],
+  violations: [],
+  arcApps: [],
+  bookings: [],
+  vendors: [],
+  legalCases: [],
+  meetings: [],
+  directors: [],
+  portfolios: [],
   addressBook: [],
   ledger: [],
   bankAccounts: [],
@@ -96,6 +113,7 @@ function toWorkStatus(s: string): WorkStatus {
 }
 
 const STAFF_ROLES: StaffRole[] = [
+  "Owner",
   "Administrator",
   "Community manager",
   "Assistant manager",
@@ -131,6 +149,92 @@ type ProfileRow = {
   staff_role: string | null;
 };
 
+/* ─── Staff: employees + portal sign-ins, linked by email ──────────── */
+
+type StaffProfileRow = {
+  id: string;
+  role: string | null;
+  staff_role: string | null;
+  display_name: string | null;
+  section_access: string[] | null;
+  communities: string[] | null;
+};
+
+/**
+ * One row per person. An employees record and a portal sign-in (auth user +
+ * profile) are the same person when their emails match; either can also
+ * stand alone — a tech who never logs in, or the original Administrator
+ * account that predates the employees table.
+ */
+export async function loadStaff(db: SupabaseClient): Promise<Staff[]> {
+  const [empRes, profRes] = await Promise.all([
+    db.from("employees").select("*").order("name", { ascending: true }),
+    db.from("profiles").select("*"),
+  ]);
+
+  // auth is the only place emails live for sign-in accounts.
+  const emailByProfile = new Map<string, string>();
+  try {
+    const { data } = await db.auth.admin.listUsers({ page: 1, perPage: 500 });
+    for (const u of data?.users ?? []) {
+      if (u.email) emailByProfile.set(u.id, u.email.toLowerCase());
+    }
+  } catch {
+    // Without auth admin access, sign-in rows simply show no email.
+  }
+
+  const adminProfiles = ((profRes.data ?? []) as StaffProfileRow[]).filter(
+    (p) => p.role === "admin",
+  );
+  const profileByEmail = new Map(
+    adminProfiles
+      .map((p) => [emailByProfile.get(p.id) ?? "", p] as const)
+      .filter(([e]) => e),
+  );
+
+  const staff: Staff[] = ((empRes.data ?? []) as {
+    id: string;
+    name: string | null;
+    email: string | null;
+    role: string | null;
+    active: boolean | null;
+    communities: string[] | null;
+  }[]).map((e) => {
+    const linked = e.email ? profileByEmail.get(e.email.toLowerCase()) : undefined;
+    return {
+      id: e.id,
+      name: linked?.display_name?.trim() || e.name || "Unnamed",
+      email: e.email ?? "—",
+      role: toStaffRole(linked?.staff_role ?? e.role),
+      communities: linked?.communities ?? e.communities ?? [],
+      active: Boolean(e.active),
+      load: 0,
+      employeeId: e.id,
+      profileId: linked?.id ?? null,
+      sections: linked?.section_access ?? null,
+    };
+  });
+
+  const covered = new Set(staff.map((s) => s.profileId).filter(Boolean));
+  for (const p of adminProfiles) {
+    if (covered.has(p.id)) continue;
+    staff.push({
+      id: p.id,
+      name: p.display_name?.trim() || "Administrator",
+      email: emailByProfile.get(p.id) ?? "—",
+      role: toStaffRole(p.staff_role),
+      communities: p.communities ?? [],
+      active: true,
+      load: 0,
+      employeeId: null,
+      profileId: p.id,
+      sections: p.section_access ?? null,
+    });
+  }
+
+  return staff;
+}
+
 /* ─── Accounting: ledger, bank accounts, audit trail ───────────────── */
 
 export type FinanceRow = {
@@ -142,6 +246,7 @@ export type FinanceRow = {
   amount_cents: number;
   source: string | null;
   bank_account_id: string | null;
+  lot_id: string | null;
   pending: boolean | null;
   created_at: string;
 };
@@ -188,6 +293,7 @@ export function mapBankAccountRow(b: BankAccountRow): BankAccount {
 export function mapLedgerRow(
   r: FinanceRow,
   bankNames: Map<string, string>,
+  ownerNames: Map<string, string>,
 ): LedgerEntry {
   const date = r.occurred_on ?? r.created_at.slice(0, 10);
   const kind = r.kind === "income" || r.kind === "transfer" ? r.kind : "expense";
@@ -208,6 +314,8 @@ export function mapLedgerRow(
     source: r.source === "bank" ? "bank" : "manual",
     account: (r.bank_account_id && bankNames.get(r.bank_account_id)) || "",
     pending: Boolean(r.pending),
+    ownerId: r.lot_id,
+    ownerName: (r.lot_id && ownerNames.get(r.lot_id)) || "",
   };
 }
 
@@ -216,11 +324,36 @@ export function bankAccountLabel(b: BankAccount): string {
   return b.mask ? `${base} ····${b.mask}` : base;
 }
 
+/** "Maria Alvarez · Lot 12" or just "Lot 12" when no owner is on file. */
+export async function loadOwnerNames(db: SupabaseClient): Promise<Map<string, string>> {
+  const [lotsRes, profRes] = await Promise.all([
+    db.from("lots").select("id, lot_number, owner_profile_id"),
+    db.from("profiles").select("id, display_name"),
+  ]);
+  const nameByProfile = new Map(
+    ((profRes.data ?? []) as { id: string; display_name: string | null }[]).map((p) => [
+      p.id,
+      p.display_name?.trim() ?? "",
+    ]),
+  );
+  return new Map(
+    ((lotsRes.data ?? []) as {
+      id: string;
+      lot_number: string | null;
+      owner_profile_id: string | null;
+    }[]).map((l) => {
+      const owner = l.owner_profile_id ? nameByProfile.get(l.owner_profile_id) : "";
+      const lot = l.lot_number ? `Lot ${l.lot_number}` : "";
+      return [l.id, owner && lot ? `${owner} · ${lot}` : owner || lot || "Lot"];
+    }),
+  );
+}
+
 /** Ledger + bank accounts together so imported rows carry their account label. */
 export async function loadAccounting(
   db: SupabaseClient,
 ): Promise<{ ledger: LedgerEntry[]; bankAccounts: BankAccount[] }> {
-  const [ftRes, baRes] = await Promise.all([
+  const [ftRes, baRes, ownerNames] = await Promise.all([
     db
       .from("finance_transactions")
       .select("*")
@@ -228,10 +361,13 @@ export async function loadAccounting(
       .order("created_at", { ascending: false })
       .limit(1000),
     db.from("bank_accounts").select("*").order("created_at", { ascending: true }),
+    loadOwnerNames(db),
   ]);
   const bankAccounts = ((baRes.data ?? []) as BankAccountRow[]).map(mapBankAccountRow);
   const names = new Map(bankAccounts.map((b) => [b.id, bankAccountLabel(b)]));
-  const ledger = ((ftRes.data ?? []) as FinanceRow[]).map((r) => mapLedgerRow(r, names));
+  const ledger = ((ftRes.data ?? []) as FinanceRow[]).map((r) =>
+    mapLedgerRow(r, names, ownerNames),
+  );
   return { ledger, bankAccounts };
 }
 
@@ -252,6 +388,140 @@ export async function loadAuditTrail(db: SupabaseClient): Promise<AuditEntry[]> 
     who: a.actor_name,
     time: stampTime(a.created_at),
   }));
+}
+
+
+/* ─── The eight domains added in 20260807250000 ─────────────────────── */
+
+const money = (cents: number | null | undefined) => usdExact(cents ?? 0);
+const dateLabel = (d: string | null) =>
+  d ? new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—";
+
+async function loadRemainingDomains(db: SupabaseClient) {
+  const [vRes, aRes, bRes, venRes, lRes, mRes, dRes, pRes, pcRes] = await Promise.all([
+    db.from("violations").select("*").order("opened_on", { ascending: false }),
+    db.from("arc_applications").select("*").order("submitted_on", { ascending: false }),
+    db.from("bookings").select("*").order("starts_at", { ascending: true }),
+    db.from("vendors").select("*").order("name", { ascending: true }),
+    db.from("legal_cases").select("*").order("opened_on", { ascending: false }),
+    db.from("meetings").select("*").order("starts_at", { ascending: false }),
+    db.from("directors").select("*").order("name", { ascending: true }),
+    db.from("portfolios").select("*").order("name", { ascending: true }),
+    db.from("portfolio_communities").select("*"),
+  ]);
+
+  const violations: Violation[] = (vRes.data ?? []).map((v) => ({
+    id: v.id,
+    date: dateLabel(v.opened_on),
+    title: v.violation_type ?? "Violation",
+    detail: [v.address, v.source, v.cure_days ? `cure in ${v.cure_days} days` : null]
+      .filter(Boolean)
+      .join(" · "),
+    status: v.status ?? "Reported",
+    photos: [],
+    mailings: [],
+    notes: [],
+    activity: [],
+  }));
+
+  const arcApps: ArcApp[] = (aRes.data ?? []).map((a) => ({
+    id: a.id,
+    ref: a.reference ?? a.id.slice(0, 8),
+    title: a.title ?? "Application",
+    owner: [a.owner_name, a.address].filter(Boolean).join(" · "),
+    submitted: dateLabel(a.submitted_on),
+    due: dateLabel(a.due_on),
+    status: a.status ?? "Awaiting decision",
+    decisionNote: a.decision_note ?? undefined,
+    thread: [],
+  }));
+
+  const bookings: Booking[] = (bRes.data ?? []).map((b) => ({
+    id: b.id,
+    date: b.starts_at
+      ? new Date(b.starts_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+      : "—",
+    amenity: b.amenity ?? "Amenity",
+    detail: [b.resident_name, b.guest_count ? `${b.guest_count} guests` : null, b.event_type]
+      .filter(Boolean)
+      .join(" · "),
+    deposit: b.deposit_status ?? "Not required",
+    status: b.status ?? "Requested",
+  }));
+
+  const vendors: Vendor[] = (venRes.data ?? []).map((v) => {
+    const expires = v.insurance_expires_on as string | null;
+    const current = expires ? new Date(expires).getTime() > Date.now() : false;
+    return {
+      id: v.id,
+      name: v.name,
+      trade: v.trade ?? "—",
+      contract:
+        v.contract_start && v.contract_end
+          ? `${dateLabel(v.contract_start)} – ${dateLabel(v.contract_end)}`
+          : "No term recorded",
+      spend: money(v.ytd_spend_cents),
+      insurance: expires ? `Expires ${dateLabel(expires)}` : "Not on file",
+      ok: current,
+    };
+  });
+
+  const legalCases: LegalCase[] = (lRes.data ?? []).map((c) => ({
+    id: c.id,
+    owner: c.owner_name,
+    address: c.address ?? "—",
+    balance: money(c.balance_cents),
+    stage: c.stage ?? "Referred to counsel",
+    counsel: c.counsel ?? "Not assigned",
+  }));
+
+  const meetings: Meeting[] = (mRes.data ?? []).map((m) => ({
+    id: m.id,
+    date: m.starts_at
+      ? new Date(m.starts_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+      : "—",
+    title: m.title,
+    detail: [m.location, m.address].filter(Boolean).join(", ") || "No location set",
+    status: m.status ?? "Scheduled",
+    notice: m.notice_required_hours ? `${m.notice_required_hours}h notice` : "Notice not set",
+    /* Statutory window: notice must have gone out far enough ahead. */
+    noticeOk: Boolean(
+      m.notice_sent_at &&
+        m.starts_at &&
+        new Date(m.starts_at).getTime() - new Date(m.notice_sent_at).getTime() >=
+          (m.notice_required_hours ?? 0) * 3600_000,
+    ),
+    minutes: null,
+  }));
+
+  const directors: Director[] = (dRes.data ?? []).map((d) => ({
+    id: d.id,
+    name: d.name,
+    role: d.role ?? "Director",
+    address: [
+      [d.street_number, d.street_name].filter(Boolean).join(" "),
+      d.city,
+      [d.state, d.zip].filter(Boolean).join(" "),
+    ]
+      .filter(Boolean)
+      .join(", ") || "No address recorded",
+    term:
+      d.term_start && d.term_end
+        ? `${dateLabel(d.term_start)} – ${dateLabel(d.term_end)}`
+        : "Term not recorded",
+  }));
+
+  const members = new Map<string, string[]>();
+  for (const pc of (pcRes.data ?? []) as { portfolio_id: string; community_id: string }[]) {
+    members.set(pc.portfolio_id, [...(members.get(pc.portfolio_id) ?? []), pc.community_id]);
+  }
+  const portfolios: Portfolio[] = (pRes.data ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    members: members.get(p.id) ?? [],
+  }));
+
+  return { violations, arcApps, bookings, vendors, legalCases, meetings, directors, portfolios };
 }
 
 export async function loadPortalData(): Promise<PortalData> {
@@ -326,30 +596,7 @@ export async function loadPortalData(): Promise<PortalData> {
     published: Boolean(d.is_published ?? d.published ?? false),
   }));
 
-  const staff: Staff[] = (empRes.data ?? []).map((e) => ({
-    id: e.id,
-    name: e.name ?? "Unnamed",
-    email: e.email ?? "—",
-    role: toStaffRole(e.role),
-    communities: [],
-    active: Boolean(e.active),
-    load: 0,
-  }));
-
-  // Staff accounts also exist as admin profiles; include any not already listed.
-  for (const p of profiles) {
-    if (p.role !== "admin") continue;
-    if (staff.some((s) => s.name === (p.display_name ?? ""))) continue;
-    staff.push({
-      id: p.id,
-      name: p.display_name?.trim() || "Administrator",
-      email: "—",
-      role: toStaffRole(p.staff_role),
-      communities: [],
-      active: true,
-      load: 0,
-    });
-  }
+  const staff = await loadStaff(db);
 
   const calendar: CalEvent[] = (eventsRes.data ?? []).map((e) => ({
     id: e.id,
@@ -450,6 +697,8 @@ export async function loadPortalData(): Promise<PortalData> {
     },
   ];
 
+  const rest = await loadRemainingDomains(db);
+
   return {
     owners,
     work,
@@ -458,6 +707,7 @@ export async function loadPortalData(): Promise<PortalData> {
     calendar,
     payments,
     communities,
+    ...rest,
     addressBook,
     ledger: accounting.ledger,
     bankAccounts: accounting.bankAccounts,

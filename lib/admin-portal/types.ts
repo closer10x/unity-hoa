@@ -105,7 +105,7 @@ export interface Staff {
   sections: string[] | null;
 }
 export type StaffRole =
-  | "Administrator" | "Community manager" | "Assistant manager"
+  | "Owner" | "Administrator" | "Community manager" | "Assistant manager"
   | "Maintenance tech" | "Inspector" | "Accounting" | "Front desk";
 
 export type CalKind = "Meeting" | "Inspection" | "Booking" | "Legal" | "Community";

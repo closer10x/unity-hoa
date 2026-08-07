@@ -142,6 +142,14 @@ export function StoreProvider({
     audit: AuditEntry[];
     metrics: { label: string; value: string; note: string }[];
     addressBook: AddressSuggestion[];
+    violations: Violation[];
+    arcApps: ArcApp[];
+    bookings: Booking[];
+    vendors: Vendor[];
+    legalCases: LegalCase[];
+    meetings: Meeting[];
+    directors: Director[];
+    portfolios: Portfolio[];
   }>;
 }) {
   const allowed = allowedSections ?? [...ALL_SECTIONS];
@@ -155,7 +163,7 @@ export function StoreProvider({
       : account;
   /* Only Administrators may delete. Anything else — including an unset role —
      gets the read/act surface without the destructive one. */
-  const isAdministrator = currentRole === "Administrator";
+  const isAdministrator = currentRole === "Administrator" || currentRole === "Owner";
   const [view, setViewRaw] = useState(allowed[0] ?? "dashboard");
   const [scope, setScope] = useState("all");
   const [vw, setVw] = useState(1200);
@@ -165,16 +173,16 @@ export function StoreProvider({
   const [payments, setPayments] = useState<Payment[]>(initialData?.payments ?? []);
   const [delinquents, setDelinquents] = useState<Delinquent[]>([]);
   const [work, setWork] = useState<WorkOrder[]>(initialData?.work ?? []);
-  const [violations, setViolations] = useState<Violation[]>([]);
-  const [arcApps, setArcApps] = useState<ArcApp[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [directors, setDirectors] = useState<Director[]>([]);
-  const [legalCases, setLegalCases] = useState<LegalCase[]>([]);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [violations, setViolations] = useState<Violation[]>(initialData?.violations ?? []);
+  const [arcApps, setArcApps] = useState<ArcApp[]>(initialData?.arcApps ?? []);
+  const [bookings, setBookings] = useState<Booking[]>(initialData?.bookings ?? []);
+  const [meetings, setMeetings] = useState<Meeting[]>(initialData?.meetings ?? []);
+  const [directors, setDirectors] = useState<Director[]>(initialData?.directors ?? []);
+  const [legalCases, setLegalCases] = useState<LegalCase[]>(initialData?.legalCases ?? []);
+  const [vendors, setVendors] = useState<Vendor[]>(initialData?.vendors ?? []);
   const [docs, setDocs] = useState<Doc[]>(initialData?.docs ?? []);
   const [communities, setCommunities] = useState<Community[]>(initialData?.communities ?? []);
-  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
+  const [portfolios, setPortfolios] = useState<Portfolio[]>(initialData?.portfolios ?? []);
   const [staff, setStaff] = useState<Staff[]>(initialData?.staff ?? []);
   const metrics = initialData?.metrics ?? [];
   const addressBook = initialData?.addressBook ?? [];

@@ -157,12 +157,14 @@ const inputStyle: React.CSSProperties = {
 };
 
 export function Input({
-  value, onChange, placeholder, readOnly = false, mono = false, suggestions,
+  value, onChange, placeholder, readOnly = false, mono = false, password = false, suggestions,
 }: {
   value: string; onChange: (v: string) => void; placeholder?: string;
   /** System-assigned values: shown, never typed into. */
   readOnly?: boolean;
   mono?: boolean;
+  /** Masks the value (temporary passwords an admin sets). */
+  password?: boolean;
   /** Known addresses; typing offers them and fills the whole line. */
   suggestions?: AddressSuggestion[];
 }) {
@@ -179,7 +181,7 @@ export function Input({
 
   const field = (
     <input
-      type="text"
+      type={password ? "password" : "text"}
       value={value}
       placeholder={placeholder}
       readOnly={readOnly}
