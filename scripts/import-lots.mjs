@@ -56,6 +56,23 @@ print(json.dumps(out))
 const rows = JSON.parse(execSync("python3", { input: py }).toString());
 console.log("parsed", rows.length, "lots from the master sheet");
 
+// Office-confirmed corrections to sheet typos. SL2 Blk4 Lot74's "2081" broke
+// the street's descending-by-4 sequence (2184 → [2180] → 2176) and collided
+// with SL1 Blk3 Lot9's legitimate 2081; 2180 is the number the sheet skips.
+for (const r of rows) {
+  if (r.section === "2" && r.block === "4" && r.lot_number === "74" && r.street_number === "2081") {
+    r.street_number = "2180";
+    console.log("corrected: SL2 Blk4 Lot74 2081 -> 2180 Hidden Hills Lane");
+  }
+}
+
+// The one deliberate dummy for end-to-end testing, clearly marked as such.
+rows.push({
+  lot_number: "TEST", block: "0", section: "0",
+  street_number: "1", street_name: "Test Dummy Address",
+  lot_size: null, builder: "Test",
+});
+
 // Dedupe on the DB's unique keys, reporting anything skipped.
 const byAddr = new Map(), byLot = new Map(), clean = [], skipped = [];
 for (const r of rows) {
