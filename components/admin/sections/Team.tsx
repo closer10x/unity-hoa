@@ -23,17 +23,44 @@ export default function Team() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<StaffRole>("Community manager");
   const [comms, setComms] = useState<string[]>([]);
+  const [sending, setSending] = useState(false);
 
-  function save() {
+  async function save() {
     if (!name.trim() || !email.trim()) return setError("Add a name and a work email.");
     if (comms.length === 0) return setError("Assign at least one community.");
-    const p: Staff = {
-      id: s.uid("s"), name: name.trim(), email: email.trim(),
-      role, communities: [...comms], active: true, load: 0,
-    };
-    s.setStaff((prev) => [...prev, p]);
-    s.audit(`Invited ${p.name} as ${p.role}`);
-    setOpen(false); setError(""); setName(""); setEmail(""); setComms([]);
+    setSending(true);
+    setError("");
+    try {
+      // Creates the account with an auto-generated temporary password and
+      // emails the credentials to the new team member.
+      const res = await fetch("/api/team-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), role }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string; emailError?: string };
+      if (!res.ok || !data.ok) {
+        setError(data.error ?? "The invite could not be sent.");
+        return;
+      }
+      const p: Staff = {
+        id: s.uid("s"), name: name.trim(), email: email.trim(),
+        role, communities: [...comms], active: true, load: 0,
+      };
+      s.setStaff((prev) => [...prev, p]);
+      s.audit(
+        data.emailError
+          ? `Invited ${p.name} as ${p.role} — account created, but the welcome email failed (${data.emailError})`
+          : `Invited ${p.name} as ${p.role} — welcome email sent with a temporary password`,
+      );
+      if (data.emailError) {
+        setError(`Account created, but the welcome email failed: ${data.emailError}`);
+        return;
+      }
+      setOpen(false); setName(""); setEmail(""); setComms([]);
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -65,7 +92,9 @@ export default function Team() {
           </div>
           <p style={{ fontSize: 14, lineHeight: 1.6, color: color.inkTertiary }}>{ROLE_HINTS[role]}</p>
           {error ? <ErrorLine>{error}</ErrorLine> : null}
-          <Primary onClick={save} style={{ justifySelf: "start" }}>Send invite</Primary>
+          <Primary onClick={save} style={{ justifySelf: "start", ...(sending ? { opacity: 0.6, pointerEvents: "none" } : {}) }}>
+            {sending ? "Sending invite…" : "Send invite"}
+          </Primary>
         </AddDrawer>
 
         {s.staff.map((p) => (
