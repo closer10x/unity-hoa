@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 
 import { isSupabaseAuthConfigured } from "@/lib/supabase/keys";
+import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server-user";
 
 export type ResidentProfile = {
@@ -66,11 +67,28 @@ export const requireResidentUser = cache(async (): Promise<ResidentSession> => {
 
   // Select * so DBs missing newer columns still return a row — explicit
   // column lists make PostgREST error and cause login ↔ portal redirect loops.
-  const { data: profile, error: profileError } = await supabase
+  let { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .maybeSingle();
+
+  // A signed-in user with no profiles row (signup-trigger gap) would loop
+  // between here and the login page, which redirects signed-in users back.
+  // Heal it the way the trigger would have: a minimal basic-role row.
+  if (!profileError && !profile && isSupabaseConfigured()) {
+    const service = createServiceClient();
+    await service
+      .from("profiles")
+      .upsert({ id: user.id, role: "basic" }, { onConflict: "id" });
+    const retry = await service
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+    profile = retry.data;
+    profileError = retry.error;
+  }
 
   if (profileError || !profile) {
     redirect("/portal/login?error=profile_error");

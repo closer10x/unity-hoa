@@ -19,6 +19,7 @@ const RECIPIENTS = [
 export default function Messages() {
   const s = useResident();
   const [filter, setFilter] = useState("All");
+  const [query, setQuery] = useState("");
   const [threadId, setThreadId] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
   const [reply, setReply] = useState("");
@@ -27,11 +28,17 @@ export default function Messages() {
   const [msgBody, setMsgBody] = useState("");
   const [msgError, setMsgError] = useState("");
 
+  const q = query.trim().toLowerCase();
   const visible = s.threads.filter((t) => {
-    if (filter === "Unread") return t.unread;
-    if (filter === "Office") return t.party === "Management office" || t.party === "Billing";
-    if (filter === "Committees") return t.party.includes("Committee") || t.party === "Board liaison";
-    return true;
+    if (filter === "Unread" && !t.unread) return false;
+    if (filter === "Office" && !(t.party === "Management office" || t.party === "Billing")) return false;
+    if (filter === "Committees" && !(t.party.includes("Committee") || t.party === "Board liaison")) return false;
+    if (!q) return true;
+    return (
+      t.subject.toLowerCase().includes(q) ||
+      t.party.toLowerCase().includes(q) ||
+      t.messages.some((m) => m.body.toLowerCase().includes(q))
+    );
   });
 
   const thread = s.threads.find((t) => t.id === threadId) ?? visible[0] ?? s.threads[0] ?? null;
@@ -88,6 +95,17 @@ export default function Messages() {
       <Card>
         <div style={{ padding: `16px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
           <Pill onClick={() => { setComposing(true); setMsgError(""); }}>New message</Pill>
+          <input
+            type="text"
+            value={query}
+            placeholder="Search messages…"
+            onChange={(e) => setQuery(e.target.value)}
+            style={{
+              flex: "1 1 200px", font: "inherit", fontSize: 15, color: color.ink,
+              background: color.surfaceSunken, border: `1px solid ${color.borderInput}`,
+              borderRadius: 10, padding: "11px 14px",
+            }}
+          />
           {FILTERS.map((f) => (
             <Chip key={f} size="sm" on={f === filter} onClick={() => setFilter(f)}>{f}</Chip>
           ))}
