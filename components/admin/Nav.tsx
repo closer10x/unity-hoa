@@ -31,26 +31,39 @@ export function Sidebar() {
       maxHeight: "calc(100dvh - 108px)",
       overflowY: "auto",
     }}>
-      {items.map((n) => {
-        const on = n.id === s.view;
-        return (
-          <button key={n.id} type="button" onClick={() => s.setView(n.id)}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-              width: "100%", textAlign: "left", font: "inherit", fontSize: 15,
-              border: `1px solid ${on ? color.accentTintBorder : "transparent"}`,
-              background: on ? color.accentTint : "transparent",
-              color: on ? "oklch(0.28 0.03 152)" : "oklch(0.32 0.014 150)",
-              borderRadius: radius.md, padding: "11px 14px", cursor: "pointer",
-            }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-              <NavIcon id={n.id} />
-              <span style={{ fontWeight: on ? 600 : 400 }}>{n.label}</span>
-            </span>
-            {"badge" in n && n.badge ? <Badge>{n.badge}</Badge> : null}
-          </button>
-        );
-      })}
+      {/* Grouped per the handoff: Today · Money · Property · People · Office.
+          A group only renders when the role can reach something inside it. */}
+      {NAV_GROUPS.filter((group) => items.some((n) => n.group === group)).map((group) => (
+        <React.Fragment key={group}>
+          <span style={{
+            fontFamily: font.mono, fontSize: 10.5, letterSpacing: "0.14em",
+            textTransform: "uppercase", color: color.inkQuaternary,
+            padding: "12px 14px 2px",
+          }}>
+            {group}
+          </span>
+          {items.filter((n) => n.group === group).map((n) => {
+            const on = n.id === s.view;
+            return (
+              <button key={n.id} type="button" onClick={() => s.setView(n.id)}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                  width: "100%", textAlign: "left", font: "inherit", fontSize: 15,
+                  border: `1px solid ${on ? color.accentTintBorder : "transparent"}`,
+                  background: on ? color.accentTint : "transparent",
+                  color: on ? "oklch(0.28 0.03 152)" : "oklch(0.32 0.014 150)",
+                  borderRadius: radius.md, padding: "11px 14px", cursor: "pointer",
+                }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                  <NavIcon id={n.id} />
+                  <span style={{ fontWeight: on ? 600 : 400 }}>{n.label}</span>
+                </span>
+                {"badge" in n && n.badge ? <Badge>{n.badge}</Badge> : null}
+              </button>
+            );
+          })}
+        </React.Fragment>
+      ))}
     </aside>
   );
 }

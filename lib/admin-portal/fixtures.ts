@@ -38,7 +38,8 @@ export const NAV: ReadonlyArray<{
   { id: "schedule", label: "Schedule", group: "Office" },
 ];
 
-export const NAV_GROUPS = ["Today", "Money", "Property", "People", "Office"] as const;
+/** Sidebar group order — People right below Today, per the office's preference. */
+export const NAV_GROUPS = ["Today", "People", "Money", "Property", "Office"] as const;
 
 export const COMMUNITIES: Community[] = [
   { id: "sofi", name: "Sofi Lakes", location: "Katy, Texas 77493", doors: "—", dues: "—", cadence: "—", stage: "Active", portfolio: "" },

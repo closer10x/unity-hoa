@@ -2,6 +2,9 @@
 
 import React, { useState } from "react";
 
+import {
+  markResidentThreadRead, replyAsResident, startResidentThread,
+} from "@/lib/resident-portal/message-actions";
 import { useResident } from "@/lib/resident-portal/store";
 import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
 import type { Thread } from "@/lib/resident-portal/types";
@@ -43,47 +46,49 @@ export default function Messages() {
 
   const thread = s.threads.find((t) => t.id === threadId) ?? visible[0] ?? s.threads[0] ?? null;
 
+  const [sending, setSending] = useState(false);
+
   function openThread(t: Thread) {
     setThreadId(t.id);
     setComposing(false);
     setReply("");
     if (t.unread) {
       s.setThreads((prev) => prev.map((x) => (x.id === t.id ? { ...x, unread: false } : x)));
+      // Persist so the unread dot stays cleared after a reload.
+      void markResidentThreadRead(t.id);
     }
   }
 
-  function sendReply() {
-    if (!thread || !reply.trim()) return;
+  async function sendReply() {
+    if (!thread || !reply.trim() || sending) return;
     const text = reply.trim();
+    setSending(true);
+    setMsgError("");
+    const res = await replyAsResident({ threadId: thread.id, body: text });
+    setSending(false);
+    if (!res.ok) return setMsgError(res.error);
     setReply("");
     s.setThreads((prev) =>
       prev.map((t) =>
         t.id === thread.id
-          ? {
-              ...t,
-              status: "Open" as const,
-              date: "Today",
-              messages: [...t.messages, { id: s.uid("m"), from: "You", mine: true, time: s.stamp(), body: text }],
-            }
+          ? { ...t, status: "Open" as const, date: "Today", messages: [...t.messages, res.message] }
           : t,
       ),
     );
   }
 
-  function sendNew() {
+  async function sendNew() {
+    if (sending) return;
     if (!msgSubject.trim() || !msgBody.trim()) return setMsgError("Add a subject and a message.");
-    const id = s.uid("t");
-    const created: Thread = {
-      id,
-      party: msgTo,
-      subject: msgSubject.trim(),
-      date: "Today",
-      unread: false,
-      status: "Open",
-      messages: [{ id: s.uid("m"), from: "You", mine: true, time: s.stamp(), body: msgBody.trim() }],
-    };
-    s.setThreads((prev) => [created, ...prev]);
-    setThreadId(id);
+    setSending(true);
+    setMsgError("");
+    const res = await startResidentThread({
+      party: msgTo, subject: msgSubject.trim(), body: msgBody.trim(),
+    });
+    setSending(false);
+    if (!res.ok) return setMsgError(res.error);
+    s.setThreads((prev) => [res.thread, ...prev]);
+    setThreadId(res.thread.id);
     setComposing(false);
     setMsgSubject(""); setMsgBody(""); setMsgError("");
   }
@@ -170,7 +175,10 @@ export default function Messages() {
                   <Area value={msgBody} onChange={setMsgBody} rows={4} placeholder="Write your message…" />
                 </Field>
                 {msgError ? <ErrorLine>{msgError}</ErrorLine> : null}
-                <Primary onClick={sendNew} style={{ justifySelf: "start" }}>Send</Primary>
+                <Primary onClick={sendNew}
+                  style={{ justifySelf: "start", ...(sending ? { opacity: 0.6, pointerEvents: "none" } : {}) }}>
+                  {sending ? "Sending…" : "Send"}
+                </Primary>
               </div>
             ) : !thread ? (
               <Empty>Select a conversation, or start a new one.</Empty>
@@ -214,7 +222,11 @@ export default function Messages() {
                 </div>
                 <div style={{ padding: pad.card, borderTop: `1px solid ${color.hairlineSoft}`, display: "grid", gap: 10 }}>
                   <Area value={reply} onChange={setReply} rows={2} placeholder="Write a reply…" />
-                  <Primary onClick={sendReply} style={{ justifySelf: "start", padding: "10px 22px" }}>Reply</Primary>
+                  {msgError && !composing ? <ErrorLine>{msgError}</ErrorLine> : null}
+                  <Primary onClick={sendReply}
+                    style={{ justifySelf: "start", padding: "10px 22px", ...(sending ? { opacity: 0.6, pointerEvents: "none" } : {}) }}>
+                    {sending ? "Sending…" : "Reply"}
+                  </Primary>
                 </div>
               </>
             )}

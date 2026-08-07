@@ -10,14 +10,64 @@ import { color, font, pad } from "@/lib/admin-portal/tokens";
 import type { Staff, StaffRole } from "@/lib/admin-portal/types";
 import {
   ConfirmBar,
-  AddDrawer, Card, CardHead, Chip, Empty, ErrorLine, Field, FieldGrid, Input,
-  Mono, PageTitle, Pill, Primary, Row, RowMain, Select, Status, TextButton,
+  AddDrawer, Card, CardHead, Chip, Empty, ErrorLine, Field, FieldGrid, FilterBar,
+  Input, Mono, PageTitle, Pill, Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
 
 const ROLES: StaffRole[] = [
   "Community manager", "Assistant manager", "Maintenance tech",
   "Inspector", "Accounting", "Front desk", "Administrator", "Owner",
 ];
+
+/** Card-header collapse toggle — same chevron as the nav icons. */
+function Chevron({ open, onToggle, label }: { open: boolean; onToggle: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-label={`${open ? "Collapse" : "Expand"} ${label}`}
+      style={{
+        background: "none", border: "none", padding: "8px 2px",
+        cursor: "pointer", color: "oklch(0.44 0.045 155)",
+        display: "inline-flex", alignItems: "center",
+      }}
+    >
+      <svg
+        width={17} height={17} viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" strokeWidth={1.5}
+        strokeLinecap="round" strokeLinejoin="round"
+        aria-hidden focusable={false}
+        style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 140ms ease" }}
+      >
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    </button>
+  );
+}
+
+/** Numbered pages — 1 · 2 · 3 — for short logs. Hidden with one page. */
+function Pager({ page, pages, onPage }: { page: number; pages: number; onPage: (p: number) => void }) {
+  if (pages < 2) return null;
+  return (
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", padding: `14px ${pad.card}` }}>
+      {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
+        <button key={p} type="button" onClick={() => onPage(p)}
+          aria-current={p === page ? "page" : undefined}
+          style={{
+            fontFamily: font.mono, fontSize: 13, cursor: "pointer",
+            minWidth: 34, padding: "7px 0", textAlign: "center",
+            border: `1px solid ${p === page ? color.chipOnBorder : color.hairline}`,
+            background: p === page ? color.chipOn : color.surfaceSunken,
+            color: p === page ? color.chipOnText : color.inkTertiary,
+            borderRadius: 8,
+          }}>
+          {p}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /**
  * Per-section access as checkmarks. Picking a role auto-fills the checked
@@ -116,6 +166,28 @@ export default function Team() {
   // The role reference is static copy — collapsed by default so it doesn't
   // push the audit trail off screen.
   const [matrixOpen, setMatrixOpen] = useState(false);
+
+  /* ----- sign-in activity: collapse + pages of five ----- */
+  const [signInsOpen, setSignInsOpen] = useState(true);
+  const [signInPage, setSignInPage] = useState(1);
+  const signInPages = Math.max(1, Math.ceil(s.signIns.length / 5));
+  const signInPageSafe = Math.min(signInPage, signInPages);
+
+  /* ----- audit trail: collapse + search + filter by user ----- */
+  const [auditOpen, setAuditOpen] = useState(true);
+  const [auditQuery, setAuditQuery] = useState("");
+  const [auditWho, setAuditWho] = useState("All");
+  const auditUsers = ["All", ...[...new Set(s.auditLog.map((a) => a.who))].slice(0, 7)];
+  const aq = auditQuery.trim().toLowerCase();
+  const auditVisible = s.auditLog.filter((a) => {
+    if (auditWho !== "All" && a.who !== auditWho) return false;
+    if (!aq) return true;
+    return (
+      a.text.toLowerCase().includes(aq) ||
+      a.who.toLowerCase().includes(aq) ||
+      a.time.toLowerCase().includes(aq)
+    );
+  });
 
   async function save() {
     if (!name.trim() || !email.trim()) return setError("Add a name and a work email.");
@@ -335,43 +407,71 @@ export default function Team() {
         <CardHead
           title="Sign-in activity"
           meta={`${s.signIns.filter((e) => !e.succeeded).length} failed of the last ${s.signIns.length}`}
-        />
-        {s.signIns.length === 0 ? (
+        >
+          <Chevron open={signInsOpen} onToggle={() => setSignInsOpen((v) => !v)} label="sign-in activity" />
+        </CardHead>
+        {!signInsOpen ? null : s.signIns.length === 0 ? (
           <Row>
             <span style={{ fontSize: 15, color: color.inkTertiary }}>
               Nothing recorded yet. Sign-ins, sign-outs and password resets appear here.
             </span>
           </Row>
         ) : (
-          s.signIns.slice(0, 25).map((e) => (
-            <Row key={e.id}>
-              <RowMain
-                label={e.who}
-                detail={e.succeeded ? e.event : `${e.event} failed — ${e.reason ?? "unknown reason"}`}
-              />
-              <Status tone={e.succeeded ? "positive" : "critical"}>
-                {e.succeeded ? "Success" : "Failed"}
-              </Status>
-              <Mono size={12} style={{ color: color.neutral }}>{e.ip}</Mono>
-              <span style={{ fontSize: 14, color: color.inkTertiary }}>{e.device}</span>
-              <Mono size={12} style={{ color: color.inkQuaternary }}>{e.at}</Mono>
-            </Row>
-          ))
+          <>
+            {s.signIns.slice((signInPageSafe - 1) * 5, signInPageSafe * 5).map((e) => (
+              <Row key={e.id}>
+                <RowMain
+                  label={e.who}
+                  detail={e.succeeded ? e.event : `${e.event} failed — ${e.reason ?? "unknown reason"}`}
+                />
+                <Status tone={e.succeeded ? "positive" : "critical"}>
+                  {e.succeeded ? "Success" : "Failed"}
+                </Status>
+                <Mono size={12} style={{ color: color.neutral }}>{e.ip}</Mono>
+                <span style={{ fontSize: 14, color: color.inkTertiary }}>{e.device}</span>
+                <Mono size={12} style={{ color: color.inkQuaternary }}>{e.at}</Mono>
+              </Row>
+            ))}
+            <Pager page={signInPageSafe} pages={signInPages} onPage={setSignInPage} />
+          </>
         )}
       </Card>
 
       <Card>
         <CardHead title="Audit trail"
-          meta="Every change in this portal is stamped with the account that made it. The log can't be edited." />
-        {s.auditLog.length === 0 ? (
-          <Empty>Nothing recorded yet this session.</Empty>
-        ) : s.auditLog.slice(0, 40).map((a) => (
-          <Row key={a.id} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
-            <span style={{ fontSize: 15 }}>{a.text}</span>
-            <Mono size={12} style={{ color: color.neutral }}>{a.who}</Mono>
-            <Mono size={12} style={{ color: color.inkQuaternary }}>{a.time}</Mono>
-          </Row>
-        ))}
+          meta="Every change in this portal is stamped with the account that made it. The log can't be edited.">
+          <Chevron open={auditOpen} onToggle={() => setAuditOpen((v) => !v)} label="the audit trail" />
+        </CardHead>
+        {!auditOpen ? null : (
+          <>
+            <FilterBar
+              query={auditQuery}
+              onQuery={setAuditQuery}
+              placeholder="Search the audit trail — action, account or time"
+              filters={auditUsers}
+              active={auditWho}
+              onFilter={setAuditWho}
+            />
+            {auditVisible.length === 0 ? (
+              <Empty>
+                {s.auditLog.length === 0
+                  ? "Nothing recorded yet this session."
+                  : "Nothing matches that search."}
+              </Empty>
+            ) : (
+              auditVisible.slice(0, 40).map((a) => (
+                <Row key={a.id} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
+                  <span style={{ fontSize: 15 }}>{a.text}</span>
+                  <Mono size={12} style={{ color: color.neutral }}>{a.who}</Mono>
+                  <Mono size={12} style={{ color: color.inkQuaternary }}>{a.time}</Mono>
+                </Row>
+              ))
+            )}
+            {auditVisible.length > 40 ? (
+              <Empty>Showing the first 40 of {auditVisible.length} matches — narrow the search to see the rest.</Empty>
+            ) : null}
+          </>
+        )}
       </Card>
 
       <Card>

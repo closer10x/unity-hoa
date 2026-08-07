@@ -634,7 +634,10 @@ export async function loadPortalData(): Promise<PortalData> {
       db.from("lots").select("*").order("lot_number", { ascending: true }).limit(1000),
       db.from("profiles").select("*"),
       db.from("work_orders").select("*").order("created_at", { ascending: false }),
-      db.from("documents").select("*").order("created_at", { ascending: false }),
+      db
+        .from("documents")
+        .select("*, document_categories(name)")
+        .order("uploaded_at", { ascending: false }),
       db.from("employees").select("*").order("name", { ascending: true }),
       db.from("community_events").select("*").order("starts_at", { ascending: true }),
       db.from("resident_payments").select("*").order("created_at", { ascending: false }).limit(50),
@@ -689,10 +692,18 @@ export async function loadPortalData(): Promise<PortalData> {
   const docs: Doc[] = (docsRes.data ?? []).map((d) => ({
     id: d.id,
     title: d.title ?? "Untitled",
-    meta: [d.category_id ? "Categorised" : null, shortDate(d.created_at)]
+    meta: [
+      (d.document_categories as { name?: string } | null)?.name ?? null,
+      shortDate(d.uploaded_at ?? d.created_at),
+    ]
       .filter(Boolean)
       .join(" · "),
-    published: Boolean(d.is_published ?? d.published ?? false),
+    // Published = residents can see it: not archived, and public or
+    // resident access. Mirrors the resident portal's own read filter.
+    published: Boolean(
+      d.is_published ??
+        (!d.is_archived && (d.access_level === "public" || d.access_level === "resident")),
+    ),
   }));
 
   const staff = await loadStaff(db);
