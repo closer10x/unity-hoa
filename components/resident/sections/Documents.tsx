@@ -6,7 +6,7 @@ import { useResident, useSearchFilter } from "@/lib/resident-portal/store";
 import { color, font, pad } from "@/lib/admin-portal/tokens";
 import type { DocItem } from "@/lib/resident-portal/types";
 import {
-  Card, Empty, FilterBar, Mono, PageTitle, Row, RowMain,
+  Card, Empty, FilterBar, Mono, PageTitle, Row, RowMain, TextButton,
 } from "@/components/admin/ui";
 
 export default function Documents() {
@@ -63,6 +63,16 @@ export default function Documents() {
                 <Row key={d.id}>
                   <RowMain label={d.title} />
                   <Mono size={13} style={{ color: color.neutral }}>{d.meta}</Mono>
+                  <span style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+                    {/* Opens the PDF in a new tab via a signed URL; the
+                        download variant asks the browser to save instead. */}
+                    <TextButton onClick={() => window.open(`/api/documents/${d.id}/download`, "_blank", "noopener")}>
+                      View
+                    </TextButton>
+                    <TextButton onClick={() => { window.location.href = `/api/documents/${d.id}/download?download=1`; }}>
+                      Download
+                    </TextButton>
+                  </span>
                 </Row>
               ))}
             </div>

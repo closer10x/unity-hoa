@@ -5,7 +5,7 @@ import { useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color } from "@/lib/admin-portal/tokens";
 import {
   AddDrawer, Card, Empty, ErrorLine, Field, FieldGrid, FilterBar, Input,
-  PageTitle, Pill, Primary, Row, RowMain, Select, Status,
+  PageTitle, Pill, Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
 
 const FILTERS = ["All", "Published", "Draft"];
@@ -114,12 +114,17 @@ export default function Documents() {
           <Row key={d.id}>
             <RowMain label={d.title} detail={d.meta} />
             <Status tone={d.published ? "positive" : "attention"}>{d.published ? "Published" : "Draft"}</Status>
-            <Pill onClick={() => {
-              s.setDocs((prev) => prev.map((x) => x.id === d.id ? { ...x, published: !x.published } : x));
-              s.audit(`${d.published ? "Unpublished" : "Published"} ${d.title}`);
-            }}>
-              {d.published ? "Unpublish" : "Publish"}
-            </Pill>
+            <span style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+              <TextButton onClick={() => window.open(`/api/documents/${d.id}/download`, "_blank", "noopener")}>
+                View
+              </TextButton>
+              <Pill style={{ padding: "8px 16px", fontSize: 14 }} onClick={() => {
+                s.setDocs((prev) => prev.map((x) => x.id === d.id ? { ...x, published: !x.published } : x));
+                s.audit(`${d.published ? "Unpublished" : "Published"} ${d.title}`);
+              }}>
+                {d.published ? "Unpublish" : "Publish"}
+              </Pill>
+            </span>
           </Row>
         ))}
       </Card>
