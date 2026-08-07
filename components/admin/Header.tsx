@@ -27,7 +27,7 @@ export default function Header() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px 14px", flexWrap: "wrap", minWidth: 0 }}>
         <span style={{ display: "flex", alignItems: "center", flex: "0 0 auto" }}>
           <img
-            src="/images/unitylogo-admin.png"
+            src="/images/unitylogo.png"
             alt="Unity Grid Management"
             style={{ display: "block", height: 34, width: "auto" }}
           />
