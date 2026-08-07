@@ -6,6 +6,7 @@ import { buildActionMenu, useSearchFilter, useStore } from "@/lib/admin-portal/s
 import { color, font } from "@/lib/admin-portal/tokens";
 import type { PendingConfirm, WorkOrder } from "@/lib/admin-portal/types";
 import {
+  DropZone,
   ActionSelect, AddDrawer, Card, CardHead, Chip, ConfirmBar, Empty, ErrorLine,
   Field, FieldGrid, FilterBar, Input, Mono, PageTitle, Primary, Row, RowMain,
   Select, Status, Area, TextButton,
@@ -95,6 +96,7 @@ export default function WorkOrders() {
               ))}
             </div>
           </div>
+          <DropZone camera>photos of the problem — take one now, or drag files here</DropZone>
           {error ? <ErrorLine>{error}</ErrorLine> : null}
           <Primary onClick={save} style={{ justifySelf: "start" }}>Create work order</Primary>
         </AddDrawer>

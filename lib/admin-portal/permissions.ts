@@ -51,6 +51,23 @@ export function sectionsForRole(
   return ["dashboard"];
 }
 
+/**
+ * Effective sections for an account: the per-person override when one was
+ * granted, otherwise the role default. Unknown ids in a stored override are
+ * dropped rather than trusted; an empty override falls back to the role, so
+ * a bad write can never lock an account out entirely.
+ */
+export function resolveSections(
+  staffRole: string | null | undefined,
+  override: readonly string[] | null | undefined,
+): readonly SectionId[] {
+  const valid = override?.filter((s): s is SectionId =>
+    (ALL_SECTIONS as readonly string[]).includes(s),
+  );
+  if (valid && valid.length > 0) return valid;
+  return sectionsForRole(staffRole);
+}
+
 /** Only Administrators manage staff accounts (mirrors the team section gate). */
 export function canManageStaff(staffRole: string | null | undefined): boolean {
   return staffRole == null || staffRole === "" || staffRole === "Administrator";

@@ -101,7 +101,8 @@ export default function Owners() {
         <AddDrawer
           open={open} onOpen={() => { setOpen(true); setError(""); }} onCancel={() => { setOpen(false); setError(""); }}
           openLabel="Add a homeowner" title="Add a homeowner"
-          note="New owners get portal access and a welcome packet the next business morning.">
+          note="New owners get portal access and a welcome packet the next business morning."
+          count={`${s.owners.length} ${s.owners.length === 1 ? "home" : "homes"} · ${s.owners.filter((o) => o.flag === "current").length} with an owner`}>
           <FieldGrid>
             <Field label="Owner name"><Input value={name} onChange={setName} placeholder="Name on the deed" /></Field>
             <Field label="Co-owner"><Input value={coOwner} onChange={setCoOwner} placeholder="Optional" /></Field>

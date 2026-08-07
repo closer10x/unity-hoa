@@ -98,6 +98,11 @@ export interface Portfolio { id: string; name: string; members: string[]; }
 export interface Staff {
   id: string; name: string; email: string; role: StaffRole;
   communities: string[]; active: boolean; load: number;
+  /** Backing rows: an employees record, a portal sign-in (profiles/auth), or both. */
+  employeeId: string | null;
+  profileId: string | null;
+  /** Custom section override an Administrator granted; null = role default. */
+  sections: string[] | null;
 }
 export type StaffRole =
   | "Administrator" | "Community manager" | "Assistant manager"
@@ -129,6 +134,9 @@ export interface LedgerEntry {
   /** Bank account label for imported rows; "" for manual entries. */
   account: string;
   pending: boolean;
+  /** The owner (lot) this money belongs to, when linked — e.g. an HOA fee. */
+  ownerId: string | null;
+  ownerName: string;
 }
 
 export interface BankAccount {

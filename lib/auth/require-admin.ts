@@ -10,6 +10,8 @@ export type AdminProfile = {
   staff_role: string | null;
   display_name: string | null;
   avatar_path: string | null;
+  /** Per-account section override; null = derive from staff_role. */
+  section_access: string[] | null;
 };
 
 export type AdminSession = {
@@ -37,6 +39,7 @@ const DEV_SESSION: AdminSession = {
     staff_role: "Administrator",
     display_name: "Local dev",
     avatar_path: null,
+    section_access: null,
   },
   // No client exists without configuration; nothing on this path queries it.
   supabase: null as unknown as AdminSession["supabase"],
@@ -78,6 +81,7 @@ export const requireAdminUser = cache(async (): Promise<AdminSession> => {
     staff_role?: string | null;
     display_name?: string | null;
     avatar_path?: string | null;
+    section_access?: string[] | null;
   };
 
   return {
@@ -87,6 +91,7 @@ export const requireAdminUser = cache(async (): Promise<AdminSession> => {
       staff_role: row.staff_role ?? null,
       display_name: row.display_name ?? null,
       avatar_path: row.avatar_path ?? null,
+      section_access: row.section_access ?? null,
     },
     supabase,
   };

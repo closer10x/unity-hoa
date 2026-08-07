@@ -268,15 +268,30 @@ export function DropZone({
   camera?: boolean;
   onFiles?: (files: File[]) => void;
 }) {
-  const [picked, setPicked] = React.useState<string[]>([]);
+  /** Object URLs are revoked on unmount; leaving them alive leaks memory. */
+  const [picked, setPicked] = React.useState<{ name: string; url: string | null }[]>([]);
   const [over, setOver] = React.useState(false);
   const browseRef = React.useRef<HTMLInputElement>(null);
   const cameraRef = React.useRef<HTMLInputElement>(null);
 
+  React.useEffect(
+    () => () => {
+      picked.forEach((f) => { if (f.url) URL.revokeObjectURL(f.url); });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   const take = (list: FileList | null) => {
     const files = Array.from(list ?? []);
     if (files.length === 0) return;
-    setPicked((prev) => [...prev, ...files.map((f) => f.name)]);
+    setPicked((prev) => [
+      ...prev,
+      ...files.map((f) => ({
+        name: f.name,
+        url: f.type.startsWith("image/") ? URL.createObjectURL(f) : null,
+      })),
+    ]);
     onFiles?.(files);
   };
 
@@ -323,10 +338,49 @@ export function DropZone({
       ) : null}
 
       {picked.length > 0 ? (
-        <div style={{ display: "grid", gap: 4 }}>
-          {picked.map((n, i) => (
-            <Mono key={`${n}-${i}`} size={12} style={{ color: color.neutral }}>{n}</Mono>
-          ))}
+        <div style={{ display: "grid", gap: 10 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            {picked.map((f, i) => (
+              <span
+                key={`${f.name}-${i}`}
+                style={{ display: "grid", gap: 4, justifyItems: "center", maxWidth: 96 }}
+              >
+                {f.url ? (
+                  /* Local object URL, not a remote asset — next/image would
+                     add nothing and cannot optimise a blob. */
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={f.url}
+                    alt=""
+                    style={{
+                      width: 72, height: 72, objectFit: "cover",
+                      borderRadius: radius.sm,
+                      border: `1px solid ${color.hairline}`,
+                    }}
+                  />
+                ) : (
+                  <span
+                    style={{
+                      width: 72, height: 72, display: "grid", placeItems: "center",
+                      borderRadius: radius.sm, border: `1px solid ${color.hairline}`,
+                      background: color.surfaceMuted, fontSize: 11, color: color.inkQuaternary,
+                    }}
+                  >
+                    file
+                  </span>
+                )}
+                <Mono
+                  size={11}
+                  style={{
+                    color: color.neutral, maxWidth: 92, overflow: "hidden",
+                    textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}
+                >
+                  {f.name}
+                </Mono>
+              </span>
+            ))}
+          </div>
           <span style={{ fontSize: 13, color: color.attention }}>
             Held in this form only — file upload is not wired up yet.
           </span>
@@ -339,16 +393,22 @@ export function DropZone({
 /* ---------- add-form drawer (product rule: always on top) ---------- */
 
 export function AddDrawer({
-  open, onOpen, onCancel, openLabel, title, note, children,
+  open, onOpen, onCancel, openLabel, title, note, count, children,
 }: {
   open: boolean; onOpen: () => void; onCancel: () => void;
-  openLabel: string; title: string; note?: string; children: React.ReactNode;
+  openLabel: string; title: string; note?: string;
+  /** Right-aligned total, e.g. "101 homes". */
+  count?: string;
+  children: React.ReactNode;
 }) {
   if (!open) {
     return (
       <div style={{ padding: pad.card, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
         <Pill onClick={onOpen}>{openLabel}</Pill>
         {note ? <span style={{ fontSize: 14, color: color.inkTertiary }}>{note}</span> : null}
+        {count ? (
+          <Mono size={13} style={{ color: color.neutral, marginLeft: "auto" }}>{count}</Mono>
+        ) : null}
       </div>
     );
   }

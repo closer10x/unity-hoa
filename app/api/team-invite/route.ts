@@ -1,7 +1,12 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 
-import { isStaffRole, canManageStaff } from "@/lib/admin-portal/permissions";
+import {
+  ALL_SECTIONS,
+  SECTION_ACCESS,
+  canManageStaff,
+  isStaffRole,
+} from "@/lib/admin-portal/permissions";
 import { sendWelcomeEmailViaResend } from "@/lib/email/send-welcome-email";
 import { sendSms } from "@/lib/sms/send-sms";
 import { isSupabaseAuthConfigured } from "@/lib/supabase/keys";
@@ -47,7 +52,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   }
 
-  let body: { name?: string; email?: string; role?: string; phone?: string };
+  let body: {
+    name?: string;
+    email?: string;
+    role?: string;
+    phone?: string;
+    sections?: string[];
+    communities?: string[];
+  };
   try {
     body = await req.json();
   } catch {
@@ -69,6 +81,21 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
+
+  // Custom section access: keep only known ids, and store null when the
+  // checked set matches the role's default so the role stays the source of
+  // truth until someone deliberately customizes.
+  const requested = (body.sections ?? []).filter((s) =>
+    (ALL_SECTIONS as readonly string[]).includes(s),
+  );
+  const roleDefault = isStaffRole(role) ? SECTION_ACCESS[role] : [];
+  const isDefault =
+    requested.length === roleDefault.length &&
+    roleDefault.every((s) => requested.includes(s));
+  const sectionAccess = requested.length && !isDefault ? requested : null;
+  const communities = (body.communities ?? []).filter(
+    (c) => typeof c === "string" && c.length < 80,
+  );
 
   const service = requireServiceSupabase();
   const tempPassword = generateTempPassword();
@@ -96,6 +123,8 @@ export async function POST(req: Request) {
       role: "admin",
       staff_role: role,
       display_name: name,
+      section_access: sectionAccess,
+      communities,
       ...(phone ? { phone } : {}),
     });
   if (profileErr) {
@@ -107,7 +136,7 @@ export async function POST(req: Request) {
 
   const { error: employeeErr } = await service
     .from("employees")
-    .insert({ name, email, role, active: true, ...(phone ? { phone } : {}) });
+    .insert({ name, email, role, active: true, communities, ...(phone ? { phone } : {}) });
   if (employeeErr) {
     return NextResponse.json(
       { error: `Account created but employee record failed: ${employeeErr.message}` },

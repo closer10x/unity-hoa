@@ -1,0 +1,160 @@
+import "server-only";
+
+import { randomBytes } from "node:crypto";
+
+import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase/server";
+
+/**
+ * Crew links: one tokenised, login-free job board per field employee.
+ *
+ * The token IS the credential, so it carries 32 bytes of entropy, is never
+ * derived from the employee's name or id, and every read goes through
+ * `resolveCrewLink` — which is the only place a token is exchanged for an
+ * employee. Nothing else in the app should query `crew_links` by token.
+ *
+ * Access is deliberately narrow: a valid token exposes that one employee's
+ * assigned work orders and nothing else. No owner records, no financials, no
+ * portal.
+ */
+
+export type CrewJob = {
+  id: string;
+  ref: string;
+  title: string;
+  description: string | null;
+  location: string | null;
+  priority: string;
+  status: string;
+  dueAt: string | null;
+  assignedOn: string | null;
+  /** Who put this job on the tech's list. */
+  assignedBy: string | null;
+  notes: { id: string; body: string; author: string; at: string }[];
+  photoCount: number;
+};
+
+export type CrewBoard = {
+  employee: { id: string; name: string; role: string | null };
+  jobs: CrewJob[];
+};
+
+const OPEN_STATUSES = ["open", "assigned", "in_progress", "pending"];
+
+/** 43 URL-safe characters. Long enough that guessing is not a threat model. */
+export function newCrewToken(): string {
+  return randomBytes(32).toString("base64url");
+}
+
+/**
+ * Exchanges a token for its employee, or null. Rejects revoked and expired
+ * links. Records `last_used_at` so a stale link can be spotted and pulled.
+ */
+export async function resolveCrewLink(
+  token: string,
+): Promise<{ id: string; employee_id: string } | null> {
+  if (!isSupabaseConfigured()) return null;
+  const clean = token.trim();
+  // Cheap guard before touching the database.
+  if (clean.length < 20 || clean.length > 200) return null;
+
+  const db = createServiceClient();
+  const { data, error } = await db
+    .from("crew_links")
+    .select("id, employee_id, revoked_at, expires_at")
+    .eq("token", clean)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  if (data.revoked_at) return null;
+  if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) return null;
+
+  await db
+    .from("crew_links")
+    .update({ last_used_at: new Date().toISOString() })
+    .eq("id", data.id);
+
+  return { id: data.id, employee_id: data.employee_id };
+}
+
+/** The board for a resolved link: the employee plus their open jobs. */
+export async function loadCrewBoard(employeeId: string): Promise<CrewBoard | null> {
+  if (!isSupabaseConfigured()) return null;
+  const db = createServiceClient();
+
+  const { data: emp } = await db
+    .from("employees")
+    .select("id, name, role, active")
+    .eq("id", employeeId)
+    .maybeSingle();
+  if (!emp || emp.active === false) return null;
+
+  const { data: rows } = await db
+    .from("work_orders")
+    .select("*")
+    .eq("assigned_to", employeeId)
+    .order("due_at", { ascending: true, nullsFirst: false });
+
+  const jobs = (rows ?? []).filter((w) => OPEN_STATUSES.includes(w.status));
+  const ids = jobs.map((w) => w.id);
+
+  const [notesRes, attRes] = await Promise.all([
+    ids.length
+      ? db
+          .from("work_order_notes")
+          .select("*")
+          .in("work_order_id", ids)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] as unknown[] }),
+    ids.length
+      ? db.from("work_order_attachments").select("id, work_order_id").in("work_order_id", ids)
+      : Promise.resolve({ data: [] as unknown[] }),
+  ]);
+
+  const notesBy = new Map<string, CrewJob["notes"]>();
+  for (const n of (notesRes.data ?? []) as {
+    id: string;
+    work_order_id: string;
+    body: string;
+    author_name: string;
+    created_at: string;
+  }[]) {
+    const list = notesBy.get(n.work_order_id) ?? [];
+    list.push({
+      id: n.id,
+      body: n.body,
+      author: n.author_name,
+      at: new Date(n.created_at).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+    });
+    notesBy.set(n.work_order_id, list);
+  }
+
+  const photosBy = new Map<string, number>();
+  for (const a of (attRes.data ?? []) as { work_order_id: string }[]) {
+    photosBy.set(a.work_order_id, (photosBy.get(a.work_order_id) ?? 0) + 1);
+  }
+
+  return {
+    employee: { id: emp.id, name: emp.name, role: emp.role },
+    jobs: jobs.map((w) => ({
+      id: w.id,
+      ref: w.work_order_number ?? w.id.slice(0, 8),
+      title: w.title ?? "Untitled",
+      description: w.description ?? null,
+      location: w.location ?? null,
+      priority: w.priority ?? "normal",
+      status: w.status ?? "open",
+      dueAt: w.due_at ?? null,
+      assignedOn: w.updated_at ?? w.created_at ?? null,
+      // The portal stamps changes to the notification feed rather than the
+      // work order, so there is no per-row "assigned by" column yet.
+      assignedBy: null,
+      notes: notesBy.get(w.id) ?? [],
+      photoCount: photosBy.get(w.id) ?? 0,
+    })),
+  };
+}
