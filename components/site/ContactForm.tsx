@@ -9,6 +9,7 @@ const FIELD =
 const LABEL = "mb-2 block text-sm text-on-surface-variant";
 
 const TOPICS = [
+  { value: "maintenance", label: "Maintenance request" },
   { value: "dues", label: "Dues or billing" },
   { value: "arc", label: "Architectural application" },
   { value: "violation", label: "A violation notice" },
@@ -18,26 +19,53 @@ const TOPICS = [
 ] as const;
 
 /**
- * Contact form from the design. FRONTEND ONLY — nothing is sent; the app has a
- * maintenance-request endpoint but no general contact route yet.
+ * Contact form from the design. Posts to /api/contact, which emails the
+ * office inbox tagged with the topic. `initialTopic` lets pages deep-link a
+ * preselected topic (e.g. /contact?topic=maintenance from the home page).
  */
-export function ContactForm() {
+export function ContactForm({ initialTopic = "" }: { initialTopic?: string }) {
   const [community, setCommunity] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [topic, setTopic] = useState("");
+  const [topic, setTopic] = useState(
+    TOPICS.some((t) => t.value === initialTopic) ? initialTopic : "",
+  );
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!community) return setError("Pick your community.");
     if (!name.trim()) return setError("Add your name.");
     if (!email.trim()) return setError("Add an email — the office replies there.");
     if (!body.trim()) return setError("Tell us what you need.");
     setError(null);
-    setSent(true);
+    setSending(true);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          community,
+          name: name.trim(),
+          email: email.trim(),
+          topic,
+          message: body.trim(),
+        }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        setError(data.error ?? "The message could not be sent — please call the office.");
+        return;
+      }
+      setSent(true);
+    } catch {
+      setError("The message could not be sent — please call the office.");
+    } finally {
+      setSending(false);
+    }
   }
 
   if (sent) {
@@ -147,9 +175,10 @@ export function ContactForm() {
 
       <button
         type="submit"
-        className="w-full rounded-[10px] bg-secondary py-[15px] text-base font-medium text-on-secondary hover:bg-secondary-hover"
+        disabled={sending}
+        className="w-full rounded-[10px] bg-secondary py-[15px] text-base font-medium text-on-secondary hover:bg-secondary-hover disabled:cursor-default disabled:opacity-60"
       >
-        Send message
+        {sending ? "Sending…" : "Send message"}
       </button>
     </form>
   );

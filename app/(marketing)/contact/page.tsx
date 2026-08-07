@@ -8,7 +8,14 @@ export const metadata: Metadata = { title: "Contact" };
 const EYEBROW =
   "font-label text-[11px] uppercase tracking-[0.12em] text-outline";
 
-export default function ContactPage() {
+type PageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function ContactPage({ searchParams }: PageProps) {
+  const sp = searchParams instanceof Promise ? await searchParams : searchParams ?? {};
+  const topicParam = Array.isArray(sp.topic) ? sp.topic[0] : sp.topic;
+
   return (
     <main>
       <PageIntro
@@ -19,7 +26,7 @@ export default function ContactPage() {
 
       <section className={`${SECTION_PAD} pb-12 md:pb-20`}>
         <div className={`${SECTION_COL} grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] items-start gap-16`}>
-          <ContactForm />
+          <ContactForm initialTopic={topicParam ?? ""} />
 
           <div className="grid gap-8">
             <div>

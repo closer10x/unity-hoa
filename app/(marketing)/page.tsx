@@ -10,17 +10,19 @@ import {
 
 const QUICK_LINKS = [
   {
-    href: "/admin/login",
+    // The public request form on the contact page — no sign-in required.
+    href: "/contact?topic=maintenance",
     title: "File a maintenance request",
     detail: "Common areas, gates, lighting and amenities.",
   },
   {
-    href: "/admin/login",
+    // Public governance page; downloads themselves stay sign-in gated there.
+    href: "/governance",
     title: "Bylaws, CC&Rs and rules",
     detail: "Every governing document, current and downloadable.",
   },
   {
-    href: "/admin/login",
+    href: "/services",
     title: "What Unity Grid handles",
     detail: "Finances, grounds, rules and records for your association.",
   },
