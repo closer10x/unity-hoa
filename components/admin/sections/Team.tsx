@@ -328,6 +328,38 @@ export default function Team() {
         )}
       </Card>
 
+      {/* Sign-in activity sits beside the audit trail: that log records what an
+          account did, this records attempts to become one — including failures
+          and probes against addresses that do not exist. */}
+      <Card>
+        <CardHead
+          title="Sign-in activity"
+          meta={`${s.signIns.filter((e) => !e.succeeded).length} failed of the last ${s.signIns.length}`}
+        />
+        {s.signIns.length === 0 ? (
+          <Row>
+            <span style={{ fontSize: 15, color: color.inkTertiary }}>
+              Nothing recorded yet. Sign-ins, sign-outs and password resets appear here.
+            </span>
+          </Row>
+        ) : (
+          s.signIns.slice(0, 25).map((e) => (
+            <Row key={e.id}>
+              <RowMain
+                label={e.who}
+                detail={e.succeeded ? e.event : `${e.event} failed — ${e.reason ?? "unknown reason"}`}
+              />
+              <Status tone={e.succeeded ? "positive" : "critical"}>
+                {e.succeeded ? "Success" : "Failed"}
+              </Status>
+              <Mono size={12} style={{ color: color.neutral }}>{e.ip}</Mono>
+              <span style={{ fontSize: 14, color: color.inkTertiary }}>{e.device}</span>
+              <Mono size={12} style={{ color: color.inkQuaternary }}>{e.at}</Mono>
+            </Row>
+          ))
+        )}
+      </Card>
+
       <Card>
         <CardHead title="Audit trail"
           meta="Every change in this portal is stamped with the account that made it. The log can't be edited." />

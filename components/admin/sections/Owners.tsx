@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { emptyAddress, formatAddress, isAddressComplete } from "@/lib/admin-portal/address";
 import { useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color, font } from "@/lib/admin-portal/tokens";
@@ -18,6 +18,20 @@ export default function Owners() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
   const [community, setCommunity] = useState("all");
+
+  /* Arriving from a link elsewhere (e.g. a ledger entry's owner): open with
+     that owner already found, then clear the request. */
+  useEffect(() => {
+    if (!s.focusOwnerId) return;
+    const o = s.owners.find((x) => x.id === s.focusOwnerId);
+    if (o) {
+      setQuery(o.name !== "Unassigned lot" ? o.name : o.account);
+      setFilter("All");
+      setCommunity("all");
+    }
+    s.setFocusOwnerId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.focusOwnerId]);
 
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");

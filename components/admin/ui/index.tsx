@@ -223,8 +223,94 @@ export function Input({
   );
 }
 
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const localISO = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+/**
+ * Calendar date picker. Value is always ISO (YYYY-MM-DD); the field shows it
+ * as "Aug 7, 2026". A real month grid — mono weekday headers, today tinted,
+ * text-glyph month arrows — matching the Calendar section's grid language.
+ */
 export function DateInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return <input type="date" value={value} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, fontFamily: font.mono, fontSize: 14 }} />;
+  const [open, setOpen] = React.useState(false);
+  const selected = /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+  const todayIso = localISO(new Date());
+  const [view, setView] = React.useState(() => (selected || todayIso).slice(0, 7));
+
+  const [vy, vm] = view.split("-").map(Number);
+  const startDow = new Date(vy, vm - 1, 1).getDay();
+  const daysInMonth = new Date(vy, vm, 0).getDate();
+  const shift = (delta: number) => {
+    const d = new Date(vy, vm - 1 + delta, 1);
+    setView(`${d.getFullYear()}-${pad2(d.getMonth() + 1)}`);
+  };
+  const display = selected
+    ? new Date(`${selected}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
+    : "";
+
+  return (
+    <div style={{ position: "relative" }}>
+      <button type="button"
+        onClick={() => { setView((selected || todayIso).slice(0, 7)); setOpen((v) => !v); }}
+        style={{ ...inputStyle, fontFamily: font.mono, fontSize: 14, textAlign: "left", cursor: "pointer", color: display ? color.ink : color.inkQuaternary }}>
+        {display || "Pick a date"}
+      </button>
+      {open ? (
+        <>
+          <button type="button" aria-label="Close the calendar" onClick={() => setOpen(false)}
+            style={{ position: "fixed", inset: 0, background: "transparent", border: "none", cursor: "default", zIndex: 29 }} />
+          <div style={{
+            position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 30, width: 292,
+            background: color.surface, border: `1px solid ${color.borderInput}`, borderRadius: radius.lg,
+            boxShadow: "0 14px 36px oklch(0.4 0.02 150 / 0.14)", padding: 14, display: "grid", gap: 10,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+              <button type="button" aria-label="Previous month" onClick={() => shift(-1)}
+                style={{ background: "none", border: "none", font: "inherit", fontSize: 18, cursor: "pointer", padding: "2px 10px", color: color.inkSecondary }}>
+                ‹
+              </button>
+              <span style={{ fontFamily: font.mono, fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                {MONTHS[vm - 1]} {vy}
+              </span>
+              <button type="button" aria-label="Next month" onClick={() => shift(1)}
+                style={{ background: "none", border: "none", font: "inherit", fontSize: 18, cursor: "pointer", padding: "2px 10px", color: color.inkSecondary }}>
+                ›
+              </button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+              {["S","M","T","W","T","F","S"].map((d, i) => (
+                <span key={i} style={{ fontFamily: font.mono, fontSize: 10, letterSpacing: "0.08em", color: color.inkQuaternary, textAlign: "center", padding: "4px 0" }}>{d}</span>
+              ))}
+              {Array.from({ length: startDow }).map((_, i) => <span key={`b${i}`} />)}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const iso = `${view}-${pad2(i + 1)}`;
+                const isSelected = iso === selected;
+                const isToday = iso === todayIso;
+                return (
+                  <button key={iso} type="button"
+                    onClick={() => { onChange(iso); setOpen(false); }}
+                    style={{
+                      font: "inherit", fontFamily: font.mono, fontSize: 13, cursor: "pointer",
+                      padding: "7px 0", borderRadius: radius.sm, textAlign: "center",
+                      border: `1px solid ${isSelected ? color.accent : isToday ? color.accentTintBorder : "transparent"}`,
+                      background: isSelected ? color.accent : isToday ? color.accentTint : "none",
+                      color: isSelected ? "oklch(0.97 0.008 140)" : color.ink,
+                    }}>
+                    {i + 1}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <TextButton onClick={() => { onChange(todayIso); setView(todayIso.slice(0, 7)); setOpen(false); }}>Today</TextButton>
+              {selected ? <TextButton tone="muted" onClick={() => { onChange(""); setOpen(false); }}>Clear</TextButton> : null}
+            </div>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
 }
 
 export function Area({ value, onChange, placeholder, rows = 3 }: { value: string; onChange: (v: string) => void; placeholder?: string; rows?: number }) {

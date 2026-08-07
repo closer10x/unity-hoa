@@ -15,8 +15,8 @@ import {
 } from "@/lib/plaid/client";
 import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
-import { loadAccounting } from "./server-data";
-import type { BankAccount, LedgerEntry } from "./types";
+import { loadAccounting, loadFees } from "./server-data";
+import type { BankAccount, Fee, LedgerEntry } from "./types";
 
 /**
  * Server actions for the Accounting section. Every mutation writes its own
@@ -155,6 +155,68 @@ export async function deleteLedgerEntry(id: string): Promise<Ok<Snapshot> | Fail
 
     revalidatePath("/admin");
     return { ok: true, ...(await loadAccounting(db)) };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/* ─── Fee schedule ───────────────────────────────────────────────────── */
+
+export async function addFee(input: {
+  name: string;
+  amount: string;
+  category: string;
+}): Promise<Ok<{ fees: Fee[] }> | Fail> {
+  try {
+    const { db, actorName, actorId } = await adminContext();
+
+    const name = input.name.trim();
+    if (!name) return { ok: false, error: "Name the fee — it appears on forms exactly as written." };
+    const cents = parseDollarsToCents(input.amount);
+    if (cents == null || cents < 0) return { ok: false, error: "Enter the fee amount." };
+
+    const { error } = await db.from("fee_schedule").insert({
+      name,
+      amount_cents: cents,
+      category: input.category.trim() || "Other income",
+    });
+    if (error) throw new Error(error.message);
+
+    await writeAudit(db, `Fee schedule: added ${name} at ${usd(cents)}`, actorName, actorId);
+    revalidatePath("/admin");
+    return { ok: true, fees: await loadFees(db) };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Fees retire rather than delete, so old ledger references keep meaning. */
+export async function setFeeActive(
+  id: string,
+  active: boolean,
+): Promise<Ok<{ fees: Fee[] }> | Fail> {
+  try {
+    const { db, actorName, actorId } = await adminContext();
+
+    const { data: fee, error: readErr } = await db
+      .from("fee_schedule")
+      .select("name, amount_cents")
+      .eq("id", id)
+      .maybeSingle();
+    if (readErr) throw new Error(readErr.message);
+    if (!fee) return { ok: false, error: "That fee no longer exists." };
+
+    const { error } = await db.from("fee_schedule").update({ active }).eq("id", id);
+    if (error) throw new Error(error.message);
+
+    await writeAudit(
+      db,
+      `Fee schedule: ${active ? "restored" : "retired"} ${fee.name} (${usd(fee.amount_cents)})`,
+      actorName,
+      actorId,
+    );
+    revalidatePath("/admin");
+    return { ok: true, fees: await loadFees(db) };
   } catch (e) {
     return fail(e);
   }

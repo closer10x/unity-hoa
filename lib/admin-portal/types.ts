@@ -139,6 +139,16 @@ export interface LedgerEntry {
   ownerName: string;
 }
 
+/** A named fee from the association's fee schedule (quick-picks on forms). */
+export interface Fee {
+  id: string;
+  name: string;
+  category: string;
+  amount: string;
+  amountCents: number;
+  active: boolean;
+}
+
 export interface BankAccount {
   id: string;
   name: string;
@@ -181,4 +191,43 @@ export interface AddressSuggestion {
   label: string;
   /** True when a lot already has an owner linked. */
   taken: boolean;
+}
+
+/* ─── Financial reports ─────────────────────────────────────────────── */
+
+export type ReportType = "income-statement" | "general-ledger" | "cash-bank" | "owner-charges";
+
+export interface ReportSection {
+  title: string;
+  columns: string[];
+  rows: string[][];
+  /** Footer row, e.g. ["Total income", "", "$4,200.00"]. */
+  total?: string[];
+}
+
+export interface ReportData {
+  type: ReportType;
+  title: string;
+  community: string;
+  periodLabel: string;
+  start: string;
+  end: string;
+  generatedAt: string;
+  generatedBy: string;
+  summary: { label: string; value: string; note?: string }[];
+  sections: ReportSection[];
+  /** Honest empty-period note instead of invented rows. */
+  note?: string;
+}
+
+/** One sign-in, sign-out or reset attempt, shown in Team. */
+export interface SignInEvent {
+  id: string;
+  event: string;
+  who: string;
+  succeeded: boolean;
+  reason: string | null;
+  ip: string;
+  device: string;
+  at: string;
 }

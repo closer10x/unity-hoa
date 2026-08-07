@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
   AddressSuggestion,
+  SignInEvent,
   ArcApp,
   Booking,
   Director,
@@ -19,6 +20,7 @@ import type {
   CalEvent,
   Community,
   Doc,
+  Fee,
   LedgerEntry,
   Owner,
   Payment,
@@ -28,7 +30,7 @@ import type {
   WorkStatus,
 } from "./types";
 
-export type { AddressSuggestion };
+export type { AddressSuggestion, SignInEvent };
 
 /**
  * Reads the admin portal's collections from the database and maps them onto
@@ -55,6 +57,7 @@ export type PortalData = {
   ledger: LedgerEntry[];
   bankAccounts: BankAccount[];
   audit: AuditEntry[];
+  fees: Fee[];
   violations: Violation[];
   arcApps: ArcApp[];
   bookings: Booking[];
@@ -63,6 +66,8 @@ export type PortalData = {
   meetings: Meeting[];
   directors: Director[];
   portfolios: Portfolio[];
+  /** Recent sign-in activity for Team. */
+  signIns: SignInEvent[];
   /** Known addresses from the lots roster, for add-form autofill. */
   addressBook: AddressSuggestion[];
   /** Dashboard tiles, computed from the same reads. */
@@ -85,10 +90,12 @@ const EMPTY: PortalData = {
   meetings: [],
   directors: [],
   portfolios: [],
+  signIns: [],
   addressBook: [],
   ledger: [],
   bankAccounts: [],
   audit: [],
+  fees: [],
   metrics: [],
 };
 
@@ -324,6 +331,29 @@ export function bankAccountLabel(b: BankAccount): string {
   return b.mask ? `${base} ····${b.mask}` : base;
 }
 
+/** The fee schedule, active first, in the office's chosen order. */
+export async function loadFees(db: SupabaseClient): Promise<Fee[]> {
+  const res = await db
+    .from("fee_schedule")
+    .select("*")
+    .order("active", { ascending: false })
+    .order("sort", { ascending: true });
+  return ((res.data ?? []) as {
+    id: string;
+    name: string;
+    category: string;
+    amount_cents: number;
+    active: boolean;
+  }[]).map((f) => ({
+    id: f.id,
+    name: f.name,
+    category: f.category,
+    amount: usdExact(f.amount_cents),
+    amountCents: f.amount_cents,
+    active: f.active,
+  }));
+}
+
 /** "Maria Alvarez · Lot 12" or just "Lot 12" when no owner is on file. */
 export async function loadOwnerNames(db: SupabaseClient): Promise<Map<string, string>> {
   const [lotsRes, profRes] = await Promise.all([
@@ -524,6 +554,50 @@ async function loadRemainingDomains(db: SupabaseClient) {
   return { violations, arcApps, bookings, vendors, legalCases, meetings, directors, portfolios };
 }
 
+/**
+ * Recent sign-in activity. Truncates the user agent to something a human can
+ * scan — the full string is kept in the row for anyone who needs it.
+ */
+function shortDevice(ua: string | null): string {
+  if (!ua) return "Unknown device";
+  const os =
+    /iPhone|iPad/.test(ua) ? "iOS" :
+    /Android/.test(ua) ? "Android" :
+    /Mac OS X/.test(ua) ? "macOS" :
+    /Windows/.test(ua) ? "Windows" :
+    /Linux/.test(ua) ? "Linux" : "Unknown OS";
+  const browser =
+    /Edg\//.test(ua) ? "Edge" :
+    /Chrome\//.test(ua) ? "Chrome" :
+    /Safari\//.test(ua) ? "Safari" :
+    /Firefox\//.test(ua) ? "Firefox" : "Unknown browser";
+  return `${browser} on ${os}`;
+}
+
+export async function loadSignIns(db: SupabaseClient): Promise<SignInEvent[]> {
+  const res = await db
+    .from("auth_events")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(100);
+  return ((res.data ?? []) as {
+    id: string; event: string; email: string | null; succeeded: boolean;
+    failure_reason: string | null; ip: string | null; user_agent: string | null;
+    created_at: string;
+  }[]).map((e) => ({
+    id: e.id,
+    event:
+      e.event === "sign_in" ? "Sign in" :
+      e.event === "sign_out" ? "Sign out" : "Password reset",
+    who: e.email ?? "Unknown account",
+    succeeded: e.succeeded,
+    reason: e.failure_reason,
+    ip: e.ip ?? "No IP recorded",
+    device: shortDevice(e.user_agent),
+    at: stampTime(e.created_at),
+  }));
+}
+
 export async function loadPortalData(): Promise<PortalData> {
   if (!isSupabaseConfigured()) return EMPTY;
 
@@ -531,7 +605,7 @@ export async function loadPortalData(): Promise<PortalData> {
 
   // Fetched together; a failure on any one table leaves that section empty
   // rather than failing the whole portal.
-  const [lotsRes, profilesRes, woRes, docsRes, empRes, eventsRes, payRes, metricsRes, accounting, audit] =
+  const [lotsRes, profilesRes, woRes, docsRes, empRes, eventsRes, payRes, metricsRes, accounting, audit, fees] =
     await Promise.all([
       db.from("lots").select("*").order("lot_number", { ascending: true }).limit(1000),
       db.from("profiles").select("*"),
@@ -543,6 +617,7 @@ export async function loadPortalData(): Promise<PortalData> {
       db.from("hoa_dashboard_metrics").select("*").maybeSingle(),
       loadAccounting(db),
       loadAuditTrail(db),
+      loadFees(db),
     ]);
 
   const lots = (lotsRes.data ?? []) as LotRow[];
@@ -698,6 +773,7 @@ export async function loadPortalData(): Promise<PortalData> {
   ];
 
   const rest = await loadRemainingDomains(db);
+  const signIns = await loadSignIns(db);
 
   return {
     owners,
@@ -708,10 +784,12 @@ export async function loadPortalData(): Promise<PortalData> {
     payments,
     communities,
     ...rest,
+    signIns,
     addressBook,
     ledger: accounting.ledger,
     bankAccounts: accounting.bankAccounts,
     audit,
+    fees,
     metrics,
   };
 }

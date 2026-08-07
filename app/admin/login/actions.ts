@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 
+import { recordAuthEvent } from "@/lib/auth/auth-events";
 import { normalizeAdminNext } from "@/lib/admin/normalize-admin-next";
 import { isSupabaseAuthConfigured } from "@/lib/supabase/keys";
 import { createSupabaseServerClient } from "@/lib/supabase/server-user";
@@ -30,6 +31,14 @@ export async function signInAdmin(formData: FormData) {
     });
 
   if (signInErr) {
+    // Our own label, not the provider's message: the log must not hint at
+    // which half of the credentials was wrong.
+    await recordAuthEvent({
+      event: "sign_in",
+      email,
+      succeeded: false,
+      failureReason: "Incorrect email or password",
+    });
     redirect(
       `/admin/login?error=credentials&next=${encodeURIComponent(next)}`,
     );
@@ -41,6 +50,12 @@ export async function signInAdmin(formData: FormData) {
     (await supabase.auth.getUser()).data.user;
 
   if (!user) {
+    await recordAuthEvent({
+      event: "sign_in",
+      email,
+      succeeded: false,
+      failureReason: "No session returned",
+    });
     redirect(
       `/admin/login?error=credentials&next=${encodeURIComponent(next)}`,
     );
@@ -74,6 +89,13 @@ export async function signInAdmin(formData: FormData) {
     redirect("/admin/login?error=forbidden");
   }
 
+  await recordAuthEvent({
+    event: "sign_in",
+    email,
+    userId: user.id,
+    succeeded: true,
+  });
+
   redirect(next);
 }
 
@@ -91,6 +113,13 @@ export async function requestPasswordReset(formData: FormData) {
     process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000";
   await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${origin}/auth/callback?next=/admin/settings/account`,
+  });
+
+  await recordAuthEvent({
+    event: "password_reset_requested",
+    email,
+    // Always true: we never reveal whether the address matched an account.
+    succeeded: true,
   });
 
   redirect("/admin/login?notice=reset_sent");

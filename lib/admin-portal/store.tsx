@@ -6,9 +6,10 @@ import { ALL_SECTIONS } from "./permissions";
 import { MOBILE_BREAKPOINT } from "./tokens";
 import type {
   AddressSuggestion,
+  SignInEvent,
   StaffRole,
   ArcApp, AuditEntry, BankAccount, Booking, CalEvent, Community, Delinquent,
-  Director, Doc, LedgerEntry, LegalCase, Meeting, Owner, Payment,
+  Director, Doc, Fee, LedgerEntry, LegalCase, Meeting, Owner, Payment,
   PendingConfirm, Portfolio, Staff, Vendor, Violation, WorkOrder,
 } from "./types";
 
@@ -85,6 +86,11 @@ interface Store {
   setLedger: React.Dispatch<React.SetStateAction<LedgerEntry[]>>;
   bankAccounts: BankAccount[];
   setBankAccounts: React.Dispatch<React.SetStateAction<BankAccount[]>>;
+  fees: Fee[];
+  setFees: React.Dispatch<React.SetStateAction<Fee[]>>;
+  /** Set before jumping to Owners to open that owner in focus (search prefilled). */
+  focusOwnerId: string | null;
+  setFocusOwnerId: (id: string | null) => void;
 
   // audit
   auditLog: AuditEntry[];
@@ -98,6 +104,8 @@ interface Store {
   isAdministrator: boolean;
   /** Known addresses from the lots roster, for add-form autofill. */
   addressBook: AddressSuggestion[];
+  /** Recent sign-in activity, shown in Team. */
+  signIns: SignInEvent[];
   /** Dashboard tiles computed server-side from live reads. */
   metrics: { label: string; value: string; note: string }[];
 
@@ -138,10 +146,12 @@ export function StoreProvider({
     communities: Community[];
     ledger: LedgerEntry[];
     bankAccounts: BankAccount[];
+    fees: Fee[];
     /** Server-written audit trail (admin_audit_log), newest first. */
     audit: AuditEntry[];
     metrics: { label: string; value: string; note: string }[];
     addressBook: AddressSuggestion[];
+    signIns: SignInEvent[];
     violations: Violation[];
     arcApps: ArcApp[];
     bookings: Booking[];
@@ -186,10 +196,13 @@ export function StoreProvider({
   const [staff, setStaff] = useState<Staff[]>(initialData?.staff ?? []);
   const metrics = initialData?.metrics ?? [];
   const addressBook = initialData?.addressBook ?? [];
+  const signIns = initialData?.signIns ?? [];
   const [customEvents, setCustomEvents] = useState<CalEvent[]>(initialData?.calendar ?? []);
   const [eventMoves, setEventMoves] = useState<Record<string, string>>({});
   const [ledger, setLedger] = useState<LedgerEntry[]>(initialData?.ledger ?? []);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(initialData?.bankAccounts ?? []);
+  const [fees, setFees] = useState<Fee[]>(initialData?.fees ?? []);
+  const [focusOwnerId, setFocusOwnerId] = useState<string | null>(null);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>(initialData?.audit ?? []);
 
   useEffect(() => {
@@ -235,7 +248,8 @@ export function StoreProvider({
     communities, setCommunities, portfolios, setPortfolios, staff, setStaff,
     customEvents, setCustomEvents, eventMoves, setEventMoves,
     ledger, setLedger, bankAccounts, setBankAccounts,
-    auditLog, audit, stamp, uid, currentUser: actor, currentRole, isAdministrator, metrics, addressBook,
+    fees, setFees, focusOwnerId, setFocusOwnerId,
+    auditLog, audit, stamp, uid, currentUser: actor, currentRole, isAdministrator, metrics, addressBook, signIns,
     allowedSections: allowed,
   };
 
