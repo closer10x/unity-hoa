@@ -26,7 +26,6 @@ export const NAV: ReadonlyArray<{
   { id: "accounting", label: "Accounting", group: "Money" },
   { id: "legal", label: "Legal & liens", group: "Money" },
   { id: "work", label: "Work orders", group: "Property" },
-  { id: "schedule", label: "Schedule", group: "Property" },
   { id: "arc", label: "Architectural", group: "Property" },
   { id: "violations", label: "Violations", group: "Property" },
   { id: "bookings", label: "Bookings", group: "Property" },
@@ -36,6 +35,7 @@ export const NAV: ReadonlyArray<{
   { id: "docs", label: "Documents", group: "Office" },
   { id: "portfolio", label: "Communities", group: "Office" },
   { id: "team", label: "Team", group: "Office" },
+  { id: "schedule", label: "Schedule", group: "Office" },
 ];
 
 export const NAV_GROUPS = ["Today", "Money", "Property", "People", "Office"] as const;

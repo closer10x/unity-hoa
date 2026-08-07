@@ -5,7 +5,10 @@ import React, { useMemo, useState } from "react";
 import { useStore } from "@/lib/admin-portal/store";
 import { color, font, radius } from "@/lib/admin-portal/tokens";
 import type { WorkOrder } from "@/lib/admin-portal/types";
-import { Card, CardHead, Chip, PageTitle, Pill } from "../ui";
+import {
+  AddDrawer, Card, CardHead, Chip, DateInput, Field, FieldGrid, PageTitle, Pill,
+  Primary, Select,
+} from "../ui";
 
 /**
  * Admin → Property → Schedule.
@@ -16,8 +19,13 @@ import { Card, CardHead, Chip, PageTitle, Pill } from "../ui";
  * work_orders via assigned_to and due_at, so nothing here is invented — an
  * empty board means nothing has been scheduled yet.
  *
- * Scheduling changes are not yet written back; assigning a day still happens
- * on the work order itself.
+ * "Add to the schedule" assigns an open work order to a person and a day,
+ * drawing both from records that already exist — the employees table and the
+ * work order list — rather than introducing a parallel roster.
+ *
+ * Not yet persisted: the assignment updates the session only. It needs to
+ * write assigned_to and due_at back to work_orders, with the audit entry in
+ * the same transaction.
  */
 
 /** Roles that do physical work and therefore belong on the board. */
@@ -74,6 +82,13 @@ export default function Schedule() {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const [showAllStaff, setShowAllStaff] = useState(false);
 
+  // Add-to-schedule drawer
+  const [open, setOpen] = useState(false);
+  const [tech, setTech] = useState("");
+  const [job, setJob] = useState("");
+  const [day, setDay] = useState("");
+  const [error, setError] = useState("");
+
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
     [weekStart],
@@ -100,6 +115,29 @@ export default function Schedule() {
       (w) => w.assigneeId === staffId && (w.dueAt ?? "").slice(0, 10) === iso(day),
     );
 
+  function schedule() {
+    if (!tech) return setError("Pick who is doing the work.");
+    if (!job) return setError("Pick a work order to schedule.");
+    if (!day) return setError("Pick the day it is due.");
+    const who = s.staff.find((m) => m.id === tech);
+    const wo = s.work.find((w) => w.id === job);
+    if (!who || !wo) return setError("That tech or work order is no longer available.");
+
+    s.setWork((prev) =>
+      prev.map((w) =>
+        w.id === job
+          ? { ...w, assigneeId: tech, assignee: who.name, dueAt: day, status: "Scheduled" }
+          : w,
+      ),
+    );
+    s.audit(`Scheduled ${wo.ref} — ${wo.title} · ${who.name} · ${day}`);
+    setOpen(false);
+    setError("");
+    setTech("");
+    setJob("");
+    setDay("");
+  }
+
   const todayIso = iso(new Date());
   const weekLabel = `${weekStart.toLocaleDateString("en-US", { month: "long", day: "numeric" })} – ${addDays(weekStart, 6).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`;
 
@@ -111,6 +149,46 @@ export default function Schedule() {
       />
 
       <Card>
+        <AddDrawer
+          open={open}
+          onOpen={() => setOpen(true)}
+          onCancel={() => { setOpen(false); setError(""); }}
+          openLabel="Add to the schedule"
+          title="Put a job on a tech's day"
+          note="Assigns an open work order to a person and a date."
+        >
+          <FieldGrid>
+            <Field label="Who">
+              <Select
+                value={tech}
+                onChange={setTech}
+                options={[
+                  { id: "", label: "Select a person…" },
+                  ...s.staff
+                    .filter((m) => m.active)
+                    .map((m) => ({ id: m.id, label: `${m.name} · ${m.role}` })),
+                ]}
+              />
+            </Field>
+            <Field label="Work order">
+              <Select
+                value={job}
+                onChange={setJob}
+                options={[
+                  { id: "", label: "Select an open work order…" },
+                  ...s.work
+                    .filter((w) => w.status !== "Closed")
+                    .map((w) => ({ id: w.id, label: `${w.ref} — ${w.title}` })),
+                ]}
+              />
+            </Field>
+            <Field label="Day"><DateInput value={day} onChange={setDay} /></Field>
+          </FieldGrid>
+          {error ? (
+            <span style={{ fontSize: 14, color: color.critical }}>{error}</span>
+          ) : null}
+          <Primary onClick={schedule}>Add to schedule</Primary>
+        </AddDrawer>
         <CardHead
           title={weekLabel}
           meta={`${scheduled.length} scheduled · ${unscheduled.length} unscheduled`}
