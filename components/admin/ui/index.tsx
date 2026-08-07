@@ -352,9 +352,6 @@ export function AddressFields({
 
       {matches.length > 0 ? (
         <div style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontFamily: font.mono, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: color.inkQuaternary }}>
-            On the roster
-          </span>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {matches.map((a) => (
               <button
