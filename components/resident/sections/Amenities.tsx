@@ -7,7 +7,7 @@ import { color, pad } from "@/lib/admin-portal/tokens";
 import type { Reservation } from "@/lib/resident-portal/types";
 import {
   AddDrawer, Area, Card, CardHead, Chip, DateInput, Empty, ErrorLine, Field,
-  FieldGrid, Input, Mono, PageTitle, Primary, Row, RowMain, Select, Status,
+  FieldGrid, Mono, PageTitle, Primary, Row, RowMain, Select, Status,
 } from "@/components/admin/ui";
 
 /** The community's reservable spaces — the same catalogue the office books from. */
@@ -18,6 +18,16 @@ const EVENTS = [
   "Community meeting", "Committee meeting", "Other",
 ];
 
+/** Half-hour steps across amenity hours, 6:00 AM – 11:00 PM. */
+const TIMES: string[] = Array.from({ length: (23 - 6) * 2 + 1 }, (_, i) => {
+  const minutes = 6 * 60 + i * 30;
+  let h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${h}:${String(m).padStart(2, "0")} ${ampm}`;
+});
+
 export default function Amenities() {
   const s = useResident();
 
@@ -26,14 +36,19 @@ export default function Amenities() {
   const [confirmed, setConfirmed] = useState("");
   const [amenity, setAmenity] = useState(AMENITIES[0]);
   const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
+  const [timeFrom, setTimeFrom] = useState("");
+  const [timeTo, setTimeTo] = useState("");
   const [guests, setGuests] = useState("");
   const [eventType, setEventType] = useState(EVENTS[0]);
   const [note, setNote] = useState("");
   const [flags, setFlags] = useState({ alcohol: false, insurance: false, vendors: false, afterHours: false });
 
   function submit() {
-    if (!date.trim() || !time.trim()) return setError("Add a date and a time.");
+    if (!date.trim()) return setError("Pick a date.");
+    if (!timeFrom || !timeTo) return setError("Pick the start and end times.");
+    if (TIMES.indexOf(timeTo) <= TIMES.indexOf(timeFrom))
+      return setError("The end time needs to be after the start.");
+    const time = `${timeFrom}–${timeTo}`;
     if (flags.alcohol && !flags.insurance)
       return setError("Serving alcohol requires a certificate of insurance naming the association — mark it once you have one, or drop the alcohol flag.");
     const flagCount = Object.values(flags).filter(Boolean).length;
@@ -42,7 +57,7 @@ export default function Amenities() {
       date,
       label: [
         amenity,
-        time.trim(),
+        time,
         eventType.toLowerCase(),
         guests ? `${guests} ${guests === "1" ? "guest" : "guests"}` : "",
         flagCount ? `${flagCount} requirement${flagCount === 1 ? "" : "s"}` : "",
@@ -51,9 +66,9 @@ export default function Amenities() {
       deposit: "Deposit instructions to follow",
     };
     s.setReservations((prev) => [r, ...prev]);
-    setConfirmed(`${amenity} is requested for ${date}, ${time.trim()}. A confirmation and any deposit instructions are on the way by email.`);
+    setConfirmed(`${amenity} is requested for ${date}, ${time}. A confirmation and any deposit instructions are on the way by email.`);
     setOpen(false);
-    setError(""); setDate(""); setTime(""); setGuests(""); setNote("");
+    setError(""); setDate(""); setTimeFrom(""); setTimeTo(""); setGuests(""); setNote("");
     setFlags({ alcohol: false, insurance: false, vendors: false, afterHours: false });
   }
 
@@ -85,7 +100,19 @@ export default function Amenities() {
                 options={AMENITIES.map((a) => ({ id: a, label: a }))} />
             </Field>
             <Field label="Date"><DateInput value={date} onChange={setDate} /></Field>
-            <Field label="Time window"><Input value={time} onChange={setTime} placeholder="e.g. 4–9PM" /></Field>
+            <Field label="From">
+              <Select value={timeFrom} onChange={(v) => {
+                setTimeFrom(v);
+                // Keep the end after the start as the start moves.
+                if (timeTo && TIMES.indexOf(timeTo) <= TIMES.indexOf(v)) setTimeTo("");
+              }} placeholder="Start time…"
+                options={TIMES.slice(0, -1).map((t) => ({ id: t, label: t }))} />
+            </Field>
+            <Field label="To">
+              <Select value={timeTo} onChange={setTimeTo} placeholder="End time…"
+                options={TIMES.filter((t) => !timeFrom || TIMES.indexOf(t) > TIMES.indexOf(timeFrom))
+                  .map((t) => ({ id: t, label: t }))} />
+            </Field>
           </FieldGrid>
           <FieldGrid>
             <Field label="Guests">
