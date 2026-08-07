@@ -29,7 +29,7 @@ export default function Header() {
           <img
             src="/images/unitylogo.png"
             alt="Unity Grid Management"
-            style={{ display: "block", height: 34, width: "auto" }}
+            style={{ display: "block", height: 28, width: "auto" }}
           />
         </span>
 

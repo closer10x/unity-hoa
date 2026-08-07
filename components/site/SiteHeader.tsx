@@ -43,7 +43,7 @@ export function SiteHeader() {
           <img
             src="/images/unitylogo.png"
             alt="Unity Grid Management"
-            className="block h-10 w-auto"
+            className="block h-8 w-auto"
           />
         </Link>
 
