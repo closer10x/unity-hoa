@@ -10,6 +10,7 @@ import Dashboard from "./sections/Dashboard";
 import Accounting from "./sections/Accounting";
 import Owners from "./sections/Owners";
 import WorkOrders from "./sections/WorkOrders";
+import Schedule from "./sections/Schedule";
 import Architectural from "./sections/Architectural";
 import Violations from "./sections/Violations";
 import Bookings from "./sections/Bookings";
@@ -23,7 +24,7 @@ import Calendar from "./sections/Calendar";
 import Team from "./sections/Team";
 
 const SECTIONS: Record<string, React.ComponentType> = {
-  dashboard: Dashboard, accounting: Accounting, owners: Owners, work: WorkOrders,
+  dashboard: Dashboard, accounting: Accounting, owners: Owners, work: WorkOrders, schedule: Schedule,
   arc: Architectural, violations: Violations, bookings: Bookings, comms: Communications,
   board: Board, legal: Legal, vendors: Vendors, docs: Documents,
   portfolio: Communities, calendar: Calendar, team: Team,

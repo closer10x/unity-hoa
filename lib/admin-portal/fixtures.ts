@@ -26,6 +26,7 @@ export const NAV: ReadonlyArray<{
   { id: "accounting", label: "Accounting", group: "Money" },
   { id: "legal", label: "Legal & liens", group: "Money" },
   { id: "work", label: "Work orders", group: "Property" },
+  { id: "schedule", label: "Schedule", group: "Property" },
   { id: "arc", label: "Architectural", group: "Property" },
   { id: "violations", label: "Violations", group: "Property" },
   { id: "bookings", label: "Bookings", group: "Property" },

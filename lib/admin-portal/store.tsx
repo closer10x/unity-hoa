@@ -5,9 +5,10 @@ import * as fx from "./fixtures";
 import { ALL_SECTIONS } from "./permissions";
 import { MOBILE_BREAKPOINT } from "./tokens";
 import type {
-  ArcApp, AuditEntry, Booking, CalEvent, Community, Delinquent, Director, Doc,
-  LegalCase, Meeting, Owner, Payment, PendingConfirm, Portfolio, Staff, Vendor,
-  Violation, WorkOrder,
+  AddressSuggestion,
+  ArcApp, AuditEntry, BankAccount, Booking, CalEvent, Community, Delinquent,
+  Director, Doc, LedgerEntry, LegalCase, Meeting, Owner, Payment,
+  PendingConfirm, Portfolio, Staff, Vendor, Violation, WorkOrder,
 } from "./types";
 
 /**
@@ -79,6 +80,10 @@ interface Store {
   setCustomEvents: React.Dispatch<React.SetStateAction<CalEvent[]>>;
   eventMoves: Record<string, string>;
   setEventMoves: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  ledger: LedgerEntry[];
+  setLedger: React.Dispatch<React.SetStateAction<LedgerEntry[]>>;
+  bankAccounts: BankAccount[];
+  setBankAccounts: React.Dispatch<React.SetStateAction<BankAccount[]>>;
 
   // audit
   auditLog: AuditEntry[];
@@ -86,6 +91,10 @@ interface Store {
   stamp: () => string;
   uid: (prefix: string) => string;
   currentUser: string;
+  /** Known addresses from the lots roster, for add-form autofill. */
+  addressBook: AddressSuggestion[];
+  /** Dashboard tiles computed server-side from live reads. */
+  metrics: { label: string; value: string; note: string }[];
 
   /** Section ids this account may open; resolved server-side from staff_role. */
   allowedSections: string[];
@@ -97,6 +106,7 @@ export function StoreProvider({
   children,
   allowedSections,
   currentUser,
+  initialData,
 }: {
   children: React.ReactNode;
   /** From the server session (sectionsForRole). Defaults to everything for
@@ -104,6 +114,27 @@ export function StoreProvider({
   allowedSections?: string[];
   /** The signed-in account, used to stamp audit entries. */
   currentUser?: string;
+  /**
+   * Collections read from the database on the server. Sections whose tables
+   * do not exist yet are simply absent here and stay empty — the fixtures are
+   * no longer used as a fallback, because showing invented records against a
+   * live database is worse than showing none.
+   */
+  initialData?: Partial<{
+    owners: Owner[];
+    work: WorkOrder[];
+    docs: Doc[];
+    staff: Staff[];
+    calendar: CalEvent[];
+    payments: Payment[];
+    communities: Community[];
+    ledger: LedgerEntry[];
+    bankAccounts: BankAccount[];
+    /** Server-written audit trail (admin_audit_log), newest first. */
+    audit: AuditEntry[];
+    metrics: { label: string; value: string; note: string }[];
+    addressBook: AddressSuggestion[];
+  }>;
 }) {
   const allowed = allowedSections ?? [...ALL_SECTIONS];
   const actor = currentUser?.trim() || fx.CURRENT_USER;
@@ -112,24 +143,28 @@ export function StoreProvider({
   const [vw, setVw] = useState(1200);
   const [navOpen, setNavOpen] = useState(false);
 
-  const [owners, setOwners] = useState<Owner[]>(fx.OWNERS);
-  const [payments, setPayments] = useState<Payment[]>(fx.PAYMENTS);
-  const [delinquents, setDelinquents] = useState<Delinquent[]>(fx.DELINQUENTS);
-  const [work, setWork] = useState<WorkOrder[]>(fx.WORK);
-  const [violations, setViolations] = useState<Violation[]>(fx.VIOLATIONS);
-  const [arcApps, setArcApps] = useState<ArcApp[]>(fx.ARC_APPS);
-  const [bookings, setBookings] = useState<Booking[]>(fx.BOOKINGS);
-  const [meetings, setMeetings] = useState<Meeting[]>(fx.MEETINGS);
-  const [directors, setDirectors] = useState<Director[]>(fx.DIRECTORS);
-  const [legalCases, setLegalCases] = useState<LegalCase[]>(fx.LEGAL_CASES);
-  const [vendors, setVendors] = useState<Vendor[]>(fx.VENDORS);
-  const [docs, setDocs] = useState<Doc[]>(fx.DOCS);
-  const [communities, setCommunities] = useState<Community[]>(fx.COMMUNITIES);
-  const [portfolios, setPortfolios] = useState<Portfolio[]>(fx.PORTFOLIOS);
-  const [staff, setStaff] = useState<Staff[]>(fx.STAFF);
-  const [customEvents, setCustomEvents] = useState<CalEvent[]>([]);
+  const [owners, setOwners] = useState<Owner[]>(initialData?.owners ?? []);
+  const [payments, setPayments] = useState<Payment[]>(initialData?.payments ?? []);
+  const [delinquents, setDelinquents] = useState<Delinquent[]>([]);
+  const [work, setWork] = useState<WorkOrder[]>(initialData?.work ?? []);
+  const [violations, setViolations] = useState<Violation[]>([]);
+  const [arcApps, setArcApps] = useState<ArcApp[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [directors, setDirectors] = useState<Director[]>([]);
+  const [legalCases, setLegalCases] = useState<LegalCase[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [docs, setDocs] = useState<Doc[]>(initialData?.docs ?? []);
+  const [communities, setCommunities] = useState<Community[]>(initialData?.communities ?? []);
+  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
+  const [staff, setStaff] = useState<Staff[]>(initialData?.staff ?? []);
+  const metrics = initialData?.metrics ?? [];
+  const addressBook = initialData?.addressBook ?? [];
+  const [customEvents, setCustomEvents] = useState<CalEvent[]>(initialData?.calendar ?? []);
   const [eventMoves, setEventMoves] = useState<Record<string, string>>({});
-  const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
+  const [ledger, setLedger] = useState<LedgerEntry[]>(initialData?.ledger ?? []);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(initialData?.bankAccounts ?? []);
+  const [auditLog, setAuditLog] = useState<AuditEntry[]>(initialData?.audit ?? []);
 
   useEffect(() => {
     const onResize = () => setVw(window.innerWidth);
@@ -173,7 +208,8 @@ export function StoreProvider({
     legalCases, setLegalCases, vendors, setVendors, docs, setDocs,
     communities, setCommunities, portfolios, setPortfolios, staff, setStaff,
     customEvents, setCustomEvents, eventMoves, setEventMoves,
-    auditLog, audit, stamp, uid, currentUser: actor,
+    ledger, setLedger, bankAccounts, setBankAccounts,
+    auditLog, audit, stamp, uid, currentUser: actor, metrics, addressBook,
     allowedSections: allowed,
   };
 

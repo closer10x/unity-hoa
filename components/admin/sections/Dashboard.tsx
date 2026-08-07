@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { METRICS, QUEUE } from "@/lib/admin-portal/fixtures";
+import { QUEUE } from "@/lib/admin-portal/fixtures";
 import { useStore } from "@/lib/admin-portal/store";
 import { color } from "@/lib/admin-portal/tokens";
 import { Card, CardHead, PageTitle, Pill, Row, RowMain, Tile, Tiles } from "../ui";
@@ -12,7 +12,7 @@ export default function Dashboard() {
     <>
       <PageTitle title="Dashboard" lede={`What needs attention across ${s.scopeLabel}.`} />
       <Tiles min={220}>
-        {METRICS.map((m) => <Tile key={m.label} label={m.label} value={m.value} note={m.note} />)}
+        {s.metrics.map((m) => <Tile key={m.label} label={m.label} value={m.value} note={m.note} />)}
       </Tiles>
       <Card>
         <CardHead title="Action queue" meta="Sorted by deadline" />

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { emptyAddress, formatAddress, isAddressComplete } from "@/lib/admin-portal/address";
 import { useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color, font } from "@/lib/admin-portal/tokens";
@@ -34,8 +34,16 @@ export default function Owners() {
   const [occupancy, setOccupancy] = useState("Owner-occupied");
   const [balance, setBalance] = useState("");
   const [flags, setFlags] = useState({ invite: true, welcome: true, autopay: false });
+  const [sort, setSort] = useState("account");
 
-  const visible = useSearchFilter(
+  const SORTS = [
+    { id: "account", label: "Lot number" },
+    { id: "name", label: "Owner name" },
+    { id: "address", label: "Street address" },
+    { id: "status", label: "Status" },
+  ];
+
+  const filtered = useSearchFilter(
     s.owners, query, ["name", "address", "contact", "account"],
     (o) => {
       if (community !== "all" && o.scope !== community) return false;
@@ -43,6 +51,21 @@ export default function Owners() {
       if (filter === "All") return true;
       return o.status === filter;
     },
+  );
+
+  /* Lot numbers are strings, so "Lot 10" would sort before "Lot 2" with a
+     plain compare. numeric collation keeps them in human order. */
+  const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
+  const visible = useMemo(
+    () =>
+      [...filtered].sort((a, b) =>
+        collator.compare(
+          String(a[sort as keyof typeof a] ?? ""),
+          String(b[sort as keyof typeof b] ?? ""),
+        ),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filtered, sort],
   );
 
   function save() {
@@ -87,10 +110,12 @@ export default function Owners() {
             </Field>
           </FieldGrid>
 
-          <AddressFields value={property} onChange={setProperty} />
+          <AddressFields value={property} onChange={setProperty} suggestions={s.addressBook} />
 
           <FieldGrid>
-            <Field label="Account number"><Input value={accountNo} onChange={setAccountNo} placeholder="Leave blank to auto-assign" /></Field>
+            <Field label="Account number" hint="Assigned automatically when the owner is saved">
+              <Input value={accountNo} onChange={setAccountNo} readOnly mono placeholder="Assigned on save" />
+            </Field>
             <Field label="Email"><Input value={email} onChange={setEmail} placeholder="owner@example.com" /></Field>
             <Field label="Mobile"><Input value={phone} onChange={setPhone} placeholder="(713) 555-0100" /></Field>
           </FieldGrid>
@@ -129,6 +154,7 @@ export default function Owners() {
         <FilterBar
           query={query} onQuery={setQuery} placeholder="Search name, address or account no.…"
           filters={FILTERS} active={filter} onFilter={setFilter}
+          sortOptions={SORTS} sort={sort} onSort={setSort}
           extra={
             <select value={community} onChange={(e) => setCommunity(e.target.value)}
               style={{ appearance: "none", font: "inherit", fontSize: 14, background: color.surfaceSunken, border: `1px solid ${color.borderInput}`, borderRadius: 999, padding: "11px 30px 11px 14px", cursor: "pointer", color: color.ink }}>

@@ -11,15 +11,15 @@ import type { StaffRole } from "./types";
  */
 
 export const ALL_SECTIONS = [
-  "dashboard", "owners", "calendar", "accounting", "legal", "work", "arc",
-  "violations", "bookings", "vendors", "comms", "board", "docs", "portfolio",
-  "team",
+  "dashboard", "owners", "calendar", "accounting", "legal", "work", "schedule",
+  "arc", "violations", "bookings", "vendors", "comms", "board", "docs",
+  "portfolio", "team",
 ] as const;
 export type SectionId = (typeof ALL_SECTIONS)[number];
 
 const MANAGER: readonly SectionId[] = [
-  "dashboard", "owners", "calendar", "accounting", "legal", "work", "arc",
-  "violations", "bookings", "vendors", "comms", "board", "docs",
+  "dashboard", "owners", "calendar", "accounting", "legal", "work", "schedule",
+  "arc", "violations", "bookings", "vendors", "comms", "board", "docs",
 ];
 
 export const SECTION_ACCESS: Record<StaffRole, readonly SectionId[]> = {
@@ -27,8 +27,8 @@ export const SECTION_ACCESS: Record<StaffRole, readonly SectionId[]> = {
   "Community manager": MANAGER,
   // Manager minus legal referrals, liens and fee waivers.
   "Assistant manager": MANAGER.filter((s) => s !== "legal"),
-  "Maintenance tech": ["dashboard", "calendar", "work", "vendors"],
-  Inspector: ["dashboard", "calendar", "violations", "owners"],
+  "Maintenance tech": ["dashboard", "calendar", "schedule", "work", "vendors"],
+  Inspector: ["dashboard", "calendar", "schedule", "violations", "owners"],
   Accounting: ["dashboard", "calendar", "accounting", "docs"],
   "Front desk": ["dashboard", "calendar", "owners", "bookings", "comms"],
 };

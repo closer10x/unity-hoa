@@ -16,6 +16,11 @@ export interface Owner {
 export interface WorkOrder {
   id: string; ref: string; title: string; detail: string;
   assignee: string; status: WorkStatus;
+  /** Scheduling: which tech, and the day the job is due. Both optional so
+      work orders created in-session before a schedule is set still type. */
+  assigneeId?: string | null;
+  dueAt?: string | null;
+  priority?: string | null;
 }
 export type WorkStatus = "New" | "Scheduled" | "In progress" | "Closed";
 
@@ -109,6 +114,35 @@ export interface CalEvent {
 
 export interface Payment { id: string; date: string; label: string; amount: string; }
 
+/** One line in the general ledger (finance_transactions). */
+export interface LedgerEntry {
+  id: string;
+  /** ISO date the money moved (occurred_on). */
+  date: string;
+  dateLabel: string;
+  kind: "income" | "expense" | "transfer";
+  category: string;
+  description: string;
+  amount: string;
+  amountCents: number;
+  source: "manual" | "bank";
+  /** Bank account label for imported rows; "" for manual entries. */
+  account: string;
+  pending: boolean;
+}
+
+export interface BankAccount {
+  id: string;
+  name: string;
+  institution: string;
+  mask: string;
+  type: string;
+  balance: string;
+  balanceCents: number | null;
+  lastSync: string;
+  status: "active" | "disconnected";
+}
+
 export interface Delinquent {
   id: string; owner: string; address: string; balance: string; stage: string;
 }
@@ -125,4 +159,18 @@ export interface ActionStep<T extends string = string> {
 
 export interface PendingConfirm {
   id: string; next: string; label: string; text: string;
+}
+
+/** A known address from the lots roster, used to autofill add-forms. */
+export interface AddressSuggestion {
+  streetNo: string;
+  street: string;
+  unit: string;
+  city: string;
+  state: string;
+  zip: string;
+  /** "1420 Willow Bend Ln · Lot 12" — what the picker shows. */
+  label: string;
+  /** True when a lot already has an owner linked. */
+  taken: boolean;
 }

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { color, fieldGrid, font, pad, radius, rowGrid } from "@/lib/admin-portal/tokens";
-import type { Address } from "@/lib/admin-portal/types";
+import type { Address, AddressSuggestion } from "@/lib/admin-portal/types";
 
 /* ---------- text ---------- */
 
@@ -138,11 +138,14 @@ export function Chip({ children, on, onClick, size = "md" }: { children: React.R
   );
 }
 
-export function Field({ label, children }: { label: string; children: React.ReactNode }) {
+export function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
     <label style={{ display: "block" }}>
       <span style={{ display: "block", fontSize: 14, color: color.inkSecondary, marginBottom: 8 }}>{label}</span>
       {children}
+      {hint ? (
+        <span style={{ display: "block", fontSize: 13, color: color.inkQuaternary, marginTop: 6 }}>{hint}</span>
+      ) : null}
     </label>
   );
 }
@@ -153,8 +156,36 @@ const inputStyle: React.CSSProperties = {
   borderRadius: radius.md, padding: "12px 14px",
 };
 
-export function Input({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
-  return <input type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} style={inputStyle} />;
+export function Input({
+  value, onChange, placeholder, readOnly = false, mono = false,
+}: {
+  value: string; onChange: (v: string) => void; placeholder?: string;
+  /** System-assigned values: shown, never typed into. */
+  readOnly?: boolean;
+  mono?: boolean;
+}) {
+  return (
+    <input
+      type="text"
+      value={value}
+      placeholder={placeholder}
+      readOnly={readOnly}
+      aria-readonly={readOnly || undefined}
+      tabIndex={readOnly ? -1 : undefined}
+      onChange={(e) => { if (!readOnly) onChange(e.target.value); }}
+      style={{
+        ...inputStyle,
+        ...(mono ? { fontFamily: font.mono, fontSize: 14 } : null),
+        ...(readOnly
+          ? { background: color.surfaceMuted, color: color.inkTertiary, cursor: "default" }
+          : null),
+      }}
+    />
+  );
+}
+
+export function DateInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return <input type="date" value={value} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, fontFamily: font.mono, fontSize: 14 }} />;
 }
 
 export function Area({ value, onChange, placeholder, rows = 3 }: { value: string; onChange: (v: string) => void; placeholder?: string; rows?: number }) {
@@ -246,16 +277,29 @@ export function ConfirmBar({ text, confirmLabel, onCancel, onConfirm }: { text: 
 
 export function FilterBar({
   query, onQuery, placeholder, filters, active, onFilter, extra,
+  sortOptions, sort, onSort,
 }: {
   query: string; onQuery: (v: string) => void; placeholder: string;
   filters: string[]; active: string; onFilter: (f: string) => void;
   extra?: React.ReactNode;
+  /** Optional sort control; omit all three to hide it. */
+  sortOptions?: { id: string; label: string }[];
+  sort?: string;
+  onSort?: (id: string) => void;
 }) {
   return (
     <div style={{ padding: `16px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
       <input type="text" value={query} placeholder={placeholder} onChange={(e) => onQuery(e.target.value)}
         style={{ ...inputStyle, flex: "1 1 220px", width: "auto", fontSize: 15, background: color.surfaceSunken, padding: "11px 14px" }} />
       {extra}
+      {sortOptions && sort !== undefined && onSort ? (
+        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontFamily: font.mono, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: color.inkQuaternary }}>
+            Sort
+          </span>
+          <Select value={sort} onChange={onSort} options={sortOptions} />
+        </label>
+      ) : null}
       {filters.map((f) => <Chip key={f} size="sm" on={f === active} onClick={() => onFilter(f)}>{f}</Chip>)}
     </div>
   );
@@ -265,11 +309,39 @@ export function FilterBar({
 
 export function AddressFields({
   value, onChange, stateLocked = true, unitLabel = "Unit or lot no.",
+  suggestions = [],
 }: {
   value: Address; onChange: (a: Address) => void;
   stateLocked?: boolean; unitLabel?: string;
+  /** Known addresses from the lots roster; typing a street number offers them. */
+  suggestions?: AddressSuggestion[];
 }) {
   const set = (k: keyof Address) => (v: string) => onChange({ ...value, [k]: v });
+
+  /* Match on street number or name so either field can drive the fill.
+     Capped at 6 — a longer list is a scroll, not a shortcut. */
+  const typed = `${value.streetNo} ${value.street}`.trim().toLowerCase();
+  const matches =
+    typed.length < 1
+      ? []
+      : suggestions
+          .filter((a) =>
+            `${a.streetNo} ${a.street}`.toLowerCase().includes(typed) &&
+            `${a.streetNo} ${a.street}`.toLowerCase() !== typed,
+          )
+          .slice(0, 6);
+
+  const apply = (a: AddressSuggestion) =>
+    onChange({
+      ...value,
+      streetNo: a.streetNo,
+      street: a.street,
+      unit: a.unit || value.unit,
+      city: a.city,
+      state: a.state || value.state,
+      zip: a.zip,
+    });
+
   return (
     <>
       <FieldGrid>
@@ -277,6 +349,39 @@ export function AddressFields({
         <Field label="Street name"><Input value={value.street} onChange={set("street")} placeholder="e.g. Willow Bend Ln" /></Field>
         <Field label={unitLabel}><Input value={value.unit} onChange={set("unit")} placeholder="Optional" /></Field>
       </FieldGrid>
+
+      {matches.length > 0 ? (
+        <div style={{ display: "grid", gap: 6 }}>
+          <span style={{ fontFamily: font.mono, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: color.inkQuaternary }}>
+            On the roster
+          </span>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {matches.map((a) => (
+              <button
+                key={a.label}
+                type="button"
+                onClick={() => apply(a)}
+                title={a.taken ? "This lot already has an owner linked" : "Fill this address"}
+                style={{
+                  font: "inherit", fontSize: 14, cursor: "pointer",
+                  background: color.surfaceSunken,
+                  border: `1px solid ${color.hairline}`,
+                  borderRadius: 999, padding: "7px 14px",
+                  color: color.ink, display: "flex", alignItems: "center", gap: 8,
+                }}
+              >
+                {a.label}
+                {a.taken ? (
+                  <span style={{ fontFamily: font.mono, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: color.attention }}>
+                    owner on file
+                  </span>
+                ) : null}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <FieldGrid>
         <Field label="City"><Input value={value.city} onChange={set("city")} placeholder="e.g. Katy" /></Field>
         <Field label="State">

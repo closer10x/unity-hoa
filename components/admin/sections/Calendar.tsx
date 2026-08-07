@@ -41,9 +41,12 @@ export default function Calendar() {
   const [dragging, setDragging] = useState("");
 
   const [syncOpen, setSyncOpen] = useState(false);
-  const [connected, setConnected] = useState(true);
-  const [lastSync, setLastSync] = useState("12 minutes ago");
+  /* No Google account is linked yet; the sync panel starts empty. */
+  const [connected, setConnected] = useState(false);
+  const [lastSync, setLastSync] = useState("never");
   const [direction, setDirection] = useState("Two-way");
+  /* Set when a real OAuth connection is made; there is no account until then. */
+  const [syncAccount] = useState("");
   const [reminder, setReminder] = useState("1 day");
   const [copied, setCopied] = useState(false);
   const [feeds, setFeeds] = useState<Record<string, boolean>>({
@@ -153,93 +156,7 @@ export default function Calendar() {
         </Card>
       ) : null}
 
-      <Card style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, alignItems: "center", padding: "18px 22px" }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 3, background: connected ? color.positive : "oklch(0.7 0.02 150)", display: "inline-block" }} />
-          <span>
-            <span style={{ display: "block", fontSize: 15, fontWeight: 500 }}>{connected ? "ecruz@unitygrid.com" : "Not connected"}</span>
-            <span style={{ display: "block", fontSize: 13, color: connected ? color.positive : color.attention, marginTop: 2 }}>
-              {connected
-                ? `Last synced ${lastSync} · ${direction.toLowerCase()} · ${allEvents.length} events`
-                : "Connect a Google account to push meetings, inspections and bookings to it."}
-            </span>
-          </span>
-        </span>
-        <span style={{ display: "flex", gap: 10, flexWrap: "wrap", justifySelf: "end" }}>
-          <Pill style={{ padding: "8px 16px", fontSize: 14 }} onClick={() => { setLastSync("just now"); setConnected(true); }}>Sync now</Pill>
-          <Pill style={{ padding: "8px 16px", fontSize: 14 }} onClick={() => setSyncOpen(!syncOpen)}>
-            {syncOpen ? "Hide sync settings" : "Manage sync"}
-          </Pill>
-        </span>
-      </Card>
 
-      {syncOpen ? (
-        <Card>
-          <div style={{ padding: 24, display: "grid", gap: 18 }}>
-            <div style={{ display: "grid", gap: 10 }}>
-              <span style={{ fontSize: 14, color: color.inkSecondary }}>What syncs to Google</span>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                {[
-                  { id: "meetings", label: "Board & committee meetings" },
-                  { id: "inspections", label: "Inspection routes" },
-                  { id: "bookings", label: "Amenity bookings" },
-                  { id: "legal", label: "Legal dates" },
-                  { id: "community", label: "Community events" },
-                ].map((f) => (
-                  <Chip key={f.id} size="sm" on={feeds[f.id]} onClick={() => setFeeds({ ...feeds, [f.id]: !feeds[f.id] })}>
-                    {f.label}
-                  </Chip>
-                ))}
-              </div>
-            </div>
-            <FieldGrid>
-              <Field label="Direction">
-                <Select value={direction} onChange={setDirection} options={[
-                  { id: "Push only", label: "Push to Google only" },
-                  { id: "Two-way", label: "Two-way — pull Google edits back" },
-                ]} />
-              </Field>
-              <Field label="Reminders">
-                <Select value={reminder} onChange={setReminder} options={[
-                  { id: "1 day", label: "1 day before" }, { id: "3 days", label: "3 days before" },
-                  { id: "1 week", label: "1 week before" }, { id: "None", label: "No reminders" },
-                ]} />
-              </Field>
-              <div>
-                <span style={{ display: "block", fontSize: 14, color: color.inkSecondary, marginBottom: 8 }}>Subscribe link (iCal)</span>
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  <Mono style={{ flex: "1 1 auto", color: color.inkTertiary, background: color.surfaceSunken, border: `1px solid ${color.hairline}`, borderRadius: 8, padding: "10px 12px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    https://cal.unitygrid.com/{s.scope}/feed.ics
-                  </Mono>
-                  <Pill style={{ padding: "8px 16px", fontSize: 14 }} onClick={() => setCopied(true)}>{copied ? "Copied" : "Copy link"}</Pill>
-                </div>
-              </div>
-            </FieldGrid>
-            <div style={{ display: "grid", gap: 10 }}>
-              <span style={{ fontSize: 14, color: color.inkSecondary }}>Community calendars you cover</span>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                {myCalendars.map((c, i) => {
-                  const on = calsOn[c.id] !== false;
-                  const palette = ["oklch(0.5 0.06 155)", "oklch(0.52 0.08 250)", "oklch(0.55 0.09 60)", "oklch(0.5 0.09 320)"];
-                  return (
-                    <Chip key={c.id} size="sm" on={on} onClick={() => setCalsOn({ ...calsOn, [c.id]: !on })}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: 2, background: palette[i % palette.length], display: "inline-block" }} />
-                        {c.name}
-                      </span>
-                    </Chip>
-                  );
-                })}
-              </div>
-            </div>
-            <p style={{ fontSize: 13, lineHeight: 1.6, color: color.inkQuaternary }}>
-              {direction === "Two-way"
-                ? "Edits made in Google flow back here. Deletions in Google only remove the calendar entry, never the underlying record."
-                : "Events push one way. Nothing in Google can change a meeting, booking or legal date here."}
-            </p>
-          </div>
-        </Card>
-      ) : null}
 
       <Card>
         <div style={{ padding: "18px 22px", borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
@@ -374,6 +291,95 @@ export default function Calendar() {
           );
         })}
       </Card>
+      {/* Google sync sits at the end: it is configuration, not the
+          working calendar. */}
+      <Card style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, alignItems: "center", padding: "18px 22px" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 3, background: connected ? color.positive : "oklch(0.7 0.02 150)", display: "inline-block" }} />
+          <span>
+            <span style={{ display: "block", fontSize: 15, fontWeight: 500 }}>{connected ? syncAccount : "No Google account connected"}</span>
+            <span style={{ display: "block", fontSize: 13, color: connected ? color.positive : color.attention, marginTop: 2 }}>
+              {connected
+                ? `Last synced ${lastSync} · ${direction.toLowerCase()} · ${allEvents.length} events`
+                : "Connect a Google account to push meetings, inspections and bookings to it."}
+            </span>
+          </span>
+        </span>
+        <span style={{ display: "flex", gap: 10, flexWrap: "wrap", justifySelf: "end" }}>
+          <Pill style={{ padding: "8px 16px", fontSize: 14 }} onClick={() => { setLastSync("just now"); setConnected(true); }}>Sync now</Pill>
+          <Pill style={{ padding: "8px 16px", fontSize: 14 }} onClick={() => setSyncOpen(!syncOpen)}>
+            {syncOpen ? "Hide sync settings" : "Manage sync"}
+          </Pill>
+        </span>
+      </Card>
+      {syncOpen ? (
+        <Card>
+          <div style={{ padding: 24, display: "grid", gap: 18 }}>
+            <div style={{ display: "grid", gap: 10 }}>
+              <span style={{ fontSize: 14, color: color.inkSecondary }}>What syncs to Google</span>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {[
+                  { id: "meetings", label: "Board & committee meetings" },
+                  { id: "inspections", label: "Inspection routes" },
+                  { id: "bookings", label: "Amenity bookings" },
+                  { id: "legal", label: "Legal dates" },
+                  { id: "community", label: "Community events" },
+                ].map((f) => (
+                  <Chip key={f.id} size="sm" on={feeds[f.id]} onClick={() => setFeeds({ ...feeds, [f.id]: !feeds[f.id] })}>
+                    {f.label}
+                  </Chip>
+                ))}
+              </div>
+            </div>
+            <FieldGrid>
+              <Field label="Direction">
+                <Select value={direction} onChange={setDirection} options={[
+                  { id: "Push only", label: "Push to Google only" },
+                  { id: "Two-way", label: "Two-way — pull Google edits back" },
+                ]} />
+              </Field>
+              <Field label="Reminders">
+                <Select value={reminder} onChange={setReminder} options={[
+                  { id: "1 day", label: "1 day before" }, { id: "3 days", label: "3 days before" },
+                  { id: "1 week", label: "1 week before" }, { id: "None", label: "No reminders" },
+                ]} />
+              </Field>
+              <div>
+                <span style={{ display: "block", fontSize: 14, color: color.inkSecondary, marginBottom: 8 }}>Subscribe link (iCal)</span>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <Mono style={{ flex: "1 1 auto", color: color.inkTertiary, background: color.surfaceSunken, border: `1px solid ${color.hairline}`, borderRadius: 8, padding: "10px 12px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    https://cal.unitygrid.com/{s.scope}/feed.ics
+                  </Mono>
+                  <Pill style={{ padding: "8px 16px", fontSize: 14 }} onClick={() => setCopied(true)}>{copied ? "Copied" : "Copy link"}</Pill>
+                </div>
+              </div>
+            </FieldGrid>
+            <div style={{ display: "grid", gap: 10 }}>
+              <span style={{ fontSize: 14, color: color.inkSecondary }}>Community calendars you cover</span>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {myCalendars.map((c, i) => {
+                  const on = calsOn[c.id] !== false;
+                  const palette = ["oklch(0.5 0.06 155)", "oklch(0.52 0.08 250)", "oklch(0.55 0.09 60)", "oklch(0.5 0.09 320)"];
+                  return (
+                    <Chip key={c.id} size="sm" on={on} onClick={() => setCalsOn({ ...calsOn, [c.id]: !on })}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: palette[i % palette.length], display: "inline-block" }} />
+                        {c.name}
+                      </span>
+                    </Chip>
+                  );
+                })}
+              </div>
+            </div>
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: color.inkQuaternary }}>
+              {direction === "Two-way"
+                ? "Edits made in Google flow back here. Deletions in Google only remove the calendar entry, never the underlying record."
+                : "Events push one way. Nothing in Google can change a meeting, booking or legal date here."}
+            </p>
+          </div>
+        </Card>
+      ) : null}
+
     </>
   );
 }

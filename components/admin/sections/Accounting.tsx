@@ -2,15 +2,36 @@
 
 import React, { useMemo, useState } from "react";
 import { AGING, BUDGET } from "@/lib/admin-portal/fixtures";
-import { CARD_FEE_RATE, DELINQ_STEPS, PAY_METHODS } from "@/lib/admin-portal/actions";
-import { buildActionMenu, useStore } from "@/lib/admin-portal/store";
-import { color, font, radius } from "@/lib/admin-portal/tokens";
-import type { PendingConfirm } from "@/lib/admin-portal/types";
 import {
-  ActionSelect, AddDrawer, Card, CardHead, Chip, ConfirmBar, ErrorLine, Field,
-  FieldGrid, Input, Mono, PageTitle, Primary, Row, RowMain, Select, Status,
-  TextButton, Tile, Tiles,
+  addLedgerEntry, connectBankAccount, deleteLedgerEntry, disconnectBankAccount,
+  getBankLinkToken, syncBankNow,
+} from "@/lib/admin-portal/accounting-actions";
+import { CARD_FEE_RATE, DELINQ_STEPS, PAY_METHODS } from "@/lib/admin-portal/actions";
+import { openPlaidLink } from "@/lib/admin-portal/plaid-link";
+import { buildActionMenu, useSearchFilter, useStore } from "@/lib/admin-portal/store";
+import { color, radius } from "@/lib/admin-portal/tokens";
+import type { BankAccount, LedgerEntry, PendingConfirm } from "@/lib/admin-portal/types";
+import {
+  ActionSelect, AddDrawer, Card, CardHead, Chip, ConfirmBar, DateInput, Empty,
+  ErrorLine, Field, FieldGrid, FilterBar, Input, Mono, PageTitle, Primary, Row,
+  RowMain, Select, Status, TextButton, Tile, Tiles,
 } from "../ui";
+
+const INCOME_CATEGORIES = [
+  "HOA fees", "Late fees", "Amenity income", "Interest income", "Other income",
+];
+const EXPENSE_CATEGORIES = [
+  "Landscaping", "Utilities", "Insurance", "Repairs & maintenance", "Management",
+  "Legal & professional", "Office & admin", "Reserves", "Other expense",
+];
+
+const usd = (cents: number) =>
+  (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+
+function todayISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 export default function Accounting() {
   const s = useStore();
@@ -88,7 +109,7 @@ export default function Accounting() {
 
   return (
     <>
-      <PageTitle title="Accounting" lede={`Receivables, delinquencies and budget performance for ${s.scopeLabel}.`} />
+      <PageTitle title="Accounting" lede={`Receivables, the general ledger and bank activity for ${s.scopeLabel}.`} />
 
       <Card>
         <CardHead title="Take a payment" meta={`Phone, walk-in or mailed check · posted by ${s.currentUser.split(" · ")[0]}`} />
@@ -236,12 +257,19 @@ export default function Accounting() {
         </div>
       </Card>
 
+      <LedgerTiles />
+      <LedgerCard />
+      <BankCard />
+
       <Tiles min={180}>
         {AGING.map((a) => <Tile key={a.label} label={a.label} value={a.amount} />)}
       </Tiles>
 
       <Card>
         <CardHead title="Delinquent accounts" meta="Collection ladder follows the recorded policy" />
+        {s.delinquents.length === 0 ? (
+          <Empty>No delinquent accounts. When an owner falls behind, the collection ladder starts here.</Empty>
+        ) : null}
         {s.delinquents.map((d) => {
           const menu = buildActionMenu(DELINQ_STEPS, d.stage, d.id, `${d.owner} · ${d.address}`, pending, setPending);
           return (
@@ -269,7 +297,9 @@ export default function Accounting() {
 
       <Card>
         <CardHead title="Recent payments" />
-        {s.payments.slice(0, 8).map((p) => (
+        {s.payments.length === 0 ? (
+          <Empty>No payments recorded yet.</Empty>
+        ) : s.payments.slice(0, 8).map((p) => (
           <Row key={p.id}>
             <Mono size={13} style={{ color: color.neutral }}>{p.date}</Mono>
             <span style={{ fontSize: 15 }}>{p.label}</span>
@@ -278,17 +308,320 @@ export default function Accounting() {
         ))}
       </Card>
 
-      <Card>
-        <CardHead title="Budget vs actual · YTD" />
-        {BUDGET.map((b) => (
-          <Row key={b.label}>
-            <span style={{ fontSize: 15, fontWeight: 500 }}>{b.label}</span>
-            <Mono size={14} style={{ color: color.inkTertiary }}>{b.budget}</Mono>
-            <Mono size={14}>{b.actual}</Mono>
-            <span style={{ fontSize: 14, color: color.inkTertiary }}>{b.note}</span>
-          </Row>
-        ))}
-      </Card>
+      {BUDGET.length > 0 ? (
+        <Card>
+          <CardHead title="Budget vs actual · YTD" />
+          {BUDGET.map((b) => (
+            <Row key={b.label}>
+              <span style={{ fontSize: 15, fontWeight: 500 }}>{b.label}</span>
+              <Mono size={14} style={{ color: color.inkTertiary }}>{b.budget}</Mono>
+              <Mono size={14}>{b.actual}</Mono>
+              <span style={{ fontSize: 14, color: color.inkTertiary }}>{b.note}</span>
+            </Row>
+          ))}
+        </Card>
+      ) : null}
     </>
+  );
+}
+
+/* ═══ General ledger ═══════════════════════════════════════════════════ */
+
+function LedgerTiles() {
+  const s = useStore();
+  const year = String(new Date().getFullYear());
+
+  const { incomeCents, expenseCents } = useMemo(() => {
+    let income = 0, expense = 0;
+    for (const e of s.ledger) {
+      if (!e.date.startsWith(year)) continue;
+      if (e.kind === "income") income += e.amountCents;
+      else if (e.kind === "expense") expense += e.amountCents;
+    }
+    return { incomeCents: income, expenseCents: expense };
+  }, [s.ledger, year]);
+
+  const net = incomeCents - expenseCents;
+  const active = s.bankAccounts.filter((b) => b.status === "active");
+  const withBalance = active.filter((b) => b.balanceCents != null);
+  const bankCents = withBalance.reduce((sum, b) => sum + (b.balanceCents ?? 0), 0);
+
+  return (
+    <Tiles min={180}>
+      <Tile label={`Income · ${year}`} value={usd(incomeCents)} />
+      <Tile label={`Expenses · ${year}`} value={usd(expenseCents)} />
+      <Tile label={`Net · ${year}`} value={`${net < 0 ? "−" : ""}${usd(Math.abs(net))}`}
+        note={net < 0 ? "Spending ahead of income" : undefined} />
+      <Tile label="In the bank" value={withBalance.length ? usd(bankCents) : "—"}
+        note={active.length
+          ? `${active.length} linked account${active.length === 1 ? "" : "s"}`
+          : "No bank account linked"} />
+    </Tiles>
+  );
+}
+
+const LEDGER_FILTERS = ["All", "Income", "Expenses", "Bank imported", "Manual"];
+
+function LedgerCard() {
+  const s = useStore();
+
+  const [drawer, setDrawer] = useState(false);
+  const [date, setDate] = useState(todayISO());
+  const [kind, setKind] = useState<"income" | "expense">("expense");
+  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
+  const [desc, setDesc] = useState("");
+  const [amount, setAmount] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [note, setNote] = useState("");
+
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("All");
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  const categories = kind === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+
+  const byFilter = useMemo(() => (e: LedgerEntry) => {
+    if (filter === "Income") return e.kind === "income";
+    if (filter === "Expenses") return e.kind === "expense";
+    if (filter === "Bank imported") return e.source === "bank";
+    if (filter === "Manual") return e.source === "manual";
+    return true;
+  }, [filter]);
+
+  const filtered = useSearchFilter(
+    s.ledger, query,
+    ["description", "category", "account", "amount", "dateLabel"],
+    byFilter,
+  );
+
+  async function save() {
+    if (saving) return;
+    setError("");
+    setSaving(true);
+    const res = await addLedgerEntry({ date, kind, category, description: desc, amount });
+    setSaving(false);
+    if (!res.ok) return setError(res.error);
+    s.setLedger(res.ledger);
+    s.setBankAccounts(res.bankAccounts);
+    s.audit(`Ledger: recorded ${kind} (${category}) — ${desc.trim()}`);
+    setNote(`Recorded ${kind === "income" ? "income" : "an expense"} — ${desc.trim()}.`);
+    setDesc(""); setAmount(""); setDate(todayISO());
+    setDrawer(false);
+  }
+
+  async function remove(e: LedgerEntry) {
+    const res = await deleteLedgerEntry(e.id);
+    setConfirmDelete(null);
+    if (!res.ok) return setError(res.error);
+    s.setLedger(res.ledger);
+    s.audit(`Ledger: deleted ${e.amount} ${e.kind} — ${e.description}`);
+    setNote(`Deleted ${e.amount} ${e.kind} — ${e.description}.`);
+  }
+
+  return (
+    <Card>
+      <CardHead title="General ledger"
+        meta={`${s.ledger.length} entr${s.ledger.length === 1 ? "y" : "ies"} · manual and bank-imported`} />
+
+      <AddDrawer open={drawer} onOpen={() => { setDrawer(true); setNote(""); setError(""); }}
+        onCancel={() => { setDrawer(false); setError(""); }}
+        openLabel="Add an entry"
+        title="New ledger entry"
+        note={note || "Record income or an expense — bank imports land here automatically."}>
+        <div style={{ display: "grid", gap: 16 }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <Chip on={kind === "expense"} onClick={() => { setKind("expense"); setCategory(EXPENSE_CATEGORIES[0]); }}>Expense</Chip>
+            <Chip on={kind === "income"} onClick={() => { setKind("income"); setCategory(INCOME_CATEGORIES[0]); }}>Income</Chip>
+          </div>
+          <FieldGrid>
+            <Field label="Date"><DateInput value={date} onChange={setDate} /></Field>
+            <Field label="Category">
+              <Select value={category} onChange={setCategory}
+                options={categories.map((c) => ({ id: c, label: c }))} />
+            </Field>
+            <Field label="Amount"><Input value={amount} onChange={setAmount} placeholder="$0.00" /></Field>
+          </FieldGrid>
+          <Field label="Description">
+            <Input value={desc} onChange={setDesc}
+              placeholder={kind === "income" ? "e.g. Clubhouse rental — Sofi Lakes" : "e.g. April mowing — front entrances"} />
+          </Field>
+          {error ? <ErrorLine>{error}</ErrorLine> : null}
+          <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+            <Primary onClick={save}>
+              {saving ? "Saving…" : kind === "income" ? "Record income" : "Record expense"}
+            </Primary>
+            <span style={{ fontSize: 13, color: color.inkQuaternary }}>
+              Saved to the books and stamped in the audit trail as {s.currentUser.split(" · ")[0]}.
+            </span>
+          </div>
+        </div>
+      </AddDrawer>
+
+      <FilterBar query={query} onQuery={setQuery}
+        placeholder="Search the ledger — description, category, amount or account"
+        filters={LEDGER_FILTERS} active={filter} onFilter={setFilter} />
+
+      {note && !drawer ? (
+        <div style={{ padding: "12px 24px", borderBottom: `1px solid ${color.hairlineSoft}`, fontSize: 14, color: color.accent }}>{note}</div>
+      ) : null}
+      {error && !drawer ? (
+        <div style={{ padding: "12px 24px", borderBottom: `1px solid ${color.hairlineSoft}` }}><ErrorLine>{error}</ErrorLine></div>
+      ) : null}
+
+      {filtered.length === 0 ? (
+        <Empty>
+          {s.ledger.length === 0
+            ? "The ledger is empty. Record the first entry above, or connect a bank account and let transactions import themselves."
+            : "Nothing matches that search."}
+        </Empty>
+      ) : filtered.slice(0, 100).map((e) => (
+        <React.Fragment key={e.id}>
+          <Row>
+            <Mono size={13} style={{ color: color.neutral }}>{e.dateLabel}</Mono>
+            <RowMain label={e.description}
+              detail={`${e.category}${e.account ? ` · ${e.account}` : " · Manual entry"}`} />
+            <Status tone={e.kind === "income" ? "positive" : "neutral"}>
+              {e.kind === "income" ? "Income" : "Expense"}{e.pending ? " · pending" : ""}
+            </Status>
+            <Mono size={15} style={{ color: e.kind === "income" ? color.positive : color.ink }}>
+              {e.kind === "income" ? "+" : "−"}{e.amount}
+            </Mono>
+            <TextButton tone="destructive" onClick={() => setConfirmDelete(e.id)}>Delete…</TextButton>
+          </Row>
+          {confirmDelete === e.id ? (
+            <ConfirmBar
+              text={`Delete the ${e.amount} ${e.kind} “${e.description}” from the ledger? The removal is recorded in the audit trail.`}
+              confirmLabel="Delete entry"
+              onCancel={() => setConfirmDelete(null)}
+              onConfirm={() => remove(e)} />
+          ) : null}
+        </React.Fragment>
+      ))}
+      {filtered.length > 100 ? (
+        <Empty>Showing the first 100 of {filtered.length} matches — narrow the search to see the rest.</Empty>
+      ) : null}
+    </Card>
+  );
+}
+
+/* ═══ Bank accounts & sync ═════════════════════════════════════════════ */
+
+function BankCard() {
+  const s = useStore();
+  const [busy, setBusy] = useState<"connect" | "sync" | null>(null);
+  const [error, setError] = useState("");
+  const [note, setNote] = useState("");
+  const [confirmDisconnect, setConfirmDisconnect] = useState<string | null>(null);
+
+  const active = s.bankAccounts.filter((b) => b.status === "active");
+
+  async function connect() {
+    if (busy) return;
+    setError(""); setNote("");
+    setBusy("connect");
+    const res = await getBankLinkToken();
+    if (!res.ok) { setBusy(null); return setError(res.error); }
+    try {
+      await openPlaidLink(res.linkToken, {
+        onSuccess: async (publicToken, institutionName) => {
+          const done = await connectBankAccount({ publicToken, institutionName });
+          setBusy(null);
+          if (!done.ok) return setError(done.error);
+          s.setLedger(done.ledger);
+          s.setBankAccounts(done.bankAccounts);
+          s.audit(`Bank sync: connected ${institutionName || "a bank"}`);
+          setNote(`Connected ${institutionName || "the bank"} — ${done.imported} transaction${done.imported === 1 ? "" : "s"} imported into the ledger.`);
+        },
+        onExit: (message) => {
+          setBusy(null);
+          if (message) setError(message);
+        },
+      });
+    } catch (e) {
+      setBusy(null);
+      setError(e instanceof Error ? e.message : "Couldn't open Plaid Link.");
+    }
+  }
+
+  async function sync() {
+    if (busy) return;
+    setError(""); setNote("");
+    setBusy("sync");
+    const res = await syncBankNow();
+    setBusy(null);
+    if (!res.ok) return setError(res.error);
+    s.setLedger(res.ledger);
+    s.setBankAccounts(res.bankAccounts);
+    s.audit(`Bank sync: pulled ${res.imported} transaction${res.imported === 1 ? "" : "s"}`);
+    setNote(res.imported
+      ? `Synced — ${res.imported} new or updated transaction${res.imported === 1 ? "" : "s"} in the ledger.`
+      : "Synced — the books already match the bank.");
+  }
+
+  async function disconnect(b: BankAccount) {
+    const res = await disconnectBankAccount(b.id);
+    setConfirmDisconnect(null);
+    if (!res.ok) return setError(res.error);
+    s.setLedger(res.ledger);
+    s.setBankAccounts(res.bankAccounts);
+    s.audit(`Bank sync: disconnected ${b.institution || b.name}${b.mask ? ` ····${b.mask}` : ""}`);
+    setNote(`Disconnected ${b.institution || b.name}${b.mask ? ` ····${b.mask}` : ""}. Imported entries stay in the ledger.`);
+  }
+
+  return (
+    <Card>
+      <CardHead title="Bank accounts" meta="Connected through Plaid · transactions import into the ledger" />
+
+      <div style={{ padding: "18px 24px", borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
+        <Primary onClick={connect} style={{ opacity: busy === "connect" ? 0.7 : 1 }}>
+          {busy === "connect" ? "Opening your bank…" : "Connect a bank account"}
+        </Primary>
+        {active.length ? (
+          <TextButton onClick={sync}>{busy === "sync" ? "Syncing…" : "Sync now"}</TextButton>
+        ) : null}
+        <span style={{ fontSize: 13, color: color.inkQuaternary }}>
+          Credentials are entered with your bank through Plaid — they never touch Unity Grid.
+        </span>
+      </div>
+
+      {note ? (
+        <div style={{ padding: "12px 24px", borderBottom: `1px solid ${color.hairlineSoft}`, fontSize: 14, color: color.accent }}>{note}</div>
+      ) : null}
+      {error ? (
+        <div style={{ padding: "12px 24px", borderBottom: `1px solid ${color.hairlineSoft}` }}><ErrorLine>{error}</ErrorLine></div>
+      ) : null}
+
+      {s.bankAccounts.length === 0 ? (
+        <Empty>
+          No bank account linked yet. Connect the association&rsquo;s operating account and every
+          transaction lands in the ledger on its own — categorized, deduplicated and stamped.
+        </Empty>
+      ) : s.bankAccounts.map((b) => (
+        <React.Fragment key={b.id}>
+          <Row>
+            <RowMain label={`${b.institution || b.name}${b.mask ? ` ····${b.mask}` : ""}`}
+              detail={`${b.name} · ${b.type}`} />
+            <Mono size={15}>{b.balance}</Mono>
+            <Mono size={12} style={{ color: color.inkQuaternary }}>
+              {b.lastSync === "—" ? "Never synced" : `Synced ${b.lastSync}`}
+            </Mono>
+            <Status tone={b.status === "active" ? "positive" : "neutral"}>
+              {b.status === "active" ? "Active" : "Disconnected"}
+            </Status>
+            {b.status === "active" ? (
+              <TextButton tone="destructive" onClick={() => setConfirmDisconnect(b.id)}>Disconnect…</TextButton>
+            ) : <span />}
+          </Row>
+          {confirmDisconnect === b.id ? (
+            <ConfirmBar
+              text={`Disconnect ${b.institution || b.name}${b.mask ? ` ····${b.mask}` : ""}? New transactions stop importing; everything already in the ledger stays.`}
+              confirmLabel="Disconnect account"
+              onCancel={() => setConfirmDisconnect(null)}
+              onConfirm={() => disconnect(b)} />
+          ) : null}
+        </React.Fragment>
+      ))}
+    </Card>
   );
 }
