@@ -1,0 +1,208 @@
+"use client";
+
+import React, { useState } from "react";
+
+import { useResident } from "@/lib/resident-portal/store";
+import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
+import type { Thread } from "@/lib/resident-portal/types";
+import {
+  Area, Card, CardHead, Chip, Empty, ErrorLine, Field, FieldGrid, Input, Mono,
+  PageTitle, Pill, Primary, Select, Status, TextButton,
+} from "@/components/admin/ui";
+
+const FILTERS = ["All", "Unread", "Office", "Committees"];
+
+const RECIPIENTS = [
+  "Management office", "Billing", "Architectural Committee", "Board liaison",
+];
+
+export default function Messages() {
+  const s = useResident();
+  const [filter, setFilter] = useState("All");
+  const [threadId, setThreadId] = useState<string | null>(null);
+  const [composing, setComposing] = useState(false);
+  const [reply, setReply] = useState("");
+  const [msgTo, setMsgTo] = useState(RECIPIENTS[0]);
+  const [msgSubject, setMsgSubject] = useState("");
+  const [msgBody, setMsgBody] = useState("");
+  const [msgError, setMsgError] = useState("");
+
+  const visible = s.threads.filter((t) => {
+    if (filter === "Unread") return t.unread;
+    if (filter === "Office") return t.party === "Management office" || t.party === "Billing";
+    if (filter === "Committees") return t.party.includes("Committee") || t.party === "Board liaison";
+    return true;
+  });
+
+  const thread = s.threads.find((t) => t.id === threadId) ?? visible[0] ?? s.threads[0] ?? null;
+
+  function openThread(t: Thread) {
+    setThreadId(t.id);
+    setComposing(false);
+    setReply("");
+    if (t.unread) {
+      s.setThreads((prev) => prev.map((x) => (x.id === t.id ? { ...x, unread: false } : x)));
+    }
+  }
+
+  function sendReply() {
+    if (!thread || !reply.trim()) return;
+    const text = reply.trim();
+    setReply("");
+    s.setThreads((prev) =>
+      prev.map((t) =>
+        t.id === thread.id
+          ? {
+              ...t,
+              status: "Open" as const,
+              date: "Today",
+              messages: [...t.messages, { id: s.uid("m"), from: "You", mine: true, time: s.stamp(), body: text }],
+            }
+          : t,
+      ),
+    );
+  }
+
+  function sendNew() {
+    if (!msgSubject.trim() || !msgBody.trim()) return setMsgError("Add a subject and a message.");
+    const id = s.uid("t");
+    const created: Thread = {
+      id,
+      party: msgTo,
+      subject: msgSubject.trim(),
+      date: "Today",
+      unread: false,
+      status: "Open",
+      messages: [{ id: s.uid("m"), from: "You", mine: true, time: s.stamp(), body: msgBody.trim() }],
+    };
+    s.setThreads((prev) => [created, ...prev]);
+    setThreadId(id);
+    setComposing(false);
+    setMsgSubject(""); setMsgBody(""); setMsgError("");
+  }
+
+  return (
+    <>
+      <PageTitle title="Messages" lede="Threaded conversations with the office, billing and the committees." />
+
+      <Card>
+        <div style={{ padding: `16px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+          <Pill onClick={() => { setComposing(true); setMsgError(""); }}>New message</Pill>
+          {FILTERS.map((f) => (
+            <Chip key={f} size="sm" on={f === filter} onClick={() => setFilter(f)}>{f}</Chip>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "stretch" }}>
+          {/* Thread list */}
+          <div style={{ flex: "1 1 260px", minWidth: 0, borderRight: `1px solid ${color.hairlineSoft}` }}>
+            {visible.length === 0 ? (
+              <Empty>
+                {s.threads.length === 0
+                  ? "No conversations yet. Start one with “New message” — the office answers within one business day."
+                  : "Nothing matches that filter."}
+              </Empty>
+            ) : (
+              visible.map((t) => {
+                const active = thread?.id === t.id && !composing;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => openThread(t)}
+                    style={{
+                      display: "grid", gap: 3, width: "100%", textAlign: "left", font: "inherit",
+                      border: "none", borderBottom: `1px solid ${color.hairlineSoft}`,
+                      borderLeft: `3px solid ${t.unread ? "oklch(0.55 0.06 155)" : "transparent"}`,
+                      background: active ? "oklch(0.96 0.012 148)" : color.surface,
+                      padding: "14px 16px", cursor: "pointer",
+                    }}
+                  >
+                    <span style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                      <span style={{ fontSize: 13, color: color.inkTertiary }}>{t.party}</span>
+                      <Mono size={12} style={{ color: color.inkQuaternary }}>{t.date}</Mono>
+                    </span>
+                    <span style={{ fontSize: 15, fontWeight: t.unread ? 600 : 500 }}>{t.subject}</span>
+                    <span style={{ fontSize: 13, color: color.inkQuaternary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {t.messages[t.messages.length - 1]?.body}
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {/* Conversation / composer */}
+          <div style={{ flex: "2 1 340px", minWidth: 0, display: "grid", alignContent: "start" }}>
+            {composing ? (
+              <div style={{ padding: pad.card, display: "grid", gap: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+                  <span style={{ fontSize: 16, fontWeight: 600 }}>New message</span>
+                  <TextButton tone="muted" onClick={() => setComposing(false)}>Cancel</TextButton>
+                </div>
+                <FieldGrid>
+                  <Field label="To">
+                    <Select value={msgTo} onChange={setMsgTo} options={RECIPIENTS.map((r) => ({ id: r, label: r }))} />
+                  </Field>
+                  <Field label="Subject">
+                    <Input value={msgSubject} onChange={setMsgSubject} placeholder="What's it about?" />
+                  </Field>
+                </FieldGrid>
+                <Field label="Message">
+                  <Area value={msgBody} onChange={setMsgBody} rows={4} placeholder="Write your message…" />
+                </Field>
+                {msgError ? <ErrorLine>{msgError}</ErrorLine> : null}
+                <Primary onClick={sendNew} style={{ justifySelf: "start" }}>Send</Primary>
+              </div>
+            ) : !thread ? (
+              <Empty>Select a conversation, or start a new one.</Empty>
+            ) : (
+              <>
+                <CardHead
+                  title={thread.subject}
+                  meta={`${thread.party} · ${thread.messages.length} message${thread.messages.length === 1 ? "" : "s"} · last activity ${thread.date}`}
+                >
+                  <Status tone={thread.status === "Open" ? "positive" : "neutral"}>{thread.status}</Status>
+                </CardHead>
+                <div style={{ padding: pad.card, display: "grid", gap: 14 }}>
+                  {thread.messages.map((m) => (
+                    <div key={m.id} style={{ display: "grid", gap: 4, justifyItems: m.mine ? "end" : "start" }}>
+                      <span style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: m.mine ? "oklch(0.4 0.05 155)" : color.inkSecondary }}>
+                          {m.from}
+                        </span>
+                        <Mono size={11} style={{ color: color.inkQuaternary }}>{m.time}</Mono>
+                      </span>
+                      <div
+                        style={{
+                          maxWidth: "min(520px, 100%)",
+                          background: m.mine ? color.accentTint : color.surfaceSunken,
+                          border: `1px solid ${m.mine ? color.accentTintBorder : "oklch(0.92 0.008 140)"}`,
+                          borderRadius: radius.xl,
+                          padding: "12px 16px",
+                          fontSize: 15,
+                          lineHeight: 1.55,
+                        }}
+                      >
+                        {m.body}
+                      </div>
+                      {m.attachment ? (
+                        <span style={{ fontFamily: font.mono, fontSize: 12, border: `1px solid ${color.borderInput}`, borderRadius: 6, padding: "5px 10px", color: color.inkSecondary }}>
+                          {m.attachment}
+                        </span>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ padding: pad.card, borderTop: `1px solid ${color.hairlineSoft}`, display: "grid", gap: 10 }}>
+                  <Area value={reply} onChange={setReply} rows={2} placeholder="Write a reply…" />
+                  <Primary onClick={sendReply} style={{ justifySelf: "start", padding: "10px 22px" }}>Reply</Primary>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </Card>
+    </>
+  );
+}

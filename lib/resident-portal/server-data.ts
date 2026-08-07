@@ -1,0 +1,501 @@
+import "server-only";
+
+import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase/server";
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import type {
+  Announcement, ComplianceNotice, DocItem, EventItem, LedgerLine, MaintReq,
+  MaintStatus, NotifyPrefs, PaymentRecord, Property, ResArcApp, Reservation,
+} from "./types";
+import { DEFAULT_NOTIFY } from "./types";
+
+/**
+ * Reads the signed-in resident's records. Every query is scoped to the
+ * resident — their profile id, their lot, their email — and read with the
+ * service client server-side, so RLS policies written for the admin surface
+ * don't silently blank a resident's own data.
+ *
+ * Missing tables resolve to empty collections: an empty section is honest,
+ * invented rows are not.
+ */
+
+export type ResidentData = {
+  property: Property;
+  ledger: LedgerLine[];
+  payments: PaymentRecord[];
+  requests: MaintReq[];
+  arcApps: ResArcApp[];
+  notices: ComplianceNotice[];
+  reservations: Reservation[];
+  docs: DocItem[];
+  events: EventItem[];
+  announcements: Announcement[];
+  notify: NotifyPrefs;
+  smsOptIn: boolean;
+};
+
+const NO_PROPERTY: Property = {
+  id: "none",
+  name: "Unity Grid",
+  address: "No property linked yet",
+  account: "",
+  balance: "",
+  balanceCents: null,
+  due: "",
+  cadence: "",
+  alert: "",
+};
+
+const EMPTY: ResidentData = {
+  property: NO_PROPERTY,
+  ledger: [],
+  payments: [],
+  requests: [],
+  arcApps: [],
+  notices: [],
+  reservations: [],
+  docs: [],
+  events: [],
+  announcements: [],
+  notify: DEFAULT_NOTIFY,
+  smsOptIn: false,
+};
+
+const usdExact = (cents: number) =>
+  (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+
+const shortDate = (iso: string | null | undefined) =>
+  iso
+    ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : "—";
+
+const longDate = (d: Date) =>
+  d.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+
+const kb = (bytes: number | null | undefined) => {
+  if (!bytes || bytes <= 0) return "";
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+};
+
+/** work_orders.status → the resident-facing ladder. */
+function toMaintStatus(s: string): MaintStatus {
+  if (s === "completed" || s === "cancelled") return "Closed";
+  if (s === "in_progress") return "In progress";
+  if (s === "assigned" || s === "pending") return "Scheduled";
+  return "Received";
+}
+
+/** Community slug → display name (the lots roster stores slugs). */
+function communityName(slug: string | null): string {
+  if (!slug) return "Unity Grid";
+  return slug
+    .split("-")
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
+const CADENCE: Record<string, string> = {
+  monthly: "Monthly",
+  quarterly: "Quarterly",
+  annual: "Annual",
+  custom: "Custom",
+};
+
+/** Next due date from a frequency + day-of-month rule. */
+function nextDue(frequency: string | null, dueDay: number | null): string {
+  if (!frequency || !CADENCE[frequency]) return "";
+  const day = dueDay && dueDay >= 1 && dueDay <= 28 ? dueDay : 1;
+  const now = new Date();
+  const candidate = (m: number) => new Date(now.getFullYear(), m, day);
+  if (frequency === "monthly") {
+    const d = candidate(now.getMonth());
+    return longDate(d >= now ? d : candidate(now.getMonth() + 1));
+  }
+  if (frequency === "quarterly") {
+    for (const m of [0, 3, 6, 9, 12]) {
+      const d = candidate(m);
+      if (d >= now) return longDate(d);
+    }
+    return longDate(candidate(12));
+  }
+  if (frequency === "annual") {
+    const d = candidate(0);
+    return longDate(d >= now ? d : new Date(now.getFullYear() + 1, 0, day));
+  }
+  return "";
+}
+
+async function safe<T>(fallback: T, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch {
+    // Missing table, missing column, network — the section simply loads empty.
+    return fallback;
+  }
+}
+
+export async function loadResidentData(user: {
+  id: string;
+  email?: string | null;
+  displayName?: string | null;
+}): Promise<ResidentData> {
+  if (!isSupabaseConfigured()) return EMPTY;
+
+  const db = createServiceClient();
+  const name = user.displayName?.trim() ?? "";
+  const email = user.email?.trim() ?? "";
+
+  /* ─── Property: the resident's lot + billing configuration ────────── */
+
+  const lot = await safe(null as null | {
+    id: string;
+    community: string | null;
+    lot_number: string | null;
+    street_number: string | null;
+    street_name: string | null;
+  }, async () => {
+    const { data, error } = await db
+      .from("lots")
+      .select("id, community, lot_number, street_number, street_name")
+      .eq("owner_profile_id", user.id)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  });
+
+  const billing = await safe(null as null | {
+    hoa_fee_amount_cents: number | null;
+    hoa_due_day_of_month: number | null;
+    dues_frequency: string | null;
+  }, async () => {
+    const { data, error } = await db
+      .from("hoa_dashboard_metrics")
+      .select("hoa_fee_amount_cents, hoa_due_day_of_month, dues_frequency")
+      .eq("id", 1)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  });
+
+  const streetLine = lot
+    ? `${lot.street_number ?? ""} ${lot.street_name ?? ""}`.trim()
+    : "";
+
+  const property: Property = lot
+    ? {
+        id: lot.id,
+        name: communityName(lot.community),
+        address:
+          streetLine + (lot.lot_number ? ` · Lot ${lot.lot_number}` : ""),
+        account: lot.lot_number ? `Lot ${lot.lot_number}` : "",
+        balance:
+          billing?.hoa_fee_amount_cents != null
+            ? usdExact(billing.hoa_fee_amount_cents)
+            : "",
+        balanceCents: billing?.hoa_fee_amount_cents ?? null,
+        due: nextDue(
+          billing?.dues_frequency ?? null,
+          billing?.hoa_due_day_of_month ?? null,
+        ),
+        cadence: billing?.dues_frequency
+          ? CADENCE[billing.dues_frequency] ?? ""
+          : "",
+        alert: "",
+      }
+    : NO_PROPERTY;
+
+  /* ─── Ledger: association transactions linked to this lot ─────────── */
+
+  const ledger = await safe([] as LedgerLine[], async () => {
+    if (!lot) return [];
+    const { data, error } = await db
+      .from("finance_transactions")
+      .select("id, occurred_on, kind, description, amount_cents")
+      .eq("lot_id", lot.id)
+      .order("occurred_on", { ascending: false })
+      .limit(60);
+    if (error) throw error;
+    return (data ?? []).map((r) => ({
+      id: r.id as string,
+      date: shortDate(r.occurred_on as string),
+      label: (r.description as string) ?? "",
+      amount:
+        r.kind === "income"
+          ? `−${usdExact(Number(r.amount_cents))}`
+          : usdExact(Number(r.amount_cents)),
+      // Running balances need the billing ledger; until charges post per
+      // lot there is nothing honest to show here.
+      balance: "—",
+      credit: r.kind === "income",
+    }));
+  });
+
+  /* ─── The resident's own portal payments ──────────────────────────── */
+
+  const payments = await safe([] as PaymentRecord[], async () => {
+    const { data, error } = await db
+      .from("resident_payments")
+      .select("id, amount_cents, status, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(24);
+    if (error) throw error;
+    return (data ?? []).map((r) => ({
+      id: r.id as string,
+      date: shortDate(r.created_at as string),
+      label: "Portal payment",
+      amount: usdExact(Number(r.amount_cents)),
+      status: (r.status as string) ?? "pending",
+    }));
+  });
+
+  /* ─── Maintenance requests reported by this resident ──────────────── */
+
+  const requests = await safe([] as MaintReq[], async () => {
+    if (!email) return [];
+    const { data, error } = await db
+      .from("work_orders")
+      .select("id, work_order_number, title, location, status, created_at")
+      .ilike("reported_by_email", email)
+      .order("created_at", { ascending: false })
+      .limit(40);
+    if (error) throw error;
+    return (data ?? []).map((r) => {
+      const status = toMaintStatus((r.status as string) ?? "open");
+      return {
+        id: r.id as string,
+        ref: (r.work_order_number as string) ?? "",
+        title: (r.title as string) ?? "",
+        detail: [
+          r.location ? `At ${r.location}` : "",
+          `Reported ${shortDate(r.created_at as string)}`,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        status,
+        open: status !== "Closed",
+      };
+    });
+  });
+
+  /* ─── Architectural applications ──────────────────────────────────── */
+
+  const arcApps = await safe([] as ResArcApp[], async () => {
+    if (!name && !streetLine) return [];
+    let q = db
+      .from("arc_applications")
+      .select("id, reference, title, submitted_on, due_on, status, decision_note")
+      .order("submitted_on", { ascending: false })
+      .limit(40);
+    if (name && streetLine) {
+      q = q.or(`owner_name.ilike.%${name}%,address.ilike.%${streetLine}%`);
+    } else if (name) {
+      q = q.ilike("owner_name", `%${name}%`);
+    } else {
+      q = q.ilike("address", `%${streetLine}%`);
+    }
+    const { data, error } = await q;
+    if (error) throw error;
+    return (data ?? []).map((r) => {
+      const status = (r.status as string) ?? "Awaiting decision";
+      const ok = /approved|completed/i.test(status);
+      return {
+        id: r.id as string,
+        ref: (r.reference as string) ?? "",
+        title: (r.title as string) ?? "",
+        detail: [
+          `Submitted ${shortDate(r.submitted_on as string)}`,
+          r.due_on ? `answer due by ${shortDate(r.due_on as string)}` : "",
+          (r.decision_note as string) ?? "",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        status,
+        ok,
+      };
+    });
+  });
+
+  /* ─── Compliance: violations against this property ────────────────── */
+
+  const notices = await safe([] as ComplianceNotice[], async () => {
+    if (!streetLine) return [];
+    const { data, error } = await db
+      .from("violations")
+      .select("id, violation_type, opened_on, status, cure_days, notes")
+      .ilike("address", `%${streetLine}%`)
+      .order("opened_on", { ascending: false })
+      .limit(40);
+    if (error) throw error;
+    return (data ?? []).map((r) => {
+      const status = (r.status as string) ?? "Reported";
+      const ok = /resolved|clear|closed/i.test(status);
+      const cure = r.cure_days ? `${r.cure_days}-day cure period` : "";
+      return {
+        id: r.id as string,
+        date: shortDate(r.opened_on as string),
+        title: (r.violation_type as string) ?? "",
+        detail: [cure, (r.notes as string) ?? ""].filter(Boolean).join(" · "),
+        status,
+        ok,
+      };
+    });
+  });
+
+  /* ─── Amenity reservations in this resident's name ────────────────── */
+
+  const reservations = await safe([] as Reservation[], async () => {
+    if (!name) return [];
+    const { data, error } = await db
+      .from("bookings")
+      .select("id, amenity, starts_at, ends_at, event_type, deposit_status, status")
+      .ilike("resident_name", `%${name}%`)
+      .order("starts_at", { ascending: false })
+      .limit(24);
+    if (error) throw error;
+    return (data ?? []).map((r) => {
+      const t = (iso: string | null) =>
+        iso
+          ? new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+          : "";
+      return {
+        id: r.id as string,
+        date: shortDate(r.starts_at as string),
+        label: [
+          (r.amenity as string) ?? "",
+          [t(r.starts_at as string), t(r.ends_at as string | null)].filter(Boolean).join("–"),
+          (r.event_type as string) ?? "",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        status: (r.status as string) ?? "Requested",
+        deposit: (r.deposit_status as string) ?? "",
+      };
+    });
+  });
+
+  /* ─── Published documents residents may read ──────────────────────── */
+
+  const docs = await safe([] as DocItem[], async () => {
+    const { data, error } = await db
+      .from("documents")
+      .select(
+        "id, title, file_type, file_size_bytes, version, effective_date, access_level, is_archived, document_categories(name)",
+      )
+      .eq("is_archived", false)
+      .in("access_level", ["public", "resident"])
+      .order("uploaded_at", { ascending: false })
+      .limit(120);
+    if (error) throw error;
+    return (data ?? []).map((r) => {
+      const cat = (r.document_categories as { name?: string } | null)?.name ?? "General";
+      const type = ((r.file_type as string) ?? "").includes("pdf") ? "PDF" : "File";
+      return {
+        id: r.id as string,
+        title: (r.title as string) ?? "",
+        meta: [
+          type,
+          kb(r.file_size_bytes as number),
+          (r.version as string) ?? "",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        category: cat,
+      };
+    });
+  });
+
+  /* ─── Community events & announcements ────────────────────────────── */
+
+  const events = await safe([] as EventItem[], async () => {
+    const { data, error } = await db
+      .from("community_events")
+      .select("id, title, description, starts_at, location")
+      .eq("published", true)
+      .gte("starts_at", new Date().toISOString())
+      .order("starts_at", { ascending: true })
+      .limit(12);
+    if (error) throw error;
+    return (data ?? []).map((r) => ({
+      id: r.id as string,
+      date: shortDate(r.starts_at as string),
+      title: (r.title as string) ?? "",
+      detail: [
+        new Date(r.starts_at as string).toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+        }),
+        (r.location as string) ?? "",
+        (r.description as string) ?? "",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    }));
+  });
+
+  const announcements = await safe([] as Announcement[], async () => {
+    const { data, error } = await db
+      .from("announcements")
+      .select("id, title, body, published_at")
+      .eq("status", "published")
+      .order("published_at", { ascending: false })
+      .limit(12);
+    if (error) throw error;
+    return (data ?? []).map((r) => ({
+      id: r.id as string,
+      meta: shortDate(r.published_at as string),
+      title: (r.title as string) ?? "",
+      body: (r.body as string) ?? "",
+    }));
+  });
+
+  /* ─── Notification preferences ────────────────────────────────────── */
+
+  const prefs = await safe(
+    { notify: DEFAULT_NOTIFY, smsOptIn: false },
+    async () => {
+      const { data, error } = await db
+        .from("notification_preferences")
+        .select("announcements, maintenance_updates, billing_reminders")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return { notify: DEFAULT_NOTIFY, smsOptIn: false };
+      // The stored schema is three booleans; map them onto the richer matrix
+      // with email as the carrier until per-channel storage lands.
+      const on = (v: boolean) => ({ email: v, text: false });
+      return {
+        notify: {
+          billing: on(Boolean(data.billing_reminders)),
+          maintenance: on(Boolean(data.maintenance_updates)),
+          arc: on(true),
+          compliance: on(true),
+          community: on(Boolean(data.announcements)),
+          meetings: { email: false, text: false },
+        },
+        smsOptIn: false,
+      };
+    },
+  );
+
+  return {
+    property,
+    ledger,
+    payments,
+    requests,
+    arcApps,
+    notices,
+    reservations,
+    docs,
+    events,
+    announcements,
+    notify: prefs.notify,
+    smsOptIn: prefs.smsOptIn,
+  };
+}
+
+// Referenced so the import stays typed even though only types flow out today.
+export type { SupabaseClient };

@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { normalizeAdminNext } from "@/lib/admin/normalize-admin-next";
+import { normalizePortalNext } from "@/lib/resident-portal/normalize-next";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/keys";
 
 /** Supabase refreshes the session onto `from`; redirects must copy those Set-Cookie headers or loops/flashing occur. */
@@ -28,6 +29,9 @@ export async function updateSession(request: NextRequest) {
   const isAdminLogin =
     pathname === "/admin/login" || pathname.startsWith("/admin/login/");
   const isAdminArea = pathname.startsWith("/admin");
+  const isPortalLogin =
+    pathname === "/portal/login" || pathname.startsWith("/portal/login/");
+  const isPortalArea = pathname.startsWith("/portal");
 
   const url = getSupabaseUrl();
   const anonKey = getSupabaseAnonKey();
@@ -45,6 +49,16 @@ export async function updateSession(request: NextRequest) {
     }
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/admin/login";
+    redirectUrl.searchParams.set("error", "config");
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  if (isPortalArea && !isPortalLogin && (!url || !anonKey)) {
+    if (allowUnconfiguredDevAccess) {
+      return NextResponse.next({ request });
+    }
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/portal/login";
     redirectUrl.searchParams.set("error", "config");
     return NextResponse.redirect(redirectUrl);
   }
@@ -83,6 +97,15 @@ export async function updateSession(request: NextRequest) {
         supabaseResponse,
         "/admin/login",
         { next: normalizeAdminNext(pathname) },
+      );
+    }
+
+    if (isPortalArea && !isPortalLogin && !user) {
+      return redirectPreservingSupabaseCookies(
+        request,
+        supabaseResponse,
+        "/portal/login",
+        { next: normalizePortalNext(pathname) },
       );
     }
 

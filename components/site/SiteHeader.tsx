@@ -65,22 +65,18 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden flex-none items-center gap-3.5 md:flex">
-          {/* Sign-in is disabled until resident auth exists. */}
-          <span
-            aria-disabled
-            title="Resident sign-in isn’t available yet"
-            className="cursor-not-allowed whitespace-nowrap text-[15px] text-outline"
+          <Link
+            href="/portal/login"
+            className="whitespace-nowrap text-[15px] text-on-surface-variant hover:text-on-surface"
           >
             Sign in
-          </span>
-          {/* Disabled until the resident portal exists. */}
-          <span
-            aria-disabled
-            title="The resident portal isn’t available yet"
-            className="cursor-not-allowed whitespace-nowrap rounded-full bg-surface-container-high px-5 py-2.5 text-[15px] font-medium text-outline"
+          </Link>
+          <Link
+            href="/portal"
+            className="whitespace-nowrap rounded-full bg-secondary px-5 py-2.5 text-[15px] font-medium text-on-secondary hover:bg-secondary-hover"
           >
             Resident portal
-          </span>
+          </Link>
         </div>
 
         <button
@@ -129,12 +125,13 @@ export function SiteHeader() {
           <span className="mt-4 mb-1.5 font-label text-[11px] uppercase tracking-[0.12em] text-outline">
             Your account
           </span>
-          <span
-            aria-disabled
-            className="min-h-11 cursor-not-allowed rounded-[9px] px-2.5 py-3 text-base text-outline"
+          <Link
+            href="/portal/login"
+            onClick={() => setNavOpen(false)}
+            className="min-h-11 rounded-[9px] px-2.5 py-3 text-base text-on-surface hover:bg-surface-container-high"
           >
             Sign in
-          </span>
+          </Link>
           <Link
             href="/payment"
             onClick={() => setNavOpen(false)}
