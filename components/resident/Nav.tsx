@@ -5,6 +5,7 @@ import React from "react";
 import { NAV, NAV_GROUPS } from "@/lib/resident-portal/nav";
 import { useResident } from "@/lib/resident-portal/store";
 import { color, font, radius } from "@/lib/admin-portal/tokens";
+import { NavIcon } from "@/components/admin/ui/NavIcon";
 
 function Badge({ children }: { children: React.ReactNode }) {
   return (
@@ -59,7 +60,10 @@ export function Sidebar() {
                   borderRadius: radius.md, padding: "10px 14px", cursor: "pointer",
                 }}
               >
-                <span style={{ fontWeight: on ? 600 : 400 }}>{n.label}</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                  <NavIcon id={n.id} />
+                  <span style={{ fontWeight: on ? 600 : 400 }}>{n.label}</span>
+                </span>
                 {badge ? <Badge>{badge}</Badge> : null}
               </button>
             );
@@ -130,7 +134,10 @@ export function MobileNav() {
                       borderRadius: radius.md, padding: "13px 14px", cursor: "pointer",
                     }}
                   >
-                    <span style={{ fontWeight: on ? 600 : 400 }}>{n.label}</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                      <NavIcon id={n.id} />
+                      <span style={{ fontWeight: on ? 600 : 400 }}>{n.label}</span>
+                    </span>
                     <span style={{ display: "flex", alignItems: "center", gap: 8, flex: "0 0 auto" }}>
                       {badge ? <Badge>{badge}</Badge> : null}
                       {on ? <span style={{ fontFamily: font.mono, fontSize: 12, color: "oklch(0.5 0.04 155)" }}>viewing</span> : null}

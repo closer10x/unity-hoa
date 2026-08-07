@@ -141,10 +141,54 @@ const PATHS: Record<string, React.ReactNode> = {
       <path d="M16 5.6a3.2 3.2 0 0 1 0 5.8M17.5 14.4A6.5 6.5 0 0 1 21.5 20" />
     </>
   ),
+
+  /* ── Resident portal ── */
+
+  // A home with a door — the resident's overview
+  overview: (
+    <>
+      <path d="M3.5 10.5 12 4l8.5 6.5" />
+      <path d="M6 12v8h12v-8" />
+      <path d="M10.5 20v-4.5h3V20" />
+    </>
+  ),
+  // Payment card
+  payments: (
+    <>
+      <rect x="3" y="6" width="18" height="13" rx="2.5" />
+      <path d="M3 10.5h18M6.5 15h4" />
+    </>
+  ),
+  // Clipboard with a check — notices cleared
+  compliance: (
+    <>
+      <rect x="5" y="4.5" width="14" height="17" rx="2" />
+      <path d="M9 4.5V3.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 3.5v1" />
+      <path d="M9 13.5l2 2 4-4" />
+    </>
+  ),
+  // Gate key
+  access: (
+    <>
+      <circle cx="8" cy="12" r="4.5" />
+      <path d="M12.5 12H21M18 12v3.5M15 12v2.5" />
+    </>
+  ),
+};
+
+/** Resident sections that share an admin icon's geometry. */
+const ALIAS: Record<string, string> = {
+  maintenance: "work",
+  architectural: "arc",
+  amenities: "bookings",
+  community: "portfolio",
+  messages: "comms",
+  documents: "docs",
+  account: "owners",
 };
 
 export function NavIcon({ id }: { id: string }) {
-  const d = PATHS[id];
+  const d = PATHS[id] ?? PATHS[ALIAS[id] ?? ""];
   if (!d) return null;
   return (
     <svg {...S} style={{ flex: "0 0 auto", opacity: 0.75 }}>
