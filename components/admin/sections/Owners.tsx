@@ -2,17 +2,46 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { emptyAddress, formatAddress, isAddressComplete } from "@/lib/admin-portal/address";
-import { getOwnerEditData, unlinkOwner, updateOwner } from "@/lib/admin-portal/owner-actions";
+import { getOwnerEditData, getOwnerPortalData, unlinkOwner, updateOwner } from "@/lib/admin-portal/owner-actions";
 import { useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color, radius } from "@/lib/admin-portal/tokens";
-import type { Address, Owner } from "@/lib/admin-portal/types";
+import type { Address, Owner, OwnerPortalData, PortalItem } from "@/lib/admin-portal/types";
 import {
-  AddDrawer, AddressFields, Card, Chip, ConfirmBar, Empty, ErrorLine,
+  AddDrawer, AddressFields, Card, Chip, ConfirmBar, Empty, ErrorLine, Eyebrow,
   Field, FieldGrid, FilterBar, Input, MailingAddress, Mono, PageTitle, Primary,
   Row, RowMain, Select, Status, TextButton,
 } from "../ui";
 
 const FILTERS = ["All", "Current", "Balance due", "Tenant on file"];
+
+/* What the resident registered portal-side, shown read-only in the drawer. */
+
+function portalTone(status: string): "neutral" | "positive" | "attention" | "critical" {
+  const s = status.toLowerCase();
+  if (/revoked|ended|denied|expired/.test(s)) return "critical";
+  if (/pending|scheduled|received|in progress/.test(s)) return "attention";
+  if (/active|registered|full access/.test(s)) return "positive";
+  return "neutral";
+}
+
+function PortalList({ title, items, empty }: { title: string; items: PortalItem[]; empty: string }) {
+  return (
+    <div style={{ display: "grid", gap: 8, alignContent: "start" }}>
+      <Eyebrow>{title}{items.length ? ` · ${items.length}` : ""}</Eyebrow>
+      {items.length === 0 ? (
+        <span style={{ fontSize: 14, color: color.inkQuaternary }}>{empty}</span>
+      ) : items.map((it) => (
+        <div key={it.id} style={{ display: "grid", gap: 2, paddingTop: 8, borderTop: `1px solid ${color.hairlineSoft}` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline", flexWrap: "wrap" }}>
+            <span style={{ fontSize: 14, fontWeight: 500 }}>{it.label}</span>
+            {it.status ? <Status tone={portalTone(it.status)}>{it.status}</Status> : null}
+          </div>
+          {it.detail ? <span style={{ fontSize: 13, color: color.inkTertiary }}>{it.detail}</span> : null}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function Owners() {
   const s = useStore();
@@ -62,6 +91,8 @@ export default function Owners() {
   const [editCurrentEmail, setEditCurrentEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [unlinkPending, setUnlinkPending] = useState(false);
+  const [portal, setPortal] = useState<OwnerPortalData | null>(null);
+  const [portalError, setPortalError] = useState("");
 
   async function openEdit(o: Owner) {
     if (editId === o.id) return closeEdit();
@@ -69,8 +100,15 @@ export default function Owners() {
     setEditLoading(true);
     setEditError("");
     setUnlinkPending(false);
-    const res = await getOwnerEditData(o.id);
+    setPortal(null);
+    setPortalError("");
+    const [res, portalRes] = await Promise.all([
+      getOwnerEditData(o.id),
+      getOwnerPortalData(o.id),
+    ]);
     setEditLoading(false);
+    if (portalRes.ok) setPortal(portalRes.data);
+    else setPortalError(portalRes.error);
     if (!res.ok) return setEditError(res.error);
     setEditLinked(res.linked);
     setEditName(res.name);
@@ -83,6 +121,8 @@ export default function Owners() {
     setEditId(null);
     setEditError("");
     setUnlinkPending(false);
+    setPortal(null);
+    setPortalError("");
   }
 
   async function saveEdit(o: Owner) {
@@ -288,6 +328,25 @@ export default function Owners() {
                             Unlink owner from this lot
                           </TextButton>
                         ) : null}
+                      </div>
+
+                      <div style={{ borderTop: `1px solid ${color.hairlineSoft}`, paddingTop: 18, display: "grid", gap: 16 }}>
+                        <span style={{ fontSize: 14, color: color.inkSecondary }}>
+                          From their resident portal — read-only. The resident manages these
+                          from their own account.
+                        </span>
+                        {portalError ? <ErrorLine>{portalError}</ErrorLine> : portal ? (
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "18px 28px" }}>
+                            <PortalList title="Vehicles" items={portal.vehicles} empty="No vehicles registered." />
+                            <PortalList title="Guest passes" items={portal.guestPasses} empty="No active passes." />
+                            <PortalList title="Pets" items={portal.pets} empty="No pets registered." />
+                            <PortalList title="Household" items={portal.household} empty="No household members added." />
+                            <PortalList title="Leases" items={portal.leases} empty="No lease on file." />
+                            <PortalList title="Open requests" items={portal.openRequests} empty="No open requests." />
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: 14, color: color.inkTertiary }}>Loading…</span>
+                        )}
                       </div>
                     </>
                   )}

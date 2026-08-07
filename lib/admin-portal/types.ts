@@ -13,6 +13,15 @@ export interface Owner {
   flag: "current" | "delinquent" | "tenant"; account: string;
 }
 
+/** One line of what a resident registered in their own portal, pre-formatted
+    for the read-only summary inside the Owners edit drawer. */
+export interface PortalItem { id: string; label: string; detail: string; status: string; }
+
+export interface OwnerPortalData {
+  vehicles: PortalItem[]; guestPasses: PortalItem[]; pets: PortalItem[];
+  household: PortalItem[]; leases: PortalItem[]; openRequests: PortalItem[];
+}
+
 export interface WorkOrder {
   id: string; ref: string; title: string; detail: string;
   assignee: string; status: WorkStatus;

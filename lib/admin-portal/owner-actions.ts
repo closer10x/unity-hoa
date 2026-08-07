@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdminUser } from "@/lib/auth/require-admin";
 import { requireServiceSupabase } from "@/lib/supabase/service";
 
-import type { Owner } from "./types";
+import type { Owner, OwnerPortalData, PortalItem } from "./types";
 
 /**
  * Editing a resident touches the profiles row (name, phone), the auth user
@@ -105,6 +105,150 @@ export async function getOwnerEditData(
       phone: profile?.phone ?? "",
       linked: true,
     };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Something went wrong.",
+    };
+  }
+}
+
+/* ----- read-only portal summary for the drawer ----- */
+
+const EMPTY_PORTAL: OwnerPortalData = {
+  vehicles: [], guestPasses: [], pets: [], household: [], leases: [], openRequests: [],
+};
+
+function shortDate(iso: unknown): string {
+  if (typeof iso !== "string" || !iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function cap(s: unknown): string {
+  const t = typeof s === "string" ? s.trim() : "";
+  return t ? t[0].toUpperCase() + t.slice(1) : "";
+}
+
+/**
+ * Everything the resident registered through their own portal — vehicles,
+ * guest passes, pets, household members, leases and the requests they've
+ * filed — scoped to the lot's linked owner. Read-only: the resident owns
+ * these records; staff see them but edit nothing here.
+ */
+export async function getOwnerPortalData(
+  lotId: string,
+): Promise<{ ok: true; data: OwnerPortalData } | Fail> {
+  try {
+    const { db } = await officeContext();
+    const { data: lot, error } = await db
+      .from("lots")
+      .select("owner_profile_id")
+      .eq("id", lotId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!lot) return { ok: false, error: "That lot no longer exists." };
+    const pid = lot.owner_profile_id as string | null;
+    if (!pid) return { ok: true, data: EMPTY_PORTAL };
+
+    // Requests are matched the same way the resident portal loads them:
+    // by the sign-in email on the work order.
+    let email = "";
+    try {
+      const { data } = await db.auth.admin.getUserById(pid);
+      email = data.user?.email ?? "";
+    } catch {
+      // No auth account yet — the resident can't have filed anything.
+    }
+
+    const [vehicles, passes, pets, household, leases, requests] = await Promise.all([
+      db.from("resident_vehicles")
+        .select("id, description, plate, tag_status, created_at")
+        .eq("user_id", pid).order("created_at", { ascending: false }),
+      db.from("guest_passes")
+        .select("id, guest_name, dates, plate, code, created_at")
+        .eq("user_id", pid).is("revoked_at", null)
+        .order("created_at", { ascending: false }),
+      db.from("resident_pets")
+        .select("id, name, pet_type, breed, weight_lb, color, rabies_tag, vet, status, created_at")
+        .eq("user_id", pid).order("created_at", { ascending: false }),
+      db.from("household_members")
+        .select("id, name, relationship, access_level, email, phone, created_at")
+        .eq("user_id", pid).order("created_at", { ascending: true }),
+      db.from("leases")
+        .select("id, tenant_names, contact, term, occupants, status, created_at")
+        .eq("user_id", pid).order("created_at", { ascending: false }),
+      email
+        ? db.from("work_orders")
+            .select("id, work_order_number, title, location, status, created_at")
+            .ilike("reported_by_email", email)
+            .not("status", "in", "(completed,cancelled)")
+            .order("created_at", { ascending: false })
+            .limit(20)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+    for (const r of [vehicles, passes, pets, household, leases, requests]) {
+      if (r.error) throw new Error(r.error.message);
+    }
+
+    type R = Record<string, unknown>;
+    const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+
+    const data: OwnerPortalData = {
+      vehicles: ((vehicles.data ?? []) as R[]).map((v): PortalItem => ({
+        id: v.id as string,
+        label: [str(v.description), str(v.plate)].filter(Boolean).join(" · "),
+        detail: `Registered ${shortDate(v.created_at)}`,
+        status: str(v.tag_status) === "pending" ? "Tag pending" : cap(v.tag_status),
+      })),
+      guestPasses: ((passes.data ?? []) as R[]).map((g): PortalItem => ({
+        id: g.id as string,
+        label: str(g.guest_name),
+        detail: [str(g.dates), str(g.plate), str(g.code) ? `code ${str(g.code)}` : ""]
+          .filter(Boolean).join(" · "),
+        status: "Active",
+      })),
+      pets: ((pets.data ?? []) as R[]).map((p): PortalItem => ({
+        id: p.id as string,
+        label: str(p.name),
+        detail: [
+          cap(p.pet_type), str(p.breed),
+          str(p.weight_lb) ? `${str(p.weight_lb)} lb` : "", str(p.color),
+          str(p.rabies_tag) ? `rabies tag ${str(p.rabies_tag)}` : "",
+          str(p.vet) ? `vet: ${str(p.vet)}` : "",
+        ].filter(Boolean).join(" · "),
+        status: cap(p.status) || "Registered",
+      })),
+      household: ((household.data ?? []) as R[]).map((h): PortalItem => ({
+        id: h.id as string,
+        label: str(h.name),
+        detail: [str(h.relationship), str(h.email), str(h.phone)].filter(Boolean).join(" · "),
+        status: str(h.access_level) ? `${cap(h.access_level)} access` : "",
+      })),
+      leases: ((leases.data ?? []) as R[]).map((l): PortalItem => ({
+        id: l.id as string,
+        label: str(l.tenant_names),
+        detail: [str(l.term), str(l.occupants), str(l.contact)].filter(Boolean).join(" · "),
+        status: cap(l.status) || "Active",
+      })),
+      openRequests: ((requests.data ?? []) as R[]).map((w): PortalItem => {
+        const s = str(w.status);
+        return {
+          id: w.id as string,
+          label: str(w.title),
+          detail: [
+            str(w.work_order_number),
+            str(w.location) ? `at ${str(w.location)}` : "",
+            `reported ${shortDate(w.created_at)}`,
+          ].filter(Boolean).join(" · "),
+          status: s === "in_progress" ? "In progress"
+            : s === "assigned" || s === "pending" ? "Scheduled"
+            : "Received",
+        };
+      }),
+    };
+    return { ok: true, data };
   } catch (e) {
     return {
       ok: false,
