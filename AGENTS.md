@@ -39,6 +39,15 @@ every list has search + filter chips; addresses are always structured fields,
 never free text; say "HOA fee" (never "assessment", except "Special
 assessment"); portfolios are never deleted.
 
+One more that is a rule, not a nicety:
+
+- **A field employee always has a job board.** Creating a Maintenance tech or
+  an Inspector mints their `/crew/<token>` link in the same call
+  (`ensureCrewLink`), and the link goes out in their welcome text. A tech must
+  never exist without somewhere to see their work, and nobody should have to
+  remember a second step. The helper is idempotent, so call it freely from any
+  new path that creates field staff.
+
 Two more that are easy to miss:
 
 - **No icons and no emoji, anywhere, by design.** Status is carried by color and
