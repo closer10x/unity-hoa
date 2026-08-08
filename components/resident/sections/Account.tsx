@@ -43,6 +43,35 @@ export default function Account() {
   const [personEmail, setPersonEmail] = useState("");
   const [personPhone, setPersonPhone] = useState("");
   const [personAccess, setPersonAccess] = useState("view");
+  /* Per-member invite state, keyed by member id. Household lives in client
+     state (no persistence layer yet), so this rides alongside it. */
+  type Invite = { email: string; access: string; status: "sending" | "sent" | "failed"; error?: string };
+  const [invites, setInvites] = useState<Record<string, Invite>>({});
+
+  async function sendInvite(memberId: string, name: string, email: string, access: string) {
+    setInvites((prev) => ({ ...prev, [memberId]: { email, access, status: "sending" } }));
+    try {
+      const res = await fetch("/api/household/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          access,
+          property: s.property.mailingAddress || s.property.address,
+        }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      setInvites((prev) => ({
+        ...prev,
+        [memberId]: res.ok && data.ok
+          ? { email, access, status: "sent" }
+          : { email, access, status: "failed", error: data.error ?? "Send failed" },
+      }));
+    } catch {
+      setInvites((prev) => ({ ...prev, [memberId]: { email, access, status: "failed", error: "Network error" } }));
+    }
+  }
 
   // Pets
   const [petOpen, setPetOpen] = useState(false);
@@ -78,15 +107,22 @@ export default function Account() {
       return setPersonError("Add an email or a mobile — the portal invite needs one.");
     const contact = [personEmail.trim(), personPhone.trim()].filter(Boolean).join(" · ");
     const accessLabel = ACCESS_LEVELS.find((a) => a.id === personAccess)?.label ?? "";
+    const accessShort = accessLabel.split(" — ")[0];
     const person: HouseholdMember = {
       id: s.uid("hh"),
       name: personName.trim(),
-      role: `${personRole} · ${accessLabel.split(" — ")[0]}`,
+      role: `${personRole} · ${accessShort}`,
       contact,
     };
     s.setHousehold((prev) => [...prev, person]);
+    // Email the new member their access instructions, when we have an address.
+    const inviteEmail = personEmail.trim();
+    if (inviteEmail && personAccess !== "none") {
+      void sendInvite(person.id, person.name, inviteEmail, accessShort);
+    }
     setPersonOpen(false);
     setPersonError(""); setPersonName(""); setPersonEmail(""); setPersonPhone("");
+    setPersonAccess("view"); setPersonRole(RELATIONSHIPS[0]);
   }
 
   function savePet() {
@@ -220,20 +256,50 @@ export default function Account() {
         </AddDrawer>
 
         <CardHead title="Household members" />
-        {s.household.map((h) => (
-          <Row key={h.id}>
-            <RowMain label={h.name} detail={h.role} />
-            <Mono size={13} style={{ color: color.neutral }}>{h.contact || "No contact details on file"}</Mono>
-            {h.locked ? (
-              <Mono size={12} style={{ color: color.inkQuaternary }}>Owner of record</Mono>
-            ) : (
-              <TextButton tone="destructive"
-                onClick={() => s.setHousehold((prev) => prev.filter((x) => x.id !== h.id))}>
-                Remove
-              </TextButton>
-            )}
-          </Row>
-        ))}
+        {s.household.map((h) => {
+          const inv = invites[h.id];
+          const emailFromContact = h.contact.split("·")[0].trim();
+          const canInvite = !h.locked && /@/.test(emailFromContact);
+          return (
+            <Row key={h.id}>
+              <RowMain label={h.name} detail={h.role} />
+              <Mono size={13} style={{ color: color.neutral }}>{h.contact || "No contact details on file"}</Mono>
+              {inv ? (
+                <Status tone={inv.status === "sent" ? "positive" : inv.status === "failed" ? "critical" : "neutral"}>
+                  {inv.status === "sending" ? "Sending invite…" : inv.status === "sent" ? "Invite sent" : "Invite failed"}
+                </Status>
+              ) : h.locked ? (
+                <Mono size={12} style={{ color: color.inkQuaternary }}>Owner of record</Mono>
+              ) : (
+                <span />
+              )}
+              {h.locked ? (
+                <span />
+              ) : (
+                <span style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                  {canInvite && inv?.status !== "sending" ? (
+                    <TextButton
+                      onClick={() => sendInvite(h.id, h.name, emailFromContact, (inv?.access ?? h.role.split("·")[1]?.trim() ?? "Portal access"))}>
+                      {inv ? "Resend invite" : "Send invite"}
+                    </TextButton>
+                  ) : null}
+                  <TextButton tone="destructive"
+                    onClick={() => s.setHousehold((prev) => prev.filter((x) => x.id !== h.id))}>
+                    Remove
+                  </TextButton>
+                </span>
+              )}
+            </Row>
+          );
+        })}
+        {Object.values(invites).some((i) => i.status === "failed") ? (
+          <div style={{ padding: `10px ${pad.card}` }}>
+            <ErrorLine>
+              An invite couldn&apos;t be emailed. Check the address and use Resend,
+              or ask the office to add them.
+            </ErrorLine>
+          </div>
+        ) : null}
       </Card>
 
       {/* ─── Pets ────────────────────────────────────────────────────── */}
