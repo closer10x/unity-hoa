@@ -128,6 +128,12 @@ export default async function AdminLoginPage({ searchParams }: PageProps) {
         </div>
 
         <p className="mt-6 text-center text-sm text-on-surface-variant">
+          Are you a resident?{" "}
+          <Link href="/portal/login" className="text-secondary hover:underline">
+            Sign in to the resident portal
+          </Link>
+        </p>
+        <p className="mt-2 text-center text-sm text-on-surface-variant">
           Need help signing in?{" "}
           <Link href="/contact" className="text-secondary hover:underline">
             Contact the office
