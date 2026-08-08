@@ -29,18 +29,18 @@ export function Sidebar() {
     <aside
       style={{
         position: "sticky", top: 88, alignSelf: "flex-start",
-        flex: "0 1 236px", minWidth: 200, display: "grid", gap: 4,
+        flex: "0 1 236px", minWidth: 200, display: "grid", gap: 2,
         background: color.surface,
         border: `1px solid ${color.hairline}`,
         borderRadius: radius.card,
-        padding: 10,
+        padding: 8,
         maxHeight: "calc(100dvh - 108px)",
         overflowY: "auto",
       }}
     >
       {NAV_GROUPS.map((group) => (
-        <div key={group} style={{ display: "grid", gap: 2, paddingBottom: 6 }}>
-          <span style={{ fontFamily: font.mono, fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "oklch(0.6 0.015 150)", padding: "8px 8px 6px" }}>
+        <div key={group} style={{ display: "grid", gap: 2, paddingBottom: 4 }}>
+          <span style={{ fontFamily: font.mono, fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "oklch(0.6 0.015 150)", padding: "8px 8px 4px" }}>
             {group}
           </span>
           {NAV.filter((n) => n.group === group).map((n) => {
@@ -53,11 +53,11 @@ export function Sidebar() {
                 onClick={() => s.setView(n.id)}
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-                  width: "100%", textAlign: "left", font: "inherit", fontSize: 15,
+                  width: "100%", textAlign: "left", font: "inherit", fontSize: 14.5,
                   border: `1px solid ${on ? color.accentTintBorder : "transparent"}`,
                   background: on ? color.accentTint : "transparent",
                   color: on ? "oklch(0.28 0.03 152)" : "oklch(0.32 0.014 150)",
-                  borderRadius: radius.md, padding: "10px 14px", cursor: "pointer",
+                  borderRadius: radius.md, padding: "7px 12px", cursor: "pointer",
                 }}
               >
                 <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>

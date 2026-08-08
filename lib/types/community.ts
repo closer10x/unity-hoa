@@ -61,6 +61,7 @@ export type HoaDashboardMetricsRow = {
   total_units: number | null;
   hoa_fee_amount_cents: number | null;
   hoa_due_day_of_month: number | null;
+  hoa_due_month: number | null;
   dues_frequency: DuesFrequency | null;
   dues_schedule_note: string | null;
   payment_methods_note: string | null;
@@ -71,6 +72,7 @@ export type HoaDashboardMetricsRow = {
 export type PublicDuesDisplay = {
   hoa_fee_amount_cents: number | null;
   hoa_due_day_of_month: number | null;
+  hoa_due_month: number | null;
   dues_frequency: DuesFrequency | null;
   dues_schedule_note: string | null;
   payment_methods_note: string | null;

@@ -740,7 +740,14 @@ export async function loadPortalData(): Promise<PortalData> {
     const key = l.community ?? "all";
     byCommunity.set(key, [...(byCommunity.get(key) ?? []), l]);
   }
-  const feeCents = (m as { hoa_fee_amount_cents?: number } | null)?.hoa_fee_amount_cents;
+  const billing = m as
+    | { hoa_fee_amount_cents?: number; dues_frequency?: string | null }
+    | null;
+  const feeCents = billing?.hoa_fee_amount_cents;
+  const cadenceLabels: Record<string, string> = {
+    monthly: "Monthly", quarterly: "Quarterly", annual: "Annual", custom: "Custom",
+  };
+  const cadence = billing?.dues_frequency ? (cadenceLabels[billing.dues_frequency] ?? "") : "";
   const communities: Community[] = [...byCommunity.entries()].map(([id, rows]) => {
     const first = rows[0];
     const place = [first?.city, first?.state].filter(Boolean).join(", ");
@@ -753,7 +760,7 @@ export async function loadPortalData(): Promise<PortalData> {
       location: place || "No address recorded",
       doors: `${rows.length} lots`,
       dues: feeCents ? usd(feeCents) : "Not set",
-      cadence: "",
+      cadence,
       stage: "Active",
       portfolio: "",
     };

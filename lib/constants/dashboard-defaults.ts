@@ -14,6 +14,7 @@ export const DEFAULT_HOA_METRICS: HoaDashboardMetricsRow = {
   total_units: null,
   hoa_fee_amount_cents: null,
   hoa_due_day_of_month: null,
+  hoa_due_month: null,
   dues_frequency: null,
   dues_schedule_note: null,
   payment_methods_note: null,

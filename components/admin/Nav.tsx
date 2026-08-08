@@ -23,22 +23,23 @@ export function Sidebar() {
        takes its own scrollbar so a long nav never drags the page with it. */
     <aside style={{
       position: "sticky", top: 88, alignSelf: "flex-start",
-      flex: "0 1 236px", minWidth: 200, display: "grid", gap: 4,
+      flex: "0 1 236px", minWidth: 200, display: "grid", gap: 2,
       background: color.surface,
       border: `1px solid ${color.hairline}`,
       borderRadius: radius.card,
-      padding: 10,
+      padding: 8,
       maxHeight: "calc(100dvh - 108px)",
       overflowY: "auto",
     }}>
       {/* Grouped per the handoff: Today · Money · Property · People · Office.
-          A group only renders when the role can reach something inside it. */}
+          A group only renders when the role can reach something inside it.
+          Kept tight on purpose so the whole nav fits without scrolling. */}
       {NAV_GROUPS.filter((group) => items.some((n) => n.group === group)).map((group) => (
         <React.Fragment key={group}>
           <span style={{
             fontFamily: font.mono, fontSize: 10.5, letterSpacing: "0.14em",
             textTransform: "uppercase", color: color.inkQuaternary,
-            padding: "12px 14px 2px",
+            padding: "8px 12px 2px",
           }}>
             {group}
           </span>
@@ -48,11 +49,11 @@ export function Sidebar() {
               <button key={n.id} type="button" onClick={() => s.setView(n.id)}
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-                  width: "100%", textAlign: "left", font: "inherit", fontSize: 15,
+                  width: "100%", textAlign: "left", font: "inherit", fontSize: 14.5,
                   border: `1px solid ${on ? color.accentTintBorder : "transparent"}`,
                   background: on ? color.accentTint : "transparent",
                   color: on ? "oklch(0.28 0.03 152)" : "oklch(0.32 0.014 150)",
-                  borderRadius: radius.md, padding: "11px 14px", cursor: "pointer",
+                  borderRadius: radius.md, padding: "7px 12px", cursor: "pointer",
                 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                   <NavIcon id={n.id} />

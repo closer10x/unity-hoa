@@ -4,16 +4,36 @@ import React, { useEffect, useState } from "react";
 import { ONBOARD_STEPS } from "@/lib/admin-portal/actions";
 import { emptyAddress, formatAddress } from "@/lib/admin-portal/address";
 import {
+  getCommunityBilling, updateCommunityBilling,
+} from "@/lib/admin-portal/community-actions";
+import {
   getCommunityPolicies, setCommunityPolicy, type CommunityPolicy,
 } from "@/lib/admin-portal/policy-actions";
 import { buildActionMenu, useStore } from "@/lib/admin-portal/store";
-import { color } from "@/lib/admin-portal/tokens";
+import { color, radius } from "@/lib/admin-portal/tokens";
 import type { Address, Community, PendingConfirm, Portfolio } from "@/lib/admin-portal/types";
 import {
   ActionSelect, AddDrawer, AddressFields, Card, CardHead, Chip, ConfirmBar,
   ErrorLine, Field, FieldGrid, Input, Mono, PageTitle, Primary, Row, RowMain,
-  Select, Status,
+  Select, Status, TextButton,
 } from "../ui";
+
+const CADENCE_LABELS: Record<string, string> = {
+  monthly: "Monthly", quarterly: "Quarterly", annual: "Annual", custom: "Custom",
+};
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function ordinal(n: number): string {
+  const j = n % 10, k = n % 100;
+  if (j === 1 && k !== 11) return `${n}st`;
+  if (j === 2 && k !== 12) return `${n}nd`;
+  if (j === 3 && k !== 13) return `${n}rd`;
+  return `${n}th`;
+}
 
 export default function Communities() {
   const s = useStore();
@@ -39,6 +59,17 @@ export default function Communities() {
   const [policies, setPolicies] = useState<CommunityPolicy[]>([]);
   const [policyError, setPolicyError] = useState("");
 
+  /* per-community edit drawer: billing + what the community offers */
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editNote, setEditNote] = useState("");
+  const [editFee, setEditFee] = useState("");
+  const [editCadence, setEditCadence] = useState("");
+  const [editDueDay, setEditDueDay] = useState("");
+  const [editDueMonth, setEditDueMonth] = useState("");
+
   useEffect(() => {
     let alive = true;
     getCommunityPolicies(s.communities.map((c) => c.id)).then((res) => {
@@ -62,6 +93,45 @@ export default function Communities() {
     } else {
       setPolicyError("");
     }
+  }
+
+  async function openEdit(c: Community) {
+    if (editId === c.id) { setEditId(null); return; }
+    setEditId(c.id);
+    setEditLoading(true);
+    setEditError("");
+    setEditNote("");
+    const res = await getCommunityBilling();
+    setEditLoading(false);
+    if (!res.ok) return setEditError(res.error);
+    setEditFee(res.billing.feeDollars);
+    setEditCadence(res.billing.cadence);
+    setEditDueDay(res.billing.dueDay);
+    setEditDueMonth(res.billing.dueMonth);
+  }
+
+  async function saveEdit(c: Community) {
+    setEditSaving(true);
+    setEditError("");
+    setEditNote("");
+    const res = await updateCommunityBilling({
+      communityName: c.name,
+      feeDollars: editFee,
+      cadence: editCadence,
+      dueDay: editDueDay,
+      // The due month only applies to annual billing; drop it otherwise.
+      dueMonth: editCadence === "annual" ? editDueMonth : "",
+    });
+    setEditSaving(false);
+    if (!res.ok) return setEditError(res.error);
+    const cents = res.billing.feeDollars === "" ? null : Math.round(parseFloat(res.billing.feeDollars) * 100);
+    s.setCommunities((prev) => prev.map((x) => x.id === c.id ? {
+      ...x,
+      dues: cents != null ? `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "Not set",
+      cadence: CADENCE_LABELS[res.billing.cadence] ?? "",
+    } : x));
+    s.audit(`Updated billing for ${c.name}`);
+    setEditNote("Saved. The fee shows across both portals and the public dues lookup.");
   }
 
   function savePortfolio() {
@@ -160,6 +230,7 @@ export default function Communities() {
 
         {s.communities.map((c) => {
           const menu = buildActionMenu(ONBOARD_STEPS, c.stage, c.id, c.name, pending, setPending);
+          const p = policies.find((x) => x.community === c.id);
           return (
             <React.Fragment key={c.id}>
               <Row>
@@ -167,8 +238,82 @@ export default function Communities() {
                 <Mono size={13} style={{ color: color.inkTertiary }}>{c.doors}</Mono>
                 <Mono size={14}>{c.dues} {c.cadence.toLowerCase()}</Mono>
                 <Status tone={c.stage === "Active" ? "positive" : c.stage === "Offboarding" ? "critical" : "attention"}>{c.stage}</Status>
+                <TextButton onClick={() => openEdit(c)}>{editId === c.id ? "Close" : "Edit"}</TextButton>
                 <ActionSelect options={menu.options} onChoose={menu.onChoose} />
               </Row>
+
+              {editId === c.id ? (
+                <div style={{ padding: "0 24px 20px", borderBottom: `1px solid ${color.hairlineSoft}` }}>
+                  <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: 22, display: "grid", gap: 16 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16 }}>
+                      <span style={{ fontSize: 16, fontWeight: 600 }}>Edit {c.name}</span>
+                      <TextButton tone="muted" onClick={() => setEditId(null)}>Cancel</TextButton>
+                    </div>
+
+                    {editLoading ? (
+                      <span style={{ fontSize: 14, color: color.inkTertiary }}>Loading…</span>
+                    ) : (
+                      <>
+                        <FieldGrid>
+                          <Field label="HOA fee" hint="Shown to residents and on the public dues lookup">
+                            <Input value={editFee} onChange={setEditFee} placeholder="e.g. 1350.00" />
+                          </Field>
+                          <Field label="Billing cadence">
+                            <Select value={editCadence} onChange={setEditCadence} placeholder="Not set"
+                              options={[
+                                { id: "monthly", label: "Monthly" },
+                                { id: "quarterly", label: "Quarterly" },
+                                { id: "annual", label: "Annual" },
+                              ]} />
+                          </Field>
+                          {editCadence === "annual" ? (
+                            <Field label="Due month" hint="Annual billing needs the month it comes due">
+                              <Select value={editDueMonth} onChange={setEditDueMonth} placeholder="Not set"
+                                options={MONTHS.map((mo, i) => ({ id: String(i + 1), label: mo }))} />
+                            </Field>
+                          ) : null}
+                          <Field label="Due day of the month">
+                            <Select value={editDueDay} onChange={setEditDueDay} placeholder="Not set"
+                              options={Array.from({ length: 28 }, (_, i) => ({
+                                id: String(i + 1), label: `The ${ordinal(i + 1)}`,
+                              }))} />
+                          </Field>
+                        </FieldGrid>
+
+                        <div style={{ borderTop: `1px solid ${color.hairlineSoft}`, paddingTop: 16, display: "grid", gap: 12 }}>
+                          <span style={{ fontSize: 15, fontWeight: 600 }}>What this community offers</span>
+                          <span style={{ fontSize: 14, color: color.inkTertiary }}>
+                            Toggles save on their own. Hidden features disappear from this community&rsquo;s resident portal.
+                          </span>
+                          {p ? (
+                            <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                              <Chip on={p.allowLeases} onClick={() => togglePolicy(c.id, "allowLeases")}>
+                                Leasing {p.allowLeases ? "allowed" : "not permitted"}
+                              </Chip>
+                              <Chip on={p.allowGateCodes} onClick={() => togglePolicy(c.id, "allowGateCodes")}>
+                                Gate codes {p.allowGateCodes ? "offered" : "off"}
+                              </Chip>
+                              <Chip on={p.allowGuestPasses} onClick={() => togglePolicy(c.id, "allowGuestPasses")}>
+                                Guest passes {p.allowGuestPasses ? "offered" : "off"}
+                              </Chip>
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 14, color: color.inkTertiary }}>Loading the policy…</span>
+                          )}
+                          {policyError ? <ErrorLine>{policyError}</ErrorLine> : null}
+                        </div>
+
+                        {editError ? <ErrorLine>{editError}</ErrorLine> : null}
+                        {editNote ? <span style={{ fontSize: 14, color: color.accent }}>{editNote}</span> : null}
+                        <Primary onClick={() => saveEdit(c)} style={{ justifySelf: "start" }}>
+                          {editSaving ? "Saving…" : "Save billing"}
+                        </Primary>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
               {menu.confirming ? (
                 <ConfirmBar text={menu.confirmText} confirmLabel={menu.confirmLabel} onCancel={menu.cancel}
                   onConfirm={() => {
@@ -179,38 +324,6 @@ export default function Communities() {
                   }} />
               ) : null}
             </React.Fragment>
-          );
-        })}
-      </Card>
-
-      <Card>
-        <CardHead
-          title="What each community offers"
-          meta="Hidden features disappear from that community's resident portal"
-        />
-        {policyError ? (
-          <div style={{ padding: "14px 24px" }}>
-            <ErrorLine>{policyError}</ErrorLine>
-          </div>
-        ) : null}
-        {s.communities.map((c) => {
-          const p = policies.find((x) => x.community === c.id);
-          if (!p) return null;
-          return (
-            <Row key={c.id}>
-              <RowMain label={c.name} detail="Leasing, gates and guest passes" />
-              <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <Chip on={p.allowLeases} onClick={() => togglePolicy(c.id, "allowLeases")}>
-                  Leasing {p.allowLeases ? "allowed" : "not permitted"}
-                </Chip>
-                <Chip on={p.allowGateCodes} onClick={() => togglePolicy(c.id, "allowGateCodes")}>
-                  Gate codes {p.allowGateCodes ? "offered" : "off"}
-                </Chip>
-                <Chip on={p.allowGuestPasses} onClick={() => togglePolicy(c.id, "allowGuestPasses")}>
-                  Guest passes {p.allowGuestPasses ? "offered" : "off"}
-                </Chip>
-              </span>
-            </Row>
           );
         })}
       </Card>

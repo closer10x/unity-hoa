@@ -16,16 +16,29 @@ export function parseDuesFrequency(raw: string): DuesFrequency | null {
   return (FREQUENCIES as readonly string[]).includes(t) ? (t as DuesFrequency) : null;
 }
 
+export const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+] as const;
+
 /** One-line schedule for dashboard cards; null if nothing configured. */
 export function formatDuesScheduleLine(m: Pick<
   HoaDashboardMetricsRow,
   "dues_frequency" | "hoa_due_day_of_month" | "dues_schedule_note"
->): string | null {
+> & { hoa_due_month?: number | null }): string | null {
   const parts: string[] = [];
   if (m.dues_frequency) {
     parts.push(DUES_FREQUENCY_LABELS[m.dues_frequency]);
   }
-  if (m.hoa_due_day_of_month != null) {
+  const month =
+    m.hoa_due_month != null && m.hoa_due_month >= 1 && m.hoa_due_month <= 12
+      ? MONTH_NAMES[m.hoa_due_month - 1]
+      : null;
+  if (month && m.hoa_due_day_of_month != null) {
+    parts.push(`due ${month} ${ordinal(m.hoa_due_day_of_month)}`);
+  } else if (month) {
+    parts.push(`due in ${month}`);
+  } else if (m.hoa_due_day_of_month != null) {
     parts.push(`due on the ${ordinal(m.hoa_due_day_of_month)}`);
   }
   const note = m.dues_schedule_note?.trim();
@@ -73,6 +86,7 @@ export function publicDuesFromMetrics(m: HoaDashboardMetricsRow): PublicDuesDisp
   return {
     hoa_fee_amount_cents: m.hoa_fee_amount_cents ?? null,
     hoa_due_day_of_month: m.hoa_due_day_of_month ?? null,
+    hoa_due_month: m.hoa_due_month ?? null,
     dues_frequency: m.dues_frequency ?? null,
     dues_schedule_note: m.dues_schedule_note ?? null,
     payment_methods_note: m.payment_methods_note ?? null,

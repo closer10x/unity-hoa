@@ -32,6 +32,7 @@ function withBillingDefaults(row: HoaDashboardMetricsRow): HoaDashboardMetricsRo
     total_units: row.total_units ?? null,
     hoa_fee_amount_cents: row.hoa_fee_amount_cents ?? null,
     hoa_due_day_of_month: row.hoa_due_day_of_month ?? null,
+    hoa_due_month: row.hoa_due_month ?? null,
     dues_frequency: row.dues_frequency ?? null,
     dues_schedule_note: row.dues_schedule_note ?? null,
     payment_methods_note: row.payment_methods_note ?? null,

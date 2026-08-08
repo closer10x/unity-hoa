@@ -122,17 +122,20 @@ const CADENCE: Record<string, string> = {
 function dueBoundaries(
   frequency: string | null,
   dueDay: number | null,
+  dueMonth: number | null = null,
 ): { next: Date | null; last: Date | null } {
   if (!frequency || !CADENCE[frequency]) return { next: null, last: null };
   const day = dueDay && dueDay >= 1 && dueDay <= 28 ? dueDay : 1;
+  // Annual billing anchors to the configured due month (defaults to January).
+  const anchor = dueMonth && dueMonth >= 1 && dueMonth <= 12 ? dueMonth - 1 : 0;
   const now = new Date();
   const months =
     frequency === "monthly"
       ? Array.from({ length: 26 }, (_, i) => i - 13)
       : frequency === "quarterly"
-        ? [-12, -9, -6, -3, 0, 3, 6, 9, 12]
+        ? [-12, -9, -6, -3, 0, 3, 6, 9, 12].map((m) => m + anchor)
         : frequency === "annual"
-          ? [-12, 0, 12]
+          ? [anchor - 12, anchor, anchor + 12]
           : [];
   let next: Date | null = null;
   let last: Date | null = null;
@@ -192,11 +195,12 @@ export async function loadResidentData(user: {
   const billing = await safe(null as null | {
     hoa_fee_amount_cents: number | null;
     hoa_due_day_of_month: number | null;
+    hoa_due_month: number | null;
     dues_frequency: string | null;
   }, async () => {
     const { data, error } = await db
       .from("hoa_dashboard_metrics")
-      .select("hoa_fee_amount_cents, hoa_due_day_of_month, dues_frequency")
+      .select("hoa_fee_amount_cents, hoa_due_day_of_month, hoa_due_month, dues_frequency")
       .eq("id", 1)
       .maybeSingle();
     if (error) throw error;
@@ -210,6 +214,7 @@ export async function loadResidentData(user: {
   const boundaries = dueBoundaries(
     billing?.dues_frequency ?? null,
     billing?.hoa_due_day_of_month ?? null,
+    billing?.hoa_due_month ?? null,
   );
 
   const property: Property = lot
