@@ -25,6 +25,28 @@ const ROLES: StaffRole[] = [
   "Assistant manager", "Community manager", "Administrator", "Owner",
 ];
 
+/* Row order is chosen so each role's column is as close to one unbroken run
+   of green as the permissions allow — sections reached by the same roles sit
+   next to each other, instead of green scattered down the page. Dashboard and
+   Calendar lead because everyone reaches them, and the senior-only sections
+   close it out. Anything not listed falls to the end rather than vanishing. */
+const MATRIX_ROW_ORDER = [
+  "dashboard", "calendar",
+  "vendors", "work", "schedule",
+  "violations", "owners",
+  "bookings", "comms",
+  "docs", "accounting",
+  "arc", "board",
+  "legal",
+  "portfolio", "team",
+] as const;
+
+const MATRIX_SECTIONS = [
+  ...MATRIX_ROW_ORDER.filter((s) => (ALL_SECTIONS as readonly string[]).includes(s)),
+  ...ALL_SECTIONS.filter((s) => !(MATRIX_ROW_ORDER as readonly string[]).includes(s)),
+];
+
+
 /** Card-header collapse toggle — same chevron as the nav icons. */
 function Chevron({ open, onToggle, label }: { open: boolean; onToggle: () => void; label: string }) {
   return (
@@ -581,7 +603,7 @@ export default function Team() {
                   </tr>
                 </thead>
                 <tbody>
-                  {ALL_SECTIONS.map((sec, i) => {
+                  {MATRIX_SECTIONS.map((sec, i) => {
                     /* Banding the rows is what makes a wide grid readable —
                        without it the eye loses the row between distant columns. */
                     const band = i % 2 === 1 ? color.surfaceSunken : color.surface;
