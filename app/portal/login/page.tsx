@@ -209,13 +209,6 @@ export default async function ResidentLoginPage({ searchParams }: PageProps) {
           office — <a href="/contact" style={{ color: "oklch(0.44 0.045 155)" }}>contact us</a>{" "}
           if you haven’t received one.
         </p>
-        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: "oklch(0.56 0.015 150)" }}>
-          Staff or board member?{" "}
-          <a href="/admin/login" style={{ color: "oklch(0.44 0.045 155)" }}>
-            Sign in to administration
-          </a>
-          .
-        </p>
       </main>
     </div>
   );

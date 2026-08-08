@@ -87,16 +87,8 @@ export async function signInAdmin(formData: FormData) {
   }
 
   if (profile?.role !== "admin") {
-    // They authenticated fine — they're just a resident, not staff. Don't
-    // dead-end them on "forbidden"; they belong in the resident portal, and
-    // their session is already valid there.
-    await recordAuthEvent({
-      event: "sign_in",
-      email,
-      userId: user.id,
-      succeeded: true,
-    });
-    redirect("/portal");
+    await supabase.auth.signOut();
+    redirect("/admin/login?error=forbidden");
   }
 
   await recordAuthEvent({
