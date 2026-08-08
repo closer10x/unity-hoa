@@ -166,6 +166,19 @@ export default function Account() {
         <CardHead title="Contact information" />
         <div style={{ padding: pad.card, display: "grid", gap: 18 }}>
           <FieldGrid>
+            <Field label="Name" hint="Set by the management office. Contact us if it needs correcting.">
+              {/* Read-only: the name of record is changed by the office, not
+                  self-serve, so it can't be edited here. */}
+              <div
+                style={{
+                  padding: "12px 14px", borderRadius: 10,
+                  border: `1px solid ${color.hairline}`, background: color.surfaceSunken,
+                  fontSize: 16, color: s.residentName ? color.ink : color.inkTertiary,
+                }}
+              >
+                {s.residentName || "Not on file"}
+              </div>
+            </Field>
             <Field label="Email"><Input value={email} onChange={setEmail} placeholder="you@example.com" /></Field>
             <Field label="Mobile"><Input value={phone} onChange={setPhone} placeholder="(713) 555-0100" /></Field>
             <Field
