@@ -8,6 +8,7 @@ import {
   isStaffRole,
 } from "@/lib/admin-portal/permissions";
 import { ensureCrewLink, isFieldRole } from "@/lib/crew/links";
+import { getEmailBaseUrl } from "@/lib/email/link-base-url";
 import { sendWelcomeEmailViaResend } from "@/lib/email/send-welcome-email";
 import { sendSms } from "@/lib/sms/send-sms";
 import { isSupabaseAuthConfigured } from "@/lib/supabase/keys";
@@ -147,10 +148,9 @@ export async function POST(req: Request) {
     );
   }
 
-  // TODO: swap for the shared outbound-link base once fix/resident-signup
-  // lands — on a dev server this is localhost, which is dead in a text.
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3001";
+  // The recipient opens both of these on their own device, so they must
+  // never carry a dev server's localhost.
+  const siteUrl = getEmailBaseUrl();
 
   // Product rule: a field employee always has a job board. Minting the link
   // here means a tech can never exist without somewhere to see their work,
