@@ -363,12 +363,30 @@ export async function addHouseholdOwner(input: {
       });
       if (createErr) throw new Error(`Could not create the sign-in account: ${createErr.message}`);
       memberUserId = created.user?.id ?? null;
+    } else {
+      /* An account can be left over from an attempt that failed after the
+         sign-in was made. If it belongs to no household yet, nobody has ever
+         been given its password, so issue a fresh one and send it. */
+      const { data: anyHousehold } = await db
+        .from("household_members")
+        .select("id")
+        .eq("member_user_id", memberUserId)
+        .is("removed_at", null)
+        .maybeSingle();
+      if (!anyHousehold) {
+        tempPassword = randomBytes(9).toString("base64url");
+        const { error: pwErr } = await db.auth.admin.updateUserById(memberUserId, {
+          password: tempPassword,
+        });
+        if (pwErr) throw new Error(`Could not set their password: ${pwErr.message}`);
+      }
     }
 
     if (memberUserId) {
       const { error: profErr } = await db.from("profiles").upsert({
         id: memberUserId,
-        role: "resident",
+        // "basic" is what the profiles check constraint calls a resident.
+        role: "basic",
         display_name: name,
         phone: input.phone.trim() || null,
         unit_lot: (lot.lot_number as string | null) ?? null,
@@ -513,6 +531,65 @@ export async function resendWelcomeEmail(input: {
 
     revalidatePath("/admin");
     return { ok: true, note: `Welcome email re-sent to ${email} with a new temporary password.` };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
+
+/**
+ * Takes a second owner off the deed. The row is kept with a removal date
+ * rather than deleted, so the household's history survives, and their
+ * sign-in loses access to this home. Restricted to the senior roles: this
+ * decides who can reach a household's records.
+ */
+export async function removeHouseholdOwner(input: {
+  memberId: string;
+  name: string;
+}): Promise<{ ok: true; note: string } | Fail> {
+  try {
+    const { db, actorName, actorId, isAdministrator } = await officeContext();
+
+    const session = await requireAdminUser();
+    const senior =
+      isAdministrator || session.profile.staff_role === "Community manager";
+    if (!senior) {
+      return {
+        ok: false,
+        error:
+          "Only an Owner, Administrator or Community manager can take someone off a deed.",
+      };
+    }
+
+    const { data: member, error } = await db
+      .from("household_members")
+      .select("id, name, email, removed_at")
+      .eq("id", input.memberId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!member) return { ok: false, error: "That owner is no longer on this household." };
+    if (member.removed_at) {
+      return { ok: false, error: `${member.name ?? "They"} has already been removed.` };
+    }
+
+    const { error: upErr } = await db
+      .from("household_members")
+      .update({ removed_at: new Date().toISOString(), invite_status: "removed" })
+      .eq("id", input.memberId);
+    if (upErr) throw new Error(upErr.message);
+
+    const { error: auditErr } = await db.from("admin_audit_log").insert({
+      action: `Owners: removed ${member.name ?? input.name} (${member.email ?? "no email"}) from the household`,
+      actor_name: actorName,
+      actor_user_id: actorId,
+    });
+    if (auditErr) throw new Error(`Audit write failed: ${auditErr.message}`);
+
+    revalidatePath("/admin");
+    revalidatePath("/portal");
+    return {
+      ok: true,
+      note: `${member.name ?? input.name} is off the deed and has lost access to this home.`,
+    };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
   }

@@ -3,8 +3,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { emptyAddress, formatAddress, isAddressComplete } from "@/lib/admin-portal/address";
 import {
-  addHouseholdOwner, getOwnerEditData, listHouseholdOwners, resendWelcomeEmail,
-  unlinkOwner, updateOwner, type HouseholdOwner,
+  addHouseholdOwner, getOwnerEditData, listHouseholdOwners, removeHouseholdOwner,
+  resendWelcomeEmail, unlinkOwner, updateOwner, type HouseholdOwner,
 } from "@/lib/admin-portal/owner-actions";
 import { addHomeowner } from "@/lib/admin-portal/roster-actions";
 import { transferLot, type TransferKind } from "@/lib/admin-portal/transfer-actions";
@@ -96,6 +96,7 @@ export default function Owners() {
   const [resendFor, setResendFor] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
   const [resendNote, setResendNote] = useState("");
+  const [removingMember, setRemovingMember] = useState<string | null>(null);
 
   /* ----- ownership change: sale, transfer, or first link ----- */
   const [xferOpen, setXferOpen] = useState(false);
@@ -180,6 +181,17 @@ export default function Owners() {
     s.audit(`Added ${res.member.name} as a second owner at ${o.address}`);
     setCoNote(res.note);
     setCoName(""); setCoEmail(""); setCoPhone("");
+  }
+
+  async function runRemoveMember(m: HouseholdOwner) {
+    setEditError("");
+    setCoNote("");
+    const res = await removeHouseholdOwner({ memberId: m.id, name: m.name });
+    setRemovingMember(null);
+    if (!res.ok) return setEditError(res.error);
+    setHousehold((prev) => prev.filter((x) => x.id !== m.id));
+    s.audit(`Removed ${m.name} from the household`);
+    setCoNote(res.note);
   }
 
   async function runResend(o: Owner, memberEmail?: string) {
@@ -419,6 +431,14 @@ export default function Owners() {
                         ) : null}
                       </div>
 
+                      {unlinkPending ? (
+                        <ConfirmBar
+                          text={`Are you sure you want to unlink ${o.name} from ${o.address}? They lose portal access to this home right away. The lot stays on the roster and their sign-in account is kept, so they can be linked again later.`}
+                          confirmLabel="Yes, unlink them"
+                          onCancel={() => setUnlinkPending(false)}
+                          onConfirm={() => confirmUnlink(o)} />
+                      ) : null}
+
                       {resendFor === "owner" ? (
                         <ConfirmBar
                           text={`Are you sure you want to resend the welcome email to ${editEmail || "this owner"}? They get a brand-new temporary password, so any password they have already set will stop working.`}
@@ -447,14 +467,31 @@ export default function Owners() {
                                 {m.email} · {m.relationship}
                               </Mono>
                             </span>
-                            <TextButton onClick={() => { setResendFor(m.id); setResendNote(""); }}>
-                              <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-                                <ResendMark />
-                                Resend
-                              </span>
-                            </TextButton>
+                            <span style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                              <TextButton onClick={() => { setResendFor(m.id); setResendNote(""); }}>
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                                  <ResendMark />
+                                  Resend
+                                </span>
+                              </TextButton>
+                              {s.isAdministrator || s.currentRole === "Community manager" ? (
+                                <TextButton tone="destructive"
+                                  onClick={() => { setRemovingMember(m.id); setCoNote(""); }}>
+                                  Remove
+                                </TextButton>
+                              ) : null}
+                            </span>
                           </div>
                         ))}
+
+                        {household.map((m) => removingMember === m.id ? (
+                          <ConfirmBar
+                            key={`remove-${m.id}`}
+                            text={`Are you sure you want to take ${m.name} off the deed for this home? They lose access to it right away, and their name comes off the household. The change is stamped in the audit trail.`}
+                            confirmLabel="Yes, remove them"
+                            onCancel={() => setRemovingMember(null)}
+                            onConfirm={() => runRemoveMember(m)} />
+                        ) : null)}
 
                         {household.map((m) => resendFor === m.id ? (
                           <ConfirmBar
@@ -564,6 +601,14 @@ export default function Owners() {
                             style={{ justifySelf: "start", ...(xferSaving ? { opacity: 0.6, pointerEvents: "none" } : {}) }}>
                             {xferSaving ? "Recording…" : xferKind === "sale" ? "Record sale…" : xferKind === "transfer" ? "Record transfer…" : "Link owner…"}
                           </Primary>
+                  {xferConfirm ? (
+                    <ConfirmBar
+                      text={`Record the ${xferKind === "sale" ? "sale" : xferKind === "transfer" ? "transfer" : "new owner"} of ${o.address} to ${xfer.name.trim()}? ${editLinked ? `${o.name} loses portal access to this lot (their account is kept). ` : ""}${xferFees.length ? `${xferFees.length} fee${xferFees.length === 1 ? "" : "s"} post to the new owner's ledger. ` : "No fees will be posted. "}${xferWelcome ? "Their sign-in details are emailed to them." : "No email is sent."} Everything is stamped in the audit trail.`}
+                      confirmLabel={xferKind === "sale" ? "Record sale" : xferKind === "transfer" ? "Record transfer" : "Link owner"}
+                      onCancel={() => setXferConfirm(false)}
+                      onConfirm={() => runTransfer(o)}
+                    />
+                  ) : null}
                         </>
                       ) : null}
                     </div>
@@ -572,23 +617,6 @@ export default function Owners() {
               </div>
             ) : null}
 
-            {editId === o.id && unlinkPending ? (
-              <ConfirmBar
-                text={`Are you sure? Unlinking removes ${o.name}'s portal access to ${o.address}. The lot stays in the roster and their sign-in account is kept.`}
-                confirmLabel="Yes, unlink them"
-                onCancel={() => setUnlinkPending(false)}
-                onConfirm={() => confirmUnlink(o)}
-              />
-            ) : null}
-
-            {editId === o.id && xferConfirm ? (
-              <ConfirmBar
-                text={`Record the ${xferKind === "sale" ? "sale" : xferKind === "transfer" ? "transfer" : "new owner"} of ${o.address} to ${xfer.name.trim()}? ${editLinked ? `${o.name} loses portal access to this lot (their account is kept). ` : ""}${xferFees.length ? `${xferFees.length} fee${xferFees.length === 1 ? "" : "s"} post to the new owner's ledger. ` : "No fees will be posted. "}${xferWelcome ? "Their sign-in details are emailed to them." : "No email is sent."} Everything is stamped in the audit trail.`}
-                confirmLabel={xferKind === "sale" ? "Record sale" : xferKind === "transfer" ? "Record transfer" : "Link owner"}
-                onCancel={() => setXferConfirm(false)}
-                onConfirm={() => runTransfer(o)}
-              />
-            ) : null}
           </React.Fragment>
         ))}
       </Card>

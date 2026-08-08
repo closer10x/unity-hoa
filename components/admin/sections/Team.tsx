@@ -113,6 +113,7 @@ export default function Team() {
   const [removing, setRemoving] = useState<string | null>(null);
   const [rowBusy, setRowBusy] = useState<string | null>(null);
   const [rowError, setRowError] = useState("");
+  const [disabling, setDisabling] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [name, setName] = useState("");
@@ -306,18 +307,10 @@ export default function Team() {
                 {editing === p.id ? "Close" : "Edit"}
               </Pill>
               <Pill style={{ padding: "6px 13px", fontSize: 13, opacity: rowBusy === p.id ? 0.6 : 1 }}
-                onClick={async () => {
+                onClick={() => {
                   if (rowBusy) return;
-                  setRowBusy(p.id);
                   setRowError("");
-                  const res = await setStaffAccountActive({
-                    employeeId: p.employeeId, profileId: p.profileId,
-                    name: p.name, active: !p.active,
-                  });
-                  setRowBusy(null);
-                  if (!res.ok) return setRowError(res.error);
-                  s.setStaff(() => res.staff);
-                  s.audit(`${p.active ? "Switched off" : "Switched on"} the account for ${p.name}`);
+                  setDisabling(disabling === p.id ? null : p.id);
                 }}>
                 {rowBusy === p.id ? "…" : p.active ? "Disable" : "Enable"}
               </Pill>
@@ -398,6 +391,31 @@ export default function Team() {
                 </div>
               </div>
             </div>
+          ) : null,
+        )}
+        {s.staff.map((p) =>
+          disabling === p.id ? (
+            <ConfirmBar
+              key={`toggle-${p.id}`}
+              text={p.active
+                ? `Switch off the account for ${p.name}? They keep their record and their history, but cannot sign in until it is switched back on.`
+                : `Switch the account for ${p.name} back on? They will be able to sign in again with the access their role allows.`}
+              confirmLabel={p.active ? "Yes, switch it off" : "Yes, switch it on"}
+              onCancel={() => setDisabling(null)}
+              onConfirm={async () => {
+                setRowBusy(p.id);
+                setRowError("");
+                const res = await setStaffAccountActive({
+                  employeeId: p.employeeId, profileId: p.profileId,
+                  name: p.name, active: !p.active,
+                });
+                setRowBusy(null);
+                setDisabling(null);
+                if (!res.ok) return setRowError(res.error);
+                s.setStaff(() => res.staff);
+                s.audit(`${p.active ? "Switched off" : "Switched on"} the account for ${p.name}`);
+              }}
+            />
           ) : null,
         )}
         {s.staff.map((p) =>

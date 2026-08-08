@@ -102,7 +102,8 @@ export async function addHomeowner(input: {
       if (ownerProfileId) {
         const { error: profErr } = await db.from("profiles").upsert({
           id: ownerProfileId,
-          role: "resident",
+          // "basic" is what the profiles check constraint calls a resident.
+          role: "basic",
           display_name: fullName,
           phone: input.phone.trim() || null,
           unit_lot: lotNumber || null,

@@ -4,7 +4,7 @@ import React from "react";
 
 import { NAV, NAV_GROUPS } from "@/lib/resident-portal/nav";
 import { useResident } from "@/lib/resident-portal/store";
-import { color, font, radius } from "@/lib/admin-portal/tokens";
+import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
 import { NavIcon } from "@/components/admin/ui/NavIcon";
 
 function Badge({ children }: { children: React.ReactNode }) {
@@ -28,13 +28,15 @@ export function Sidebar() {
   return (
     <aside
       style={{
-        position: "sticky", top: 88, alignSelf: "flex-start",
+        /* The sticky offset includes the shell's own top padding, or the rail
+           jumps up by that much the first time the page scrolls. */
+        position: "sticky", top: `calc(88px + ${pad.shell})`, alignSelf: "flex-start",
         flex: "0 1 236px", minWidth: 200, display: "grid", gap: 2,
         background: color.surface,
         border: `1px solid ${color.hairline}`,
         borderRadius: radius.card,
         padding: 8,
-        height: "calc(100dvh - 108px)",
+        height: `calc(100dvh - 88px - ${pad.shell} * 2)`,
         overflowY: "auto",
       }}
     >
