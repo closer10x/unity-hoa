@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { resolveCrewLink } from "@/lib/crew/links";
+import { PENDING_REASONS } from "@/lib/crew/pending-reasons";
 import {
   WORK_ORDER_IMAGES_BUCKET,
   createServiceClient,
@@ -84,6 +85,66 @@ export async function addFieldNote(
   return { ok: true };
 }
 
+/**
+ * Parks a job with a reason. Distinct from doing nothing: the office sees
+ * why it stopped, on the row and in the notes, so a paused job can't be
+ * mistaken for a forgotten one.
+ */
+export async function markJobPending(
+  token: string,
+  workOrderId: string,
+  reason: string,
+  detail: string,
+): Promise<Result> {
+  const auth = await authorize(token, workOrderId);
+  if ("error" in auth) return auth;
+
+  const picked = (PENDING_REASONS as readonly string[]).includes(reason.trim())
+    ? reason.trim()
+    : "";
+  if (!picked) return { error: "Pick what you're waiting on." };
+  const extra = detail.trim().slice(0, MAX_NOTE);
+  const full = extra ? `${picked} — ${extra}` : picked;
+
+  const { error } = await auth.db
+    .from("work_orders")
+    .update({ status: "pending", pending_reason: full })
+    .eq("id", workOrderId);
+  if (error) return { error: error.message };
+
+  // The hold is itself a field note, so the office reads it in sequence with
+  // everything else that happened on the job.
+  await auth.db.from("work_order_notes").insert({
+    work_order_id: workOrderId,
+    body: `Put on hold — ${full}`,
+    author_name: auth.who,
+  });
+
+  revalidatePath(`/crew/${token}`);
+  return { ok: true };
+}
+
+/** Back off hold and into progress, clearing the reason. */
+export async function resumeJob(token: string, workOrderId: string): Promise<Result> {
+  const auth = await authorize(token, workOrderId);
+  if ("error" in auth) return auth;
+
+  const { error } = await auth.db
+    .from("work_orders")
+    .update({ status: "in_progress", pending_reason: null })
+    .eq("id", workOrderId);
+  if (error) return { error: error.message };
+
+  await auth.db.from("work_order_notes").insert({
+    work_order_id: workOrderId,
+    body: "Back on it — hold cleared.",
+    author_name: auth.who,
+  });
+
+  revalidatePath(`/crew/${token}`);
+  return { ok: true };
+}
+
 export async function markJobComplete(
   token: string,
   workOrderId: string,
@@ -93,7 +154,7 @@ export async function markJobComplete(
 
   const { error } = await auth.db
     .from("work_orders")
-    .update({ status: "completed" })
+    .update({ status: "completed", pending_reason: null })
     .eq("id", workOrderId);
   if (error) return { error: error.message };
 

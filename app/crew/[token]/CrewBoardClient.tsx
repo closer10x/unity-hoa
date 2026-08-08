@@ -4,7 +4,15 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 
 import type { CrewBoard, CrewJob } from "@/lib/crew/links";
 
-import { addFieldNote, markJobComplete, uploadFieldPhoto } from "./actions";
+import { PENDING_REASONS } from "@/lib/crew/pending-reasons";
+
+import {
+  addFieldNote,
+  markJobComplete,
+  markJobPending,
+  resumeJob,
+  uploadFieldPhoto,
+} from "./actions";
 
 /**
  * The field board a tech opens from their texted link.
@@ -21,10 +29,50 @@ import { addFieldNote, markJobComplete, uploadFieldPhoto } from "./actions";
  * the portal's shell.
  */
 
+/**
+ * The office picks Routine / Soon / Urgent; the database stores
+ * normal / high / urgent. A tech should read back the words the office
+ * chose, never the column value — "normal" told them nothing.
+ */
+const PRIORITY_LABEL: Record<string, string> = {
+  urgent: "Urgent",
+  high: "Soon",
+  normal: "Routine",
+  low: "Low priority",
+};
+
+const PRIORITY_FULL: Record<string, string> = {
+  urgent: "Urgent — same day",
+  high: "Soon — within a week",
+  normal: "Routine — next visit",
+  low: "Low priority — when you're nearby",
+};
+
 const PRIORITY_TONE: Record<string, string> = {
   urgent: "text-status-critical",
   high: "text-status-attention",
 };
+
+const priorityKey = (p: string) => p.trim().toLowerCase();
+const priorityLabel = (p: string) => PRIORITY_LABEL[priorityKey(p)] ?? p;
+const priorityFull = (p: string) => PRIORITY_FULL[priorityKey(p)] ?? p;
+
+/** The office's own status words, not the stored value. */
+const STATUS_LABEL: Record<string, string> = {
+  open: "Not started",
+  assigned: "Scheduled",
+  in_progress: "In progress",
+  pending: "On hold",
+  completed: "Done",
+  cancelled: "Cancelled",
+};
+
+/** Initials for the avatar when no photo is on file. */
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+}
 
 function dayLabel(iso: string | null): string {
   if (!iso) return "No date set";
@@ -65,10 +113,12 @@ function JobRow({ job, onOpen }: { job: CrewJob; onOpen: () => void }) {
           className={`font-label text-xs ${
             job.done
               ? "text-status-positive"
-              : PRIORITY_TONE[job.priority.toLowerCase()] ?? "text-status-neutral"
+              : job.status === "pending"
+                ? "text-status-attention"
+                : PRIORITY_TONE[priorityKey(job.priority)] ?? "text-status-neutral"
           }`}
         >
-          {job.done ? "Done" : job.priority}
+          {job.done ? "Done" : job.status === "pending" ? "On hold" : priorityLabel(job.priority)}
         </span>
       </div>
 
@@ -80,6 +130,9 @@ function JobRow({ job, onOpen }: { job: CrewJob; onOpen: () => void }) {
       {/* The short view: when it landed, when it closed, what's attached. */}
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-label text-xs text-outline">
         <span>{job.done ? `Closed ${stamp(job.completedAt)}` : `Assigned ${stamp(job.assignedAt)}`}</span>
+        {job.pendingReason ? (
+          <span className="text-status-attention">{job.pendingReason}</span>
+        ) : null}
         {!job.done && job.dueAt ? <span>Due {dayLabel(job.dueAt)}</span> : null}
         {job.photoCount > 0 ? (
           <span>{job.photoCount} {job.photoCount === 1 ? "photo" : "photos"}</span>
@@ -107,6 +160,9 @@ function JobDetail({
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [holding, setHolding] = useState(false);
+  const [reason, setReason] = useState<string>(PENDING_REASONS[0]);
+  const [reasonDetail, setReasonDetail] = useState("");
   const [busy, start] = useTransition();
 
   const say = (r: { ok: true } | { error: string }, good: string) => {
@@ -131,10 +187,12 @@ function JobDetail({
             className={`font-label text-xs ${
               job.done
                 ? "text-status-positive"
-                : PRIORITY_TONE[job.priority.toLowerCase()] ?? "text-status-neutral"
+                : job.status === "pending"
+                  ? "text-status-attention"
+                  : PRIORITY_TONE[priorityKey(job.priority)] ?? "text-status-neutral"
             }`}
           >
-            {job.done ? "Done" : job.priority}
+            {job.done ? "Done" : job.status === "pending" ? "On hold" : priorityLabel(job.priority)}
           </span>
         </div>
 
@@ -149,6 +207,16 @@ function JobDetail({
         ) : null}
 
         <dl className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3 border-t border-hairline-soft pt-4">
+          <div>
+            <dt className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">Priority</dt>
+            <dd className={`mt-1 text-[15px] ${PRIORITY_TONE[priorityKey(job.priority)] ?? ""}`}>
+              {priorityFull(job.priority)}
+            </dd>
+          </div>
+          <div>
+            <dt className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">Status</dt>
+            <dd className="mt-1 text-[15px]">{STATUS_LABEL[job.status] ?? job.status}</dd>
+          </div>
           <div>
             <dt className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">Assigned</dt>
             <dd className="mt-1 font-label text-[13px]">{stamp(job.assignedAt)}</dd>
@@ -188,6 +256,23 @@ function JobDetail({
           </p>
         ) : (
           <div className="mt-4 grid gap-3 border-t border-hairline-soft pt-4">
+            {job.pendingReason ? (
+              <div className="rounded-xl border border-outline-variant bg-surface-container-low p-4">
+                <p className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">
+                  On hold
+                </p>
+                <p className="mt-1 text-[15px] text-status-attention">{job.pendingReason}</p>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => start(async () => say(await resumeJob(token, job.id), "Back on it."))}
+                  className="mt-3 min-h-11 rounded-[10px] border border-outline-strong px-4 text-base disabled:opacity-60"
+                >
+                  Back on it
+                </button>
+              </div>
+            ) : null}
+
             <label className="block">
               <span className="mb-2 block text-sm text-on-surface-variant">Add a note</span>
               <textarea
@@ -232,17 +317,88 @@ function JobDetail({
                 />
               </label>
 
+              {!holding && !job.pendingReason ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => { setHolding(true); setConfirming(false); }}
+                  className="min-h-11 rounded-[10px] border border-outline-strong px-4 text-base text-on-surface disabled:opacity-60"
+                >
+                  Put on hold
+                </button>
+              ) : null}
+
               {!confirming ? (
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() => setConfirming(true)}
+                  onClick={() => { setConfirming(true); setHolding(false); }}
                   className="min-h-11 rounded-[10px] bg-secondary px-4 text-base font-medium text-on-secondary disabled:opacity-60"
                 >
                   Mark complete
                 </button>
               ) : null}
             </div>
+
+            {holding ? (
+              <div className="rounded-xl border border-outline-variant bg-surface-container-low p-4">
+                <p className="text-[15px] leading-relaxed">
+                  What are you waiting on? The office sees this on the job, so
+                  nobody has to chase you for an update.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {PENDING_REASONS.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setReason(r)}
+                      className={`min-h-11 rounded-full border px-4 text-[15px] ${
+                        reason === r
+                          ? "border-chip-on-border bg-chip-on text-chip-on-ink"
+                          : "border-outline-strong text-on-surface"
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+                <label className="mt-3 block">
+                  <span className="mb-2 block text-sm text-on-surface-variant">
+                    Anything else? (optional)
+                  </span>
+                  <textarea
+                    rows={2}
+                    value={reasonDetail}
+                    onChange={(e) => setReasonDetail(e.target.value)}
+                    placeholder="Which part, which vendor, who you need."
+                    className="w-full rounded-[10px] border border-outline-strong bg-surface-container-low px-3.5 py-3 text-base"
+                  />
+                </label>
+                <div className="mt-3 flex flex-wrap gap-2.5">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() =>
+                      start(async () => {
+                        say(await markJobPending(token, job.id, reason, reasonDetail), "Job put on hold.");
+                        setHolding(false);
+                        setReasonDetail("");
+                      })
+                    }
+                    className="min-h-11 rounded-[10px] bg-secondary px-4 text-base font-medium text-on-secondary disabled:opacity-60"
+                  >
+                    Put it on hold
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHolding(false)}
+                    className="min-h-11 rounded-[10px] border border-outline-strong px-4 text-base"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : null}
 
             {confirming ? (
               <div className="rounded-xl border border-accent-tint-border bg-confirm-bar p-4">
@@ -290,6 +446,7 @@ export function CrewBoardClient({ board, token }: { board: CrewBoard; token: str
   const [openId, setOpenId] = useState<string | null>(null);
   const job = board.jobs.find((j) => j.id === openId) ?? null;
   const openCount = board.jobs.filter((j) => !j.done).length;
+  const doneCount = board.jobs.length - openCount;
 
   // Opening a job pushes a history entry, so the phone's back gesture (and
   // the browser button) returns to the list instead of leaving the board.
@@ -327,17 +484,75 @@ export function CrewBoardClient({ board, token }: { board: CrewBoard; token: str
       ) : (
         <>
           <header className="mb-6">
-            <p className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">
-              Unity Grid · Field
-            </p>
-            <h1 className="mt-2 text-[clamp(24px,5vw,32px)] font-semibold tracking-[-0.024em]">
-              {board.employee.name}
-            </h1>
-            <p className="mt-1 text-base text-on-surface-variant">
-              {board.jobs.length === 0
-                ? "Nothing assigned right now."
-                : `${openCount} open ${openCount === 1 ? "job" : "jobs"}${board.employee.role ? ` · ${board.employee.role}` : ""}`}
-            </p>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">
+                  Unity Grid · Field
+                </p>
+                <h1 className="mt-2 text-[clamp(24px,5vw,32px)] font-semibold tracking-[-0.024em]">
+                  {board.employee.name}
+                </h1>
+                {board.employee.role ? (
+                  <p className="mt-1 text-base text-on-surface-variant">{board.employee.role}</p>
+                ) : null}
+              </div>
+
+              {/* Their own face, so a shared phone can't leave a tech looking
+                  at someone else's list without noticing. Initials when no
+                  photo is on file. */}
+              {board.employee.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={board.employee.photoUrl}
+                  alt=""
+                  className="size-12 shrink-0 rounded-full border border-outline-variant object-cover"
+                />
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="grid size-12 shrink-0 place-items-center rounded-full border border-chip-on-border bg-chip-on font-label text-sm text-chip-on-ink"
+                >
+                  {initials(board.employee.name)}
+                </span>
+              )}
+            </div>
+
+            {/* The two numbers they came here for, as tiles rather than a
+                run-on sentence: same auto-fit rule as the portal's summary
+                tiles, so one tile fills the width and two share it. */}
+            {board.jobs.length === 0 ? (
+              <p className="mt-5 text-lg text-on-surface-variant">
+                Nothing assigned right now.
+              </p>
+            ) : (
+              <div className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
+                <div className="rounded-2xl border border-accent-tint-border bg-confirm-bar p-4">
+                  <p className="font-label text-[11px] uppercase tracking-[0.12em] text-secondary-muted">
+                    Open
+                  </p>
+                  <p className="mt-1.5 text-[38px] font-semibold leading-none tracking-[-0.03em] text-secondary">
+                    {openCount}
+                  </p>
+                  <p className="mt-1.5 text-sm text-on-surface-variant">
+                    {openCount === 1 ? "job on your list" : "jobs on your list"}
+                  </p>
+                </div>
+
+                {doneCount > 0 ? (
+                  <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
+                    <p className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">
+                      Closed
+                    </p>
+                    <p className="mt-1.5 text-[38px] font-semibold leading-none tracking-[-0.03em] text-status-positive">
+                      {doneCount}
+                    </p>
+                    <p className="mt-1.5 text-sm text-on-surface-variant">
+                      in the last 14 days
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            )}
           </header>
 
           <div className="grid gap-3">

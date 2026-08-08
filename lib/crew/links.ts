@@ -2,7 +2,11 @@ import "server-only";
 
 import { randomBytes } from "node:crypto";
 
-import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import {
+  PROFILE_AVATARS_BUCKET,
+  createServiceClient,
+  isSupabaseConfigured,
+} from "@/lib/supabase/server";
 
 /**
  * Crew links: one tokenised, login-free job board per field employee.
@@ -31,6 +35,8 @@ export type CrewJob = {
   completedAt: string | null;
   /** Closed jobs stay on the board briefly so the tech can see their work. */
   done: boolean;
+  /** Set while the job is on hold — what the tech is waiting on. */
+  pendingReason: string | null;
   /** Who put this job on the tech's list. */
   assignedBy: string | null;
   notes: { id: string; body: string; author: string; at: string }[];
@@ -38,7 +44,13 @@ export type CrewJob = {
 };
 
 export type CrewBoard = {
-  employee: { id: string; name: string; role: string | null };
+  employee: {
+    id: string;
+    name: string;
+    role: string | null;
+    /** Signed URL for their profile photo, when one is on file. */
+    photoUrl: string | null;
+  };
   jobs: CrewJob[];
 };
 
@@ -84,6 +96,44 @@ export async function resolveCrewLink(
   return { id: data.id, employee_id: data.employee_id };
 }
 
+/**
+ * A signed URL for the tech's profile photo, or null.
+ *
+ * Staff photos live on profiles.avatar_path; employees carry no profile
+ * link, so they are matched on the work email the account was invited with.
+ * Any miss — no email, no account, no photo — is simply null, and the board
+ * falls back to their initials.
+ */
+async function employeePhotoUrl(
+  db: ReturnType<typeof createServiceClient>,
+  email: string | null,
+): Promise<string | null> {
+  if (!email?.trim()) return null;
+  try {
+    const { data: page } = await db.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const account = page?.users?.find(
+      (u) => u.email?.toLowerCase() === email.trim().toLowerCase(),
+    );
+    if (!account) return null;
+
+    const { data: profile } = await db
+      .from("profiles")
+      .select("avatar_path")
+      .eq("id", account.id)
+      .maybeSingle();
+    const path = profile?.avatar_path as string | null | undefined;
+    if (!path) return null;
+
+    const { data: signed } = await db.storage
+      .from(PROFILE_AVATARS_BUCKET)
+      .createSignedUrl(path, 60 * 60);
+    return signed?.signedUrl ?? null;
+  } catch {
+    // A photo is decoration; never let it take the job list down.
+    return null;
+  }
+}
+
 /** The board for a resolved link: the employee plus their open jobs. */
 export async function loadCrewBoard(employeeId: string): Promise<CrewBoard | null> {
   if (!isSupabaseConfigured()) return null;
@@ -91,7 +141,7 @@ export async function loadCrewBoard(employeeId: string): Promise<CrewBoard | nul
 
   const { data: emp } = await db
     .from("employees")
-    .select("id, name, role, active")
+    .select("id, name, role, email, active")
     .eq("id", employeeId)
     .maybeSingle();
   if (!emp || emp.active === false) return null;
@@ -165,7 +215,12 @@ export async function loadCrewBoard(employeeId: string): Promise<CrewBoard | nul
   }
 
   return {
-    employee: { id: emp.id, name: emp.name, role: emp.role },
+    employee: {
+      id: emp.id,
+      name: emp.name,
+      role: emp.role,
+      photoUrl: await employeePhotoUrl(db, emp.email),
+    },
     jobs: jobs.map((w) => ({
       id: w.id,
       ref: w.work_order_number ?? w.id.slice(0, 8),
@@ -178,6 +233,7 @@ export async function loadCrewBoard(employeeId: string): Promise<CrewBoard | nul
       assignedAt: w.assigned_at ?? null,
       completedAt: w.completed_at ?? null,
       done: DONE_STATUSES.includes(w.status),
+      pendingReason: w.pending_reason ?? null,
       // The portal stamps changes to the notification feed rather than the
       // work order, so there is no per-row "assigned by" column yet.
       assignedBy: null,
