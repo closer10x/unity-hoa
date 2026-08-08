@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 
 import {
   PROFILE_AVATARS_BUCKET,
+  WORK_ORDER_IMAGES_BUCKET,
   createServiceClient,
   isSupabaseConfigured,
 } from "@/lib/supabase/server";
@@ -41,6 +42,8 @@ export type CrewJob = {
   assignedBy: string | null;
   notes: { id: string; body: string; author: string; at: string }[];
   photoCount: number;
+  /** Signed thumbnails, newest first — what's already been documented. */
+  photos: { id: string; url: string; at: string }[];
 };
 
 export type CrewBoard = {
@@ -63,6 +66,56 @@ const DONE_WINDOW_DAYS = 14;
 /** 43 URL-safe characters. Long enough that guessing is not a threat model. */
 export function newCrewToken(): string {
   return randomBytes(32).toString("base64url");
+}
+
+/**
+ * Roles that work off a job board rather than the admin portal. These are the
+ * accounts that get a crew link the moment they exist.
+ */
+export const FIELD_ROLES = ["Maintenance tech", "Inspector"] as const;
+
+export function isFieldRole(role: string | null | undefined): boolean {
+  return (FIELD_ROLES as readonly string[]).includes((role ?? "").trim());
+}
+
+/**
+ * Product rule: a field employee always has a job board.
+ *
+ * Called wherever a field employee comes into existence, so a tech is never
+ * created without somewhere to see their work. Idempotent — the table allows
+ * one live link per employee, so a repeat call returns the existing token
+ * rather than minting a second one.
+ */
+export async function ensureCrewLink(
+  employeeId: string,
+  createdBy?: string | null,
+): Promise<{ token: string } | null> {
+  if (!isSupabaseConfigured()) return null;
+  const db = createServiceClient();
+
+  const { data: existing } = await db
+    .from("crew_links")
+    .select("token")
+    .eq("employee_id", employeeId)
+    .is("revoked_at", null)
+    .maybeSingle();
+  if (existing?.token) return { token: existing.token as string };
+
+  const token = newCrewToken();
+  const { error } = await db
+    .from("crew_links")
+    .insert({ employee_id: employeeId, token, created_by: createdBy ?? null });
+  // A race on the one-live-link index means someone else just made it.
+  if (error) {
+    const { data: raced } = await db
+      .from("crew_links")
+      .select("token")
+      .eq("employee_id", employeeId)
+      .is("revoked_at", null)
+      .maybeSingle();
+    return raced?.token ? { token: raced.token as string } : null;
+  }
+  return { token };
 }
 
 /**
@@ -182,7 +235,11 @@ export async function loadCrewBoard(employeeId: string): Promise<CrewBoard | nul
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] as unknown[] }),
     ids.length
-      ? db.from("work_order_attachments").select("id, work_order_id").in("work_order_id", ids)
+      ? db
+          .from("work_order_attachments")
+          .select("id, work_order_id, storage_path, created_at")
+          .in("work_order_id", ids)
+          .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] as unknown[] }),
   ]);
 
@@ -209,9 +266,38 @@ export async function loadCrewBoard(employeeId: string): Promise<CrewBoard | nul
     notesBy.set(n.work_order_id, list);
   }
 
-  const photosBy = new Map<string, number>();
-  for (const a of (attRes.data ?? []) as { work_order_id: string }[]) {
-    photosBy.set(a.work_order_id, (photosBy.get(a.work_order_id) ?? 0) + 1);
+  // Signed in one batch: the bucket is private, so a thumbnail needs a URL
+  // the browser can actually fetch. A failure just means no thumbnail.
+  const photosBy = new Map<string, CrewJob["photos"]>();
+  const atts = (attRes.data ?? []) as {
+    id: string;
+    work_order_id: string;
+    storage_path: string;
+    created_at: string;
+  }[];
+  if (atts.length) {
+    const { data: signed } = await db.storage
+      .from(WORK_ORDER_IMAGES_BUCKET)
+      .createSignedUrls(atts.map((a) => a.storage_path), 60 * 60);
+    const urlByPath = new Map(
+      (signed ?? []).map((r) => [r.path ?? "", r.signedUrl ?? ""]),
+    );
+    for (const a of atts) {
+      const url = urlByPath.get(a.storage_path);
+      if (!url) continue;
+      const list = photosBy.get(a.work_order_id) ?? [];
+      list.push({
+        id: a.id,
+        url,
+        at: new Date(a.created_at).toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        }),
+      });
+      photosBy.set(a.work_order_id, list);
+    }
   }
 
   return {
@@ -238,7 +324,8 @@ export async function loadCrewBoard(employeeId: string): Promise<CrewBoard | nul
       // work order, so there is no per-row "assigned by" column yet.
       assignedBy: null,
       notes: notesBy.get(w.id) ?? [],
-      photoCount: photosBy.get(w.id) ?? 0,
+      photos: photosBy.get(w.id) ?? [],
+      photoCount: (photosBy.get(w.id) ?? []).length,
     })),
   };
 }

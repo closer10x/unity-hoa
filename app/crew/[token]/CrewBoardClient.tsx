@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
 
 import type { CrewBoard, CrewJob } from "@/lib/crew/links";
@@ -206,7 +207,10 @@ function JobDetail({
           </p>
         ) : null}
 
-        <dl className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3 border-t border-hairline-soft pt-4">
+        {/* 130px floor, not the roster's 170: inside a card on a phone that
+            is the difference between one long column and two, and auto-fit
+            can never overflow sideways. */}
+        <dl className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-x-3 gap-y-3.5 border-t border-hairline-soft pt-4">
           <div>
             <dt className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">Priority</dt>
             <dd className={`mt-1 text-[15px] ${PRIORITY_TONE[priorityKey(job.priority)] ?? ""}`}>
@@ -231,11 +235,38 @@ function JobDetail({
               <dd className="mt-1 font-label text-[13px] text-status-positive">{stamp(job.completedAt)}</dd>
             </div>
           ) : null}
-          <div>
-            <dt className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">Photos</dt>
-            <dd className="mt-1 text-[15px]">{job.photoCount}</dd>
-          </div>
+          {job.photos.length === 0 ? (
+            <div>
+              <dt className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">Photos</dt>
+              <dd className="mt-1 text-[15px] text-on-surface-variant">None yet</dd>
+            </div>
+          ) : null}
         </dl>
+
+        {job.photos.length > 0 ? (
+          <div className="mt-4 border-t border-hairline-soft pt-4">
+            <p className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">
+              Photos on this job
+            </p>
+            {/* Horizontal strip: many photos must not push the actions off
+                the screen, so this one region scrolls sideways on purpose. */}
+            <ul className="mt-2 -mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
+              {job.photos.map((photo) => (
+                <li key={photo.id} className="shrink-0 snap-start">
+                  <a href={photo.url} target="_blank" rel="noreferrer" title={photo.at}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={photo.url}
+                      alt={`Photo added ${photo.at}`}
+                      loading="lazy"
+                      className="size-20 rounded-xl border border-outline-variant object-cover"
+                    />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         {job.notes.length > 0 ? (
           <div className="mt-4 grid gap-2 border-t border-hairline-soft pt-4">
@@ -442,7 +473,42 @@ function JobDetail({
 
 /* ─── Board ────────────────────────────────────────────────────────── */
 
+/**
+ * Keeps the board current without the tech thinking about it.
+ *
+ * Polling, not a Supabase realtime channel: this page has no Supabase
+ * session — the URL token is the credential — and crew tables are
+ * service-role only, so a browser subscription would be blocked by RLS.
+ * A server refresh re-runs the same guarded loader the page was built
+ * from, which is the only path allowed to read this data.
+ */
+function useLiveBoard() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // A tech reaching for their phone is the moment the list matters most.
+    const onFocus = () => router.refresh();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") router.refresh();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+
+    // And a steady tick for a phone propped on the dash while they work.
+    const tick = setInterval(() => {
+      if (document.visibilityState === "visible") router.refresh();
+    }, 30_000);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+      clearInterval(tick);
+    };
+  }, [router]);
+}
+
 export function CrewBoardClient({ board, token }: { board: CrewBoard; token: string }) {
+  useLiveBoard();
   const [openId, setOpenId] = useState<string | null>(null);
   const job = board.jobs.find((j) => j.id === openId) ?? null;
   const openCount = board.jobs.filter((j) => !j.done).length;

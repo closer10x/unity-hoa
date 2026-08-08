@@ -7,6 +7,7 @@ import {
   canManageStaff,
   isStaffRole,
 } from "@/lib/admin-portal/permissions";
+import { ensureCrewLink, isFieldRole } from "@/lib/crew/links";
 import { sendWelcomeEmailViaResend } from "@/lib/email/send-welcome-email";
 import { sendSms } from "@/lib/sms/send-sms";
 import { isSupabaseAuthConfigured } from "@/lib/supabase/keys";
@@ -134,9 +135,11 @@ export async function POST(req: Request) {
     );
   }
 
-  const { error: employeeErr } = await service
+  const { data: employee, error: employeeErr } = await service
     .from("employees")
-    .insert({ name, email, role, active: true, communities, ...(phone ? { phone } : {}) });
+    .insert({ name, email, role, active: true, communities, ...(phone ? { phone } : {}) })
+    .select("id")
+    .single();
   if (employeeErr) {
     return NextResponse.json(
       { error: `Account created but employee record failed: ${employeeErr.message}` },
@@ -144,8 +147,20 @@ export async function POST(req: Request) {
     );
   }
 
+  // TODO: swap for the shared outbound-link base once fix/resident-signup
+  // lands — on a dev server this is localhost, which is dead in a text.
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3001";
+
+  // Product rule: a field employee always has a job board. Minting the link
+  // here means a tech can never exist without somewhere to see their work,
+  // and nobody has to remember a second step.
+  let crewUrl: string | undefined;
+  if (isFieldRole(role) && employee?.id) {
+    const link = await ensureCrewLink(employee.id as string, created.user.id);
+    if (link) crewUrl = `${siteUrl}/crew/${link.token}`;
+  }
+
   const emailResult = await sendWelcomeEmailViaResend({
     name,
     email,
@@ -160,7 +175,9 @@ export async function POST(req: Request) {
   if (phone) {
     const smsResult = await sendSms(
       phone,
-      `Unity Grid Management: your admin portal account is ready. Check ${email} for your sign-in details.`,
+      crewUrl
+        ? `Unity Grid Management: your job board is ${crewUrl} — open it on your phone, no sign-in needed. Portal sign-in details are in your email at ${email}.`
+        : `Unity Grid Management: your admin portal account is ready. Check ${email} for your sign-in details.`,
     );
     if ("error" in smsResult) smsError = smsResult.error;
   }
@@ -170,6 +187,9 @@ export async function POST(req: Request) {
   // can resend or share credentials another way.
   return NextResponse.json({
     ok: true,
+    // Returned so the Team screen can show and copy it — a tech without a
+    // phone on file still needs the office to be able to hand it over.
+    ...(crewUrl ? { crewUrl } : {}),
     ...(emailError ? { emailError } : {}),
     ...(smsError ? { smsError } : {}),
   });
