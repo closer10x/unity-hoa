@@ -38,11 +38,15 @@ export function Card({ children, style }: { children: React.ReactNode; style?: R
 }
 
 export function CardHead({ title, meta, children }: { title: string; meta?: string; children?: React.ReactNode }) {
+  /* The label owns the header: bold title on top, its description directly
+     beneath it — never a lone sentence floating on the right. */
   return (
-    <div style={{ padding: `20px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-      <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>{title}</h2>
-      {meta ? <span style={{ fontSize: 14, color: color.inkTertiary }}>{meta}</span> : null}
-      {children}
+    <div style={{ padding: `18px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, display: "grid", gap: 3 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>{title}</h2>
+        {children}
+      </div>
+      {meta ? <span style={{ fontSize: 13.5, lineHeight: 1.5, color: color.inkTertiary, maxWidth: "72ch" }}>{meta}</span> : null}
     </div>
   );
 }

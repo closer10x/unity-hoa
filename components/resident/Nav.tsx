@@ -34,7 +34,7 @@ export function Sidebar() {
         border: `1px solid ${color.hairline}`,
         borderRadius: radius.card,
         padding: 8,
-        maxHeight: "calc(100dvh - 108px)",
+        height: "calc(100dvh - 108px)",
         overflowY: "auto",
       }}
     >
