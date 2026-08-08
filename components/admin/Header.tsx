@@ -133,12 +133,21 @@ export default function Header() {
                     </div>
                   ) : null}
                 </div>
+                <a href="/admin/profile" role="menuitem"
+                  onClick={() => setProfileOpen(false)}
+                  style={{
+                    display: "block", width: "100%", textAlign: "left", font: "inherit",
+                    fontSize: 14, textDecoration: "none",
+                    color: color.ink, borderRadius: radius.md, padding: "10px 12px", marginTop: 4,
+                  }}>
+                  Profile settings
+                </a>
                 <button type="button" role="menuitem"
                   onClick={() => { setProfileOpen(false); s.setView("team"); }}
                   style={{
                     display: "block", width: "100%", textAlign: "left", font: "inherit",
                     fontSize: 14, border: "none", background: "transparent", cursor: "pointer",
-                    color: color.ink, borderRadius: radius.md, padding: "10px 12px", marginTop: 4,
+                    color: color.ink, borderRadius: radius.md, padding: "10px 12px",
                   }}>
                   Team &amp; accounts
                 </button>
