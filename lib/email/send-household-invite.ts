@@ -72,8 +72,9 @@ export function buildHouseholdInviteHtml(p: HouseholdInvitePayload): string {
           </table>
 
           <p style="margin:24px 0 8px;font-family:${SANS};font-size:15px;line-height:1.65;color:${C.inkMuted}">
-            To get in, go to the portal and choose <strong style="color:${C.ink};font-weight:600">&ldquo;Forgot password?&rdquo;</strong>
-            to set your own — sign in with this email address afterward.
+            The button below signs you in and takes you straight to
+            <strong style="color:${C.ink};font-weight:600">choosing your password</strong>.
+            You&rsquo;ll sign in with this email address and that password from then on.
           </p>
 
           <table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px 0 8px"><tr>
