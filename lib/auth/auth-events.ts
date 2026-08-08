@@ -17,7 +17,12 @@ import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase/server
  * half of the credentials was wrong leaks into the log.
  */
 
-export type AuthEvent = "sign_in" | "sign_out" | "password_reset_requested";
+export type AuthEvent =
+  | "sign_in"
+  | "sign_out"
+  | "password_reset_requested"
+  /** An invited account chose its own password and finished signing up. */
+  | "password_set";
 
 /**
  * Client IP from the proxy chain. x-forwarded-for is client-controllable, so
