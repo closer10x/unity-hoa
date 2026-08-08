@@ -26,7 +26,11 @@ export type CrewJob = {
   priority: string;
   status: string;
   dueAt: string | null;
-  assignedOn: string | null;
+  assignedAt: string | null;
+  /** Set once the tech closes it; null while the job is still open. */
+  completedAt: string | null;
+  /** Closed jobs stay on the board briefly so the tech can see their work. */
+  done: boolean;
   /** Who put this job on the tech's list. */
   assignedBy: string | null;
   notes: { id: string; body: string; author: string; at: string }[];
@@ -39,6 +43,10 @@ export type CrewBoard = {
 };
 
 const OPEN_STATUSES = ["open", "assigned", "in_progress", "pending"];
+const DONE_STATUSES = ["completed", "cancelled"];
+
+/** How long a finished job stays visible on the tech's list. */
+const DONE_WINDOW_DAYS = 14;
 
 /** 43 URL-safe characters. Long enough that guessing is not a threat model. */
 export function newCrewToken(): string {
@@ -94,7 +102,25 @@ export async function loadCrewBoard(employeeId: string): Promise<CrewBoard | nul
     .eq("assigned_to", employeeId)
     .order("due_at", { ascending: true, nullsFirst: false });
 
-  const jobs = (rows ?? []).filter((w) => OPEN_STATUSES.includes(w.status));
+  // Open jobs, plus recently closed ones — a tech should be able to see
+  // what they finished today, and when, not just what is left.
+  const cutoff = Date.now() - DONE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  const jobs = (rows ?? []).filter((w) => {
+    if (OPEN_STATUSES.includes(w.status)) return true;
+    if (!DONE_STATUSES.includes(w.status)) return false;
+    const at = w.completed_at ?? w.updated_at;
+    return at ? new Date(at).getTime() >= cutoff : false;
+  });
+  // Open work first (the query already ordered it by due date); finished
+  // jobs fall to the bottom, most recently closed first.
+  jobs.sort((a, b) => {
+    const aDone = DONE_STATUSES.includes(a.status) ? 1 : 0;
+    const bDone = DONE_STATUSES.includes(b.status) ? 1 : 0;
+    if (aDone !== bDone) return aDone - bDone;
+    if (!aDone) return 0;
+    return String(b.completed_at ?? "").localeCompare(String(a.completed_at ?? ""));
+  });
+
   const ids = jobs.map((w) => w.id);
 
   const [notesRes, attRes] = await Promise.all([
@@ -149,7 +175,9 @@ export async function loadCrewBoard(employeeId: string): Promise<CrewBoard | nul
       priority: w.priority ?? "normal",
       status: w.status ?? "open",
       dueAt: w.due_at ?? null,
-      assignedOn: w.updated_at ?? w.created_at ?? null,
+      assignedAt: w.assigned_at ?? null,
+      completedAt: w.completed_at ?? null,
+      done: DONE_STATUSES.includes(w.status),
       // The portal stamps changes to the notification feed rather than the
       // work order, so there is no per-row "assigned by" column yet.
       assignedBy: null,
