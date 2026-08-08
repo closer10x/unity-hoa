@@ -780,30 +780,49 @@ export async function loadPortalData(): Promise<PortalData> {
     };
   });
 
+  /* Dashboard tiles. The label names the number in office language; the
+     note answers the follow-up question the number raises. */
+  const outstanding = m?.outstanding_dues_cents ?? 0;
+  const linkedOwners = owners.filter((o) => o.flag === "current").length;
+  const completedWork = work.length - openWork;
   const metrics = [
     {
-      label: "Receivables",
-      value: usd(m?.outstanding_dues_cents ?? 0),
-      note: payments.length
-        ? `${payments.length} payment${payments.length === 1 ? "" : "s"} recorded`
-        : "No transactions yet",
+      label: "Outstanding HOA fees",
+      value: usd(outstanding),
+      note:
+        outstanding > 0
+          ? `Owed across the community after ${payments.length} payment${payments.length === 1 ? "" : "s"} received`
+          : payments.length
+            ? "Every account is paid up"
+            : "Billing hasn't started yet",
     },
     {
       label: "Open work orders",
       value: String(openWork),
-      note: openWork ? `${work.length} total` : "None open",
+      note: openWork
+        ? completedWork
+          ? `${completedWork} completed, ${openWork} still in the field`
+          : "None completed yet"
+        : work.length
+          ? "All caught up — every order is closed"
+          : "No work orders filed yet",
     },
     {
-      label: "Lots on roster",
+      label: "Homes on the roster",
       value: String(lots.length),
       note: lots.length
-        ? `${owners.filter((o) => o.flag === "current").length} with an owner linked`
-        : "No lots registered",
+        ? linkedOwners
+          ? `${linkedOwners} ${linkedOwners === 1 ? "home has" : "homes have"} a portal owner — ${lots.length - linkedOwners} still to invite`
+          : "No owners invited to the portal yet"
+        : "The roster is empty — import the lot registry",
     },
     {
       label: "Delinquency rate",
-      value: doors > 0 && overdue > 0 ? `${((overdue / doors) * 100).toFixed(1)}%` : "—",
-      note: doors > 0 && overdue > 0 ? `${overdue} of ${doors} doors` : "No accounts yet",
+      value: doors > 0 && overdue > 0 ? `${((overdue / doors) * 100).toFixed(1)}%` : "0%",
+      note:
+        doors > 0 && overdue > 0
+          ? `${overdue} of ${doors} homes behind on HOA fees`
+          : "No owners behind on their HOA fees",
     },
   ];
 

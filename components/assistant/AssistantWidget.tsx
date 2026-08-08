@@ -12,15 +12,14 @@ import { color, font, radius } from "@/lib/admin-portal/tokens";
 
 type Msg = { role: "user" | "assistant"; content: string; sources?: string[] };
 
-/** The Unity Grid mark, drawn in white for the launcher button. */
+/** AI sparkle, drawn in white for the launcher button. */
 function Mark({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-      stroke="oklch(0.99 0.004 130)" strokeWidth={2.2}
+      stroke="oklch(0.99 0.004 130)" strokeWidth={1.8}
       strokeLinecap="round" strokeLinejoin="round" aria-hidden focusable={false}>
-      {/* U-in-frame, echoing the wordmark */}
-      <path d="M4 4v10a8 8 0 0 0 16 0V4" />
-      <path d="M4 20h16" opacity={0.55} />
+      <path d="M11 4l1.7 4.6a2 2 0 0 0 1.2 1.2L18.5 11.5l-4.6 1.7a2 2 0 0 0-1.2 1.2L11 19l-1.7-4.6a2 2 0 0 0-1.2-1.2L3.5 11.5l4.6-1.7a2 2 0 0 0 1.2-1.2z" />
+      <path d="M18.5 3.5v4M16.5 5.5h4" opacity={0.8} />
     </svg>
   );
 }

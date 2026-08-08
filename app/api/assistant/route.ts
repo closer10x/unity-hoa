@@ -1,6 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 
+import { loadResidentData } from "@/lib/resident-portal/server-data";
 import { DOCUMENTS_BUCKET } from "@/lib/supabase/documents";
 import { isSupabaseAuthConfigured } from "@/lib/supabase/keys";
 import { requireServiceSupabase } from "@/lib/supabase/service";
@@ -8,15 +8,24 @@ import { createSupabaseServerClient } from "@/lib/supabase/server-user";
 
 /**
  * The Unity Grid assistant: a floating Q&A grounded in the association's
- * real records — the document library (CC&Rs, bylaws, policies — attached
- * to Claude as PDFs, since the recorded copies are scans), the fee
- * schedule, and community facts. Signed-in users only; answers cite the
- * documents they came from.
+ * real records, served through OpenRouter (the office's chosen provider).
+ * The recorded documents are scans, so the relevant PDFs are attached to
+ * the request and parsed with OpenRouter's native engine — the model reads
+ * them directly. Signed-in users only; answers cite their documents.
+ *
+ * Scope boundary (non-negotiable): a resident's assistant sees only that
+ * resident's own records and resident-visible documents. Management's
+ * internal data — manager/board documents, other residents, staff records,
+ * the database at large — is never in a resident's context. Staff accounts
+ * get the full library.
  */
 
 export const maxDuration = 120;
 
 type ChatMsg = { role: "user" | "assistant"; content: string };
+
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const DEFAULT_MODEL = "anthropic/claude-opus-4.5";
 
 const MAX_DOC_BYTES = 6_000_000; // combined PDF budget per question
 const STOPWORDS = new Set([
@@ -42,11 +51,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Sign in to use the assistant." }, { status: 401 });
   }
 
-  if (!process.env.ANTHROPIC_API_KEY?.trim()) {
+  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
+  if (!apiKey) {
     return NextResponse.json(
       {
         error:
-          "The assistant isn't configured yet — add ANTHROPIC_API_KEY to the environment and restart.",
+          "The assistant isn't configured yet — add OPENROUTER_API_KEY to the environment and restart.",
       },
       { status: 503 },
     );
@@ -66,15 +76,38 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Ask a question first." }, { status: 400 });
   }
 
+  // Role decides the boundary: staff see the whole library, residents see
+  // only resident-visible documents plus their own records.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, display_name")
+    .eq("id", user.id)
+    .maybeSingle();
+  const isStaff = profile?.role === "admin";
+
   const service = requireServiceSupabase();
-  const [docsRes, feesRes, lotsCount] = await Promise.all([
-    service
-      .from("documents")
-      .select("id, title, file_path, file_size_bytes, tags, document_categories(name)")
-      .eq("is_archived", false),
+  let docsQuery = service
+    .from("documents")
+    .select("id, title, file_path, file_size_bytes, tags, access_level, document_categories(name)")
+    .eq("is_archived", false);
+  if (!isStaff) {
+    docsQuery = docsQuery.in("access_level", ["public", "resident"]);
+  }
+  const [docsRes, feesRes] = await Promise.all([
+    docsQuery,
     service.from("fee_schedule").select("name, amount_cents, category, active").order("sort"),
-    service.from("lots").select("id", { count: "exact", head: true }),
   ]);
+
+  // The homeowner's own records — the only account data a resident's
+  // assistant may discuss. Loaded with the same per-resident scoping as
+  // the portal itself.
+  const mine = isStaff
+    ? null
+    : await loadResidentData({
+        id: user.id,
+        email: user.email,
+        displayName: profile?.display_name ?? null,
+      });
 
   type DocRow = {
     id: string;
@@ -104,15 +137,20 @@ export async function POST(req: Request) {
     }
   }
 
-  const docBlocks: Anthropic.Beta.BetaContentBlockParam[] = [];
+  type ContentPart =
+    | { type: "text"; text: string }
+    | { type: "file"; file: { filename: string; file_data: string } };
+  const docParts: ContentPart[] = [];
   for (const d of attached) {
     const { data: blob } = await service.storage.from(DOCUMENTS_BUCKET).download(d.file_path);
     if (!blob) continue;
     const b64 = Buffer.from(await blob.arrayBuffer()).toString("base64");
-    docBlocks.push({
-      type: "document",
-      source: { type: "base64", media_type: "application/pdf", data: b64 },
-      title: d.title,
+    docParts.push({
+      type: "file",
+      file: {
+        filename: `${d.title.replace(/[^\w &().,-]/g, "")}.pdf`,
+        file_data: `data:application/pdf;base64,${b64}`,
+      },
     });
   }
 
@@ -131,10 +169,7 @@ export async function POST(req: Request) {
     .map((d) => `- ${d.title} (${d.document_categories?.name ?? "General"})`)
     .join("\n");
 
-  const system = `You are the Unity Grid assistant for the Sofi Lakes residential association in Katy, Texas, embedded in the community's management portal. Answer questions from residents and staff using the attached governing documents and the live data below. Cite the document you drew from by title. If the answer isn't in the documents or data, say so plainly and suggest contacting the management office — never guess at rules, deadlines, or dollar amounts.
-
-Community facts:
-- ${lotsCount.count ?? "—"} lots on the roster in Sofi Lakes (Katy, Texas 77493).
+  const shared = `Cite the document you drew from by title. If the answer isn't in the documents or data, say so plainly and suggest contacting the management office — never guess at rules, deadlines, or dollar amounts.
 
 Fee schedule (authoritative amounts):
 ${fees || "- No fees recorded yet."}
@@ -144,51 +179,95 @@ ${catalog || "- None yet."}
 
 Keep answers focused, brief, and concise. Lead with the answer; add the citation after.`;
 
-  const client = new Anthropic();
-  const messages: Anthropic.Beta.BetaMessageParam[] = history.map((m, i) => {
-    if (m.role === "user" && i === history.length - 1 && docBlocks.length) {
-      return {
-        role: "user" as const,
-        content: [...docBlocks, { type: "text" as const, text: m.content }],
-      };
-    }
-    return { role: m.role, content: m.content };
-  });
+  const personal = mine
+    ? [
+        `- Property: ${mine.property.address} in ${mine.property.name}`,
+        mine.property.balance
+          ? `- HOA fee: ${mine.property.balance}${mine.property.cadence ? ` ${mine.property.cadence.toLowerCase()}` : ""}${mine.property.due ? `, ${mine.property.overdue ? "PAST DUE since" : "due"} ${mine.property.due}` : ""}`
+          : "- HOA fee: no billing on file yet",
+        mine.requests.length
+          ? `- Maintenance requests: ${mine.requests.slice(0, 5).map((r) => `${r.ref} ${r.title} (${r.status})`).join("; ")}`
+          : "- Maintenance requests: none on file",
+        mine.arcApps.length
+          ? `- Architectural applications: ${mine.arcApps.slice(0, 4).map((a) => `${a.ref} ${a.title} (${a.status})`).join("; ")}`
+          : "- Architectural applications: none",
+        mine.notices.length
+          ? `- Compliance notices: ${mine.notices.slice(0, 4).map((n) => `${n.title} (${n.status})`).join("; ")}`
+          : "- Compliance notices: none — the property is in good standing",
+        mine.reservations.length
+          ? `- Amenity reservations: ${mine.reservations.slice(0, 4).map((r) => `${r.label} (${r.status})`).join("; ")}`
+          : "- Amenity reservations: none",
+        mine.ledger.length
+          ? `- Recent ledger: ${mine.ledger.slice(0, 6).map((l) => `${l.date} ${l.label} ${l.amount}`).join("; ")}`
+          : "- Ledger: no activity yet",
+      ].join("\n")
+    : "";
+
+  const system = isStaff
+    ? `You are the Unity Grid assistant for the Sofi Lakes residential association in Katy, Texas, embedded in the community's management portal and speaking with a staff member. Answer using the attached governing documents and the live data below.
+
+${shared}`
+    : `You are the Unity Grid assistant for the Sofi Lakes residential association in Katy, Texas, embedded in the resident portal and speaking with the homeowner ${profile?.display_name?.trim() || "on file"}. Answer using the attached governing documents, the community data, and this homeowner's own records below. You know nothing about any other resident or the management company's internal records, and if asked, say that isn't available here.
+
+This homeowner's records:
+${personal}
+
+${shared}`;
+
+  type ORMsg = { role: "system" | "user" | "assistant"; content: string | ContentPart[] };
+  const messages: ORMsg[] = [
+    { role: "system", content: system },
+    ...history.map((m, i): ORMsg => {
+      if (m.role === "user" && i === history.length - 1 && docParts.length) {
+        return { role: "user", content: [...docParts, { type: "text", text: m.content }] };
+      }
+      return { role: m.role, content: m.content };
+    }),
+  ];
 
   try {
-    // Server-side fallback: if Opus 5's safety classifiers decline a benign
-    // question, the API retries it on the recommended fallback model.
-    const response = await client.beta.messages.create({
-      model: "claude-opus-5",
-      max_tokens: 2048,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-      system,
-      messages,
+    const res = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3001",
+        "X-Title": "Unity Grid Assistant",
+      },
+      body: JSON.stringify({
+        model: process.env.OPENROUTER_MODEL?.trim() || DEFAULT_MODEL,
+        max_tokens: 2048,
+        messages,
+        // Native engine: the provider's own PDF understanding reads the
+        // scanned documents; no lossy text pre-extraction.
+        plugins: docParts.length
+          ? [{ id: "file-parser", pdf: { engine: "native" } }]
+          : undefined,
+      }),
     });
 
-    if (response.stop_reason === "refusal") {
-      return NextResponse.json({
-        answer:
-          "I can't help with that question. For anything about the association, try rephrasing — or contact the management office directly.",
-        sources: [] as string[],
-      });
+    const data = (await res.json()) as {
+      choices?: { message?: { content?: string } }[];
+      error?: { message?: string };
+    };
+    if (!res.ok || data.error) {
+      return NextResponse.json(
+        {
+          error: `The assistant hit a provider error${data.error?.message ? `: ${data.error.message}` : ` (${res.status})`}. Try again in a moment.`,
+        },
+        { status: 502 },
+      );
     }
 
-    const answer = response.content
-      .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("\n")
-      .trim();
+    const answer = (data.choices?.[0]?.message?.content ?? "").trim();
     return NextResponse.json({
       answer: answer || "I couldn't put together an answer — try rephrasing the question.",
       sources: attached.map((d) => d.title),
     });
-  } catch (e) {
-    const message =
-      e instanceof Anthropic.APIError
-        ? `The assistant hit an API error (${e.status ?? "network"}). Try again in a moment.`
-        : "The assistant couldn't answer just now. Try again in a moment.";
-    return NextResponse.json({ error: message }, { status: 502 });
+  } catch {
+    return NextResponse.json(
+      { error: "The assistant couldn't be reached. Try again in a moment." },
+      { status: 502 },
+    );
   }
 }
