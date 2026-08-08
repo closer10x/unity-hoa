@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-import { SENT_HISTORY } from "@/lib/admin-portal/fixtures";
+import React, { useEffect, useState } from "react";
+import {
+  countAnnouncementAudience, listAnnouncements, sendAnnouncement,
+} from "@/lib/admin-portal/announcement-actions";
 import {
   replyToResidentThread, setResidentThreadStatus,
 } from "@/lib/admin-portal/message-actions";
@@ -379,29 +381,52 @@ export default function Communications() {
   const [channels, setChannels] = useState({ email: true, sms: false, portal: true });
   const [error, setError] = useState("");
   const [sent, setSent] = useState("");
-  const [history, setHistory] = useState(SENT_HISTORY);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [sending, setSending] = useState(false);
+  const [history, setHistory] = useState<
+    { id: string; date: string; subject: string; meta: string }[]
+  >([]);
+  const [allCount, setAllCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    listAnnouncements().then((r) => { if (alive && r.ok) setHistory(r.sent); });
+    countAnnouncementAudience("all").then((r) => {
+      if (alive && r.ok) setAllCount(r.households);
+    });
+    return () => { alive = false; };
+  }, []);
 
   const audiences = [
-    { id: "all", label: "All communities", count: 676 },
+    { id: "all", label: "All communities", count: allCount ?? s.owners.length },
     ...s.communities.map((c) => ({ id: c.id, label: c.name, count: parseInt(c.doors, 10) || 0 })),
     { id: "delinquent", label: "Delinquent accounts", count: s.delinquents.length },
     { id: "board", label: "Board members", count: s.directors.length },
   ];
 
-  function send() {
+  async function send() {
+    if (sending) return;
     if (!subject.trim()) return setError("Give the announcement a subject.");
     if (!body.trim()) return setError("Write the message.");
     const active = Object.entries(channels).filter(([, v]) => v).map(([k]) => k);
     if (active.length === 0) return setError("Pick at least one channel.");
     const a = audiences.find((x) => x.id === audience)!;
-    const labels: Record<string, string> = { email: "email", sms: "SMS", portal: "portal" };
-    setSent(`\u201C${subject.trim()}\u201D sent to ${a.label.toLowerCase()} by ${active.map((k) => labels[k]).join(", ")}.`);
-    setHistory((prev) => [
-      { date: "Today", subject: subject.trim(), meta: `${a.label} · ${active.map((k) => labels[k]).join(" + ")} · ${a.count} recipients` },
-      ...prev,
-    ]);
+
+    setSending(true);
+    setError("");
+    setSent("");
+    setWarnings([]);
+    const res = await sendAnnouncement({
+      subject, body, audience, audienceLabel: a.label, channels,
+    });
+    setSending(false);
+    if (!res.ok) return setError(res.error);
+    setSent(res.summary);
+    setWarnings(res.warnings);
     s.audit(`Sent announcement \u201C${subject.trim()}\u201D to ${a.label.toLowerCase()}`);
-    setSubject(""); setBody(""); setError("");
+    const refreshed = await listAnnouncements();
+    if (refreshed.ok) setHistory(refreshed.sent);
+    setSubject(""); setBody("");
   }
 
   return (
@@ -433,15 +458,22 @@ export default function Communications() {
             </span>
           </div>
           {error ? <ErrorLine>{error}</ErrorLine> : null}
-          {sent ? <p style={{ fontSize: 14, color: color.accent }}>{sent}</p> : null}
-          <Primary onClick={send} style={{ justifySelf: "start" }}>Send announcement</Primary>
+          {sent ? <p style={{ fontSize: 14, color: color.accent, margin: 0 }}>{sent}</p> : null}
+          {warnings.map((w) => (
+            <p key={w} style={{ fontSize: 14, color: color.attention, margin: 0 }}>{w}</p>
+          ))}
+          <Primary onClick={send} style={{ justifySelf: "start", opacity: sending ? 0.6 : 1 }}>
+            {sending ? "Sending\u2026" : "Send announcement"}
+          </Primary>
         </div>
       </Card>
 
       <Card>
-        <CardHead title="Sent history" />
-        {history.map((h, i) => (
-          <Row key={i}>
+        <CardHead title="Sent history" meta="Announcements that have actually gone out" />
+        {history.length === 0 ? (
+          <Empty>Nothing sent yet. Announcements you send appear here.</Empty>
+        ) : history.map((h) => (
+          <Row key={h.id}>
             <Mono size={13} style={{ color: color.neutral }}>{h.date}</Mono>
             <RowMain label={h.subject} detail={h.meta} />
           </Row>

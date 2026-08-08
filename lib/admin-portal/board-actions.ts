@@ -5,10 +5,11 @@ import { revalidatePath } from "next/cache";
 import { requireAdminUser } from "@/lib/auth/require-admin";
 import { requireServiceSupabase } from "@/lib/supabase/service";
 
-import type { Meeting, MeetingStatus, Minutes } from "./types";
+import type { Director, Meeting, MeetingStatus, Minutes } from "./types";
 
 /**
- * Meetings and their minutes, persisted. Scheduling, every lifecycle step and
+ * The board: directors, meetings and their minutes, persisted. Seating a
+ * director, closing out a term, scheduling, every lifecycle step and
  * each minutes draft writes the database and stamps the audit trail; approving
  * the minutes publishes them to every resident portal, so that step is guarded
  * behind actual minutes content.
@@ -26,7 +27,7 @@ const STATUSES: MeetingStatus[] = [
 async function officeContext() {
   const session = await requireAdminUser();
   if (session.profile.role !== "admin") {
-    throw new Error("Only staff can manage meetings.");
+    throw new Error("Only staff can manage the board record.");
   }
   const db = requireServiceSupabase();
   const actorName =
@@ -214,6 +215,163 @@ export async function setMeetingStatus(input: {
 
     revalidatePath("/admin");
     return { ok: true, meeting: toMeeting(data as MeetingRow, minutes) };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
+
+/* ─── Directors ──────────────────────────────────────────────────────── */
+
+type DirectorRow = {
+  id: string;
+  name: string;
+  role: string | null;
+  street_number: string | null;
+  street_name: string | null;
+  unit: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  term_start: string | null;
+  term_end: string | null;
+};
+
+const dayLabel = (d: string | null) =>
+  d
+    ? new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", {
+        month: "short", day: "numeric", year: "numeric", timeZone: "UTC",
+      })
+    : "—";
+
+/** Same shape the loader produces, so a seated director renders identically. */
+function toDirector(d: DirectorRow): Director {
+  return {
+    id: d.id,
+    name: d.name,
+    role: d.role ?? "Director",
+    address:
+      [
+        [d.street_number, d.street_name].filter(Boolean).join(" "),
+        d.city,
+        [d.state, d.zip].filter(Boolean).join(" "),
+      ]
+        .filter(Boolean)
+        .join(", ") || "No address recorded",
+    term:
+      d.term_start && d.term_end
+        ? `${dayLabel(d.term_start)} – ${dayLabel(d.term_end)}`
+        : "Term not recorded",
+    termEnd: d.term_end ?? null,
+  };
+}
+
+/**
+ * Terms are collected as years. A start year begins on January 1 and an end
+ * year runs through December 31, so both land in the date columns.
+ */
+function toTermDate(raw: string, edge: "start" | "end"): string | null {
+  const t = raw.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+  if (/^\d{4}$/.test(t)) return edge === "start" ? `${t}-01-01` : `${t}-12-31`;
+  return null;
+}
+
+export async function seatDirector(input: {
+  name: string;
+  role: string;
+  streetNumber: string;
+  streetName: string;
+  unit: string;
+  city: string;
+  state: string;
+  zip: string;
+  /** Year ("2026") or ISO date. */
+  termStart: string;
+  termEnd: string;
+}): Promise<{ ok: true; director: Director } | Fail> {
+  try {
+    const { db, actorName, actorId } = await officeContext();
+
+    const name = input.name.trim();
+    if (!name) return { ok: false, error: "Add the director's name." };
+
+    const termStart = toTermDate(input.termStart, "start");
+    const termEnd = toTermDate(input.termEnd, "end");
+    if (!termStart || !termEnd) {
+      return { ok: false, error: "Add the term start and end years, e.g. 2026 and 2029." };
+    }
+    if (termEnd < termStart) {
+      return { ok: false, error: "The term ends before it starts — check the years." };
+    }
+
+    const { data, error } = await db
+      .from("directors")
+      .insert({
+        name,
+        role: input.role.trim() || "Director",
+        street_number: input.streetNumber.trim() || null,
+        street_name: input.streetName.trim() || null,
+        unit: input.unit.trim() || null,
+        city: input.city.trim() || null,
+        state: input.state.trim() || null,
+        zip: input.zip.trim() || null,
+        term_start: termStart,
+        term_end: termEnd,
+      })
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+
+    await audit(
+      db, actorName, actorId,
+      `Board: seated ${name} as ${input.role.trim() || "Director"} (${dayLabel(termStart)} – ${dayLabel(termEnd)})`,
+    );
+
+    revalidatePath("/admin");
+    return { ok: true, director: toDirector(data as DirectorRow) };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
+
+/**
+ * The roster is history: ending a term closes it out at today's date rather
+ * than removing the row, so who sat when stays answerable.
+ */
+export async function endDirectorTerm(input: {
+  id: string;
+  name: string;
+}): Promise<{ ok: true; director: Director } | Fail> {
+  try {
+    const { db, actorName, actorId } = await officeContext();
+
+    const { data: existing, error: getErr } = await db
+      .from("directors")
+      .select("*")
+      .eq("id", input.id)
+      .maybeSingle();
+    if (getErr) throw new Error(getErr.message);
+    if (!existing) return { ok: false, error: "That director is no longer on the roster." };
+
+    const today = new Date().toISOString().slice(0, 10);
+    const { data, error } = await db
+      .from("directors")
+      .update({
+        term_end: today,
+        term_start: existing.term_start ?? today,
+      })
+      .eq("id", input.id)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+
+    await audit(
+      db, actorName, actorId,
+      `Board: ended ${existing.name}'s term as ${existing.role ?? "Director"} on ${dayLabel(today)}`,
+    );
+
+    revalidatePath("/admin");
+    return { ok: true, director: toDirector(data as DirectorRow) };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
   }

@@ -2,11 +2,17 @@
 
 import React, { useState } from "react";
 import { ARC_STEPS } from "@/lib/admin-portal/actions";
+import { addArcMessage, setArcStatus } from "@/lib/admin-portal/compliance-actions";
 import { buildActionMenu, useStore } from "@/lib/admin-portal/store";
-import { color, font, radius } from "@/lib/admin-portal/tokens";
-import type { PendingConfirm } from "@/lib/admin-portal/types";
-import { ActionSelect, Area, Card, Chip, ConfirmBar, Eyebrow, Mono, PageTitle, Primary, Status } from "../ui";
+import { color, pad, radius } from "@/lib/admin-portal/tokens";
+import type { ArcStatus, PendingConfirm } from "@/lib/admin-portal/types";
+import {
+  ActionSelect, Area, Card, Chip, ConfirmBar, Empty, ErrorLine, Eyebrow, Mono,
+  PageTitle, Primary, Status,
+} from "../ui";
 
+/* Mirrors the audience column on arc_messages — an internal note must never
+   reach the owner. */
 type Target = "owner" | "committee" | "internal";
 
 export default function Architectural() {
@@ -15,6 +21,7 @@ export default function Architectural() {
   const [openThread, setOpenThread] = useState("");
   const [target, setTarget] = useState<Target>("owner");
   const [draft, setDraft] = useState("");
+  const [flowError, setFlowError] = useState("");
 
   const targets: { id: Target; label: string; hint: string }[] = [
     { id: "owner", label: "Reply to owner", hint: "Copied to their portal and email." },
@@ -26,7 +33,11 @@ export default function Architectural() {
     <>
       <PageTitle title="Architectural review" lede="Applications on the 30-day statutory clock. Decisions and correspondence stay on the case." />
 
-      {s.arcApps.map((a) => {
+      {flowError ? <Card><div style={{ padding: `12px ${pad.card}` }}><ErrorLine>{flowError}</ErrorLine></div></Card> : null}
+
+      {s.arcApps.length === 0 ? (
+        <Card><Empty>No architectural applications yet.</Empty></Card>
+      ) : s.arcApps.map((a) => {
         const menu = buildActionMenu(ARC_STEPS, a.status, a.id, `${a.ref} · ${a.title}`, pending, setPending);
         const threadOpen = openThread === a.id;
         return (
@@ -88,17 +99,16 @@ export default function Architectural() {
                     <Area value={draft} onChange={setDraft} placeholder="Ask the owner for more detail, or leave a note for the committee…" />
                     <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
                       <Primary style={{ padding: "11px 22px", fontSize: 14 }}
-                        onClick={() => {
+                        onClick={async () => {
                           const text = draft.trim();
                           if (!text) return;
-                          const from = target === "owner" ? "Elena Cruz · to owner"
-                            : target === "committee" ? "Elena Cruz · to committee"
-                            : "Elena Cruz · internal note";
+                          setFlowError("");
+                          const res = await addArcMessage({ applicationId: a.id, body: text, audience: target });
+                          if (!res.ok) return setFlowError(res.error);
                           s.setArcApps((prev) => prev.map((x) => x.id === a.id
-                            ? { ...x, thread: [...x.thread, { from, mine: true, time: `Today, ${s.stamp().split(", ")[1]}`, body: text }] }
+                            ? { ...x, thread: [...x.thread, res.message] }
                             : x));
                           setDraft("");
-                          s.audit(`${a.ref} — ${target === "internal" ? "internal note added" : `message sent to ${target}`}`);
                         }}>
                         {target === "owner" ? "Send to owner" : target === "committee" ? "Post to committee" : "Save internal note"}
                       </Primary>
@@ -111,12 +121,16 @@ export default function Architectural() {
 
             {menu.confirming ? (
               <ConfirmBar text={menu.confirmText} confirmLabel={menu.confirmLabel} onCancel={menu.cancel}
-                onConfirm={() => {
-                  const next = menu.nextValue!;
+                onConfirm={async () => {
+                  const next = menu.nextValue! as ArcStatus;
                   const note = ARC_STEPS.find((x) => x.id === next)?.after ?? "Decision sent to the owner";
-                  s.setArcApps((prev) => prev.map((x) => x.id === a.id ? { ...x, status: next, decisionNote: note } : x));
                   setPending(null);
-                  s.audit(`${a.ref} ${next.toLowerCase()} — ${a.title}`);
+                  setFlowError("");
+                  const res = await setArcStatus({ id: a.id, status: next, decisionNote: note });
+                  if (!res.ok) return setFlowError(res.error);
+                  s.setArcApps((prev) => prev.map((x) => x.id === a.id
+                    ? { ...x, status: res.status, decisionNote: res.decisionNote }
+                    : x));
                 }} />
             ) : null}
           </Card>

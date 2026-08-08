@@ -76,6 +76,11 @@ export const requireAdminUser = cache(async (): Promise<AdminSession> => {
     redirect("/admin/login?error=forbidden");
   }
 
+  // An account switched off in Team keeps its record but loses its access.
+  if ((profile as { disabled?: boolean | null }).disabled) {
+    redirect("/admin/login?error=disabled");
+  }
+
   const row = profile as {
     role: string;
     staff_role?: string | null;

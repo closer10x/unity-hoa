@@ -44,7 +44,11 @@ export default function Header() {
   }, [profileOpen]);
 
   const options = [
-    { id: "all", label: "All communities", meta: `${s.communities.length} communities · 676 doors` },
+    {
+      id: "all",
+      label: "All communities",
+      meta: `${s.communities.length} communities · ${s.owners.length} homes`,
+    },
     ...s.portfolios.map((p) => ({ id: p.id, label: p.name, meta: `Portfolio · ${p.members.length} communities` })),
     ...s.communities.map((c) => ({ id: c.id, label: c.name, meta: `${c.doors} · ${c.dues} ${c.cadence.toLowerCase()}` })),
   ];

@@ -2,16 +2,18 @@
 
 import React, { useState } from "react";
 import { BOOKING_STEPS } from "@/lib/admin-portal/actions";
+import { createBooking, setBookingStatus } from "@/lib/admin-portal/operations-actions";
 import { buildActionMenu, useSearchFilter, useStore } from "@/lib/admin-portal/store";
-import { color } from "@/lib/admin-portal/tokens";
-import type { Booking, PendingConfirm } from "@/lib/admin-portal/types";
+import { color, pad } from "@/lib/admin-portal/tokens";
+import type { BookingStatus, PendingConfirm } from "@/lib/admin-portal/types";
 import {
-  ActionSelect, AddDrawer, Area, Card, Chip, ConfirmBar, Empty, ErrorLine,
-  Field, FieldGrid, FilterBar, Input, Mono, PageTitle, Primary, Row, RowMain,
-  Select, Status,
+  ActionSelect, AddDrawer, Area, Card, Chip, ConfirmBar, DateInput, Empty,
+  ErrorLine, Field, FieldGrid, FilterBar, Input, Mono, PageTitle, Primary, Row,
+  RowMain, Select, Status,
 } from "../ui";
 
 const FILTERS = ["All", "Requested", "Approved", "Completed", "Deposit unpaid"];
+/* Placeholder inventory — awaiting the association's real amenity list. */
 const AMENITIES = ["Great Hall", "Pool cabana 1", "Pool cabana 2", "Clubhouse Annex", "Tennis court"];
 const EVENTS = ["Private party", "Birthday", "Wedding or reception", "Memorial", "Community meeting", "Committee meeting", "Other"];
 
@@ -20,9 +22,11 @@ export default function Bookings() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
   const [pending, setPending] = useState<PendingConfirm | null>(null);
+  const [flowError, setFlowError] = useState("");
 
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [resident, setResident] = useState("");
   const [amenity, setAmenity] = useState(AMENITIES[0]);
   const [date, setDate] = useState("");
@@ -40,20 +44,23 @@ export default function Bookings() {
     (b) => filter === "All" ? true : filter === "Deposit unpaid" ? /unpaid/i.test(b.deposit) : b.status === filter,
   );
 
-  function save() {
+  async function save() {
     if (!resident.trim()) return setError("Who is it for?");
     if (!date.trim() || !time.trim()) return setError("Add a date and a time.");
     if (flags.alcohol && !flags.insurance)
       return setError("Alcohol events need a certificate of insurance — mark it or drop the alcohol flag.");
-    const count = Object.values(flags).filter(Boolean).length;
-    const b: Booking = {
-      id: s.uid("bk"), date: date.trim(), amenity,
-      detail: `${resident.trim()} · ${eventType.toLowerCase()} · ${time.trim()}${guests.trim() ? ` · ${guests.trim()} guests` : ""}${count ? ` · ${count} requirement(s)` : ""} · booked at the office`,
-      deposit, status: "Requested",
-    };
-    s.setBookings((prev) => [b, ...prev]);
-    s.audit(`Booked ${amenity} on ${date.trim()} for ${resident.trim()}`);
+    setSaving(true);
+    const res = await createBooking({
+      amenity, residentName: resident, phone, date, time,
+      guestCount: guests, eventType, setupNotes: setup, officeNotes: notes,
+      depositStatus: deposit, alcohol: flags.alcohol, insuranceOnFile: flags.insurance,
+      outsideVendors: flags.vendors, afterHours: flags.afterHours,
+    });
+    setSaving(false);
+    if (!res.ok) return setError(res.error);
+    s.setBookings((prev) => [res.booking, ...prev]);
     setOpen(false); setError(""); setResident(""); setDate(""); setTime(""); setGuests(""); setPhone(""); setSetup(""); setNotes("");
+    setFlags({ alcohol: false, insurance: false, vendors: false, afterHours: false });
   }
 
   return (
@@ -69,7 +76,7 @@ export default function Bookings() {
           <FieldGrid>
             <Field label="Resident"><Input value={resident} onChange={setResident} placeholder="Name or lot number" /></Field>
             <Field label="Amenity"><Select value={amenity} onChange={setAmenity} options={AMENITIES.map((a) => ({ id: a, label: a }))} /></Field>
-            <Field label="Date"><Input value={date} onChange={setDate} placeholder="e.g. Jun 12" /></Field>
+            <Field label="Date"><DateInput value={date} onChange={setDate} /></Field>
           </FieldGrid>
           <FieldGrid>
             <Field label="Time"><Input value={time} onChange={setTime} placeholder="e.g. 4–9PM" /></Field>
@@ -106,11 +113,13 @@ export default function Bookings() {
             </span>
           </div>
           {error ? <ErrorLine>{error}</ErrorLine> : null}
-          <Primary onClick={save} style={{ justifySelf: "start" }}>Create booking</Primary>
+          <Primary onClick={save} style={{ justifySelf: "start" }}>{saving ? "Saving…" : "Create booking"}</Primary>
         </AddDrawer>
 
         <FilterBar query={query} onQuery={setQuery} placeholder="Search resident or amenity…"
           filters={FILTERS} active={filter} onFilter={setFilter} />
+
+        {flowError ? <div style={{ padding: `12px ${pad.card} 0` }}><ErrorLine>{flowError}</ErrorLine></div> : null}
 
         {visible.length === 0 ? <Empty>No bookings match that.</Empty> : visible.map((b) => {
           const menu = buildActionMenu(BOOKING_STEPS, b.status, b.id, `${b.amenity} · ${b.date}`, pending, setPending);
@@ -125,11 +134,13 @@ export default function Bookings() {
               </Row>
               {menu.confirming ? (
                 <ConfirmBar text={menu.confirmText} confirmLabel={menu.confirmLabel} onCancel={menu.cancel}
-                  onConfirm={() => {
-                    const next = menu.nextValue!;
-                    s.setBookings((prev) => prev.map((x) => x.id === b.id ? { ...x, status: next } : x));
+                  onConfirm={async () => {
+                    const next = menu.nextValue! as BookingStatus;
                     setPending(null);
-                    s.audit(`Booking ${b.amenity} ${b.date} → ${next}`);
+                    setFlowError("");
+                    const res = await setBookingStatus({ id: b.id, status: next });
+                    if (!res.ok) return setFlowError(res.error);
+                    s.setBookings((prev) => prev.map((x) => (x.id === b.id ? res.booking : x)));
                   }} />
               ) : null}
             </React.Fragment>

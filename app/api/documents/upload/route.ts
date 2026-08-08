@@ -95,6 +95,10 @@ export async function POST(req: Request) {
       file_size_bytes: file.size,
       file_type: file.type || "application/octet-stream",
       uploaded_by: userId,
+      // New documents are drafts: the office publishes them deliberately.
+      // Without this the column default would make every upload readable by
+      // residents the moment it lands.
+      access_level: "manager_only",
     })
     .select("id, title, uploaded_at")
     .single();

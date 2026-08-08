@@ -40,6 +40,141 @@ async function officeContext() {
   return { db, actorName, actorId };
 }
 
+/** Onboarding stage per community, defaulting to Active where none is set. */
+export async function getCommunityStages(): Promise<
+  { ok: true; stages: Record<string, string> } | Fail
+> {
+  try {
+    const { db } = await officeContext();
+    const { data, error } = await db
+      .from("community_onboarding")
+      .select("community, stage");
+    if (error) throw new Error(error.message);
+    const stages: Record<string, string> = {};
+    for (const r of data ?? []) stages[r.community as string] = (r.stage as string) ?? "Active";
+    return { ok: true, stages };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
+
+export async function setCommunityStage(input: {
+  community: string;
+  communityName: string;
+  stage: string;
+}): Promise<{ ok: true; stage: string } | Fail> {
+  try {
+    const { db, actorName, actorId } = await officeContext();
+    if (!input.community) return { ok: false, error: "That community has no id to record against." };
+
+    const { error } = await db.from("community_onboarding").upsert(
+      { community: input.community, stage: input.stage, updated_at: new Date().toISOString() },
+      { onConflict: "community" },
+    );
+    if (error) throw new Error(error.message);
+
+    const { error: auditErr } = await db.from("admin_audit_log").insert({
+      action: `Communities: ${input.communityName} moved to ${input.stage}`,
+      actor_name: actorName,
+      actor_user_id: actorId,
+    });
+    if (auditErr) throw new Error(`Audit write failed: ${auditErr.message}`);
+
+    revalidatePath("/admin");
+    return { ok: true, stage: input.stage };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
+
+export async function createPortfolio(input: {
+  name: string;
+  memberCommunities: string[];
+}): Promise<{ ok: true; portfolio: { id: string; name: string; members: string[] } } | Fail> {
+  try {
+    const { db, actorName, actorId } = await officeContext();
+    const name = input.name.trim();
+    if (!name) return { ok: false, error: "Name the portfolio." };
+    if (input.memberCommunities.length === 0) {
+      return { ok: false, error: "Assign at least one community." };
+    }
+
+    const { data, error } = await db
+      .from("portfolios")
+      .insert({ name })
+      .select("id, name")
+      .single();
+    if (error) throw new Error(error.message);
+
+    const portfolioId = data.id as string;
+    const { error: linkErr } = await db.from("portfolio_communities").insert(
+      input.memberCommunities.map((community_id) => ({ portfolio_id: portfolioId, community_id })),
+    );
+    if (linkErr) throw new Error(`The portfolio saved but its communities did not: ${linkErr.message}`);
+
+    const { error: auditErr } = await db.from("admin_audit_log").insert({
+      action: `Communities: created portfolio ${name} with ${input.memberCommunities.length} community${
+        input.memberCommunities.length === 1 ? "" : "s"
+      }`,
+      actor_name: actorName,
+      actor_user_id: actorId,
+    });
+    if (auditErr) throw new Error(`Audit write failed: ${auditErr.message}`);
+
+    revalidatePath("/admin");
+    return {
+      ok: true,
+      portfolio: { id: portfolioId, name, members: [...input.memberCommunities] },
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
+
+/**
+ * Registers a community before it has any homes. The roster is what makes a
+ * community appear in the list, so this records the stage and waits; the
+ * first home added in Owners brings it through.
+ */
+export async function registerCommunity(input: {
+  name: string;
+  stage: string;
+}): Promise<{ ok: true; community: string } | Fail> {
+  try {
+    const { db, actorName, actorId } = await officeContext();
+    const name = input.name.trim();
+    if (!name) return { ok: false, error: "Name the community." };
+
+    const community = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    if (!community) return { ok: false, error: "That name has no letters to key the community on." };
+
+    const { data: clash, error: clashErr } = await db
+      .from("community_onboarding")
+      .select("community")
+      .eq("community", community)
+      .maybeSingle();
+    if (clashErr) throw new Error(clashErr.message);
+    if (clash) return { ok: false, error: `${name} is already being onboarded.` };
+
+    const { error } = await db
+      .from("community_onboarding")
+      .insert({ community, stage: input.stage || "Onboarding" });
+    if (error) throw new Error(error.message);
+
+    const { error: auditErr } = await db.from("admin_audit_log").insert({
+      action: `Communities: started onboarding ${name}`,
+      actor_name: actorName,
+      actor_user_id: actorId,
+    });
+    if (auditErr) throw new Error(`Audit write failed: ${auditErr.message}`);
+
+    revalidatePath("/admin");
+    return { ok: true, community };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
+
 export async function getCommunityBilling(): Promise<
   { ok: true; billing: CommunityBilling } | Fail
 > {

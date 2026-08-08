@@ -5,6 +5,7 @@ import React, { useMemo, useState } from "react";
 import { useStore } from "@/lib/admin-portal/store";
 import { color, font, radius } from "@/lib/admin-portal/tokens";
 import type { WorkOrder } from "@/lib/admin-portal/types";
+import { assignWorkOrder } from "@/lib/admin-portal/work-actions";
 import {
   AddDrawer, Card, CardHead, Chip, DateInput, Field, FieldGrid, PageTitle, Pill,
   Primary, Select,
@@ -21,11 +22,9 @@ import {
  *
  * "Add to the schedule" assigns an open work order to a person and a day,
  * drawing both from records that already exist — the employees table and the
- * work order list — rather than introducing a parallel roster.
- *
- * Not yet persisted: the assignment updates the session only. It needs to
- * write assigned_to and due_at back to work_orders, with the audit entry in
- * the same transaction.
+ * work order list — rather than introducing a parallel roster. The assignment
+ * writes assigned_to and due_at back to work_orders and stamps the audit
+ * trail, so the board survives a refresh.
  */
 
 /** Roles that do physical work and therefore belong on the board. */
@@ -88,6 +87,7 @@ export default function Schedule() {
   const [job, setJob] = useState("");
   const [day, setDay] = useState("");
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
@@ -115,7 +115,7 @@ export default function Schedule() {
       (w) => w.assigneeId === staffId && (w.dueAt ?? "").slice(0, 10) === iso(day),
     );
 
-  function schedule() {
+  async function schedule() {
     if (!tech) return setError("Pick who is doing the work.");
     if (!job) return setError("Pick a work order to schedule.");
     if (!day) return setError("Pick the day it is due.");
@@ -123,13 +123,12 @@ export default function Schedule() {
     const wo = s.work.find((w) => w.id === job);
     if (!who || !wo) return setError("That tech or work order is no longer available.");
 
-    s.setWork((prev) =>
-      prev.map((w) =>
-        w.id === job
-          ? { ...w, assigneeId: tech, assignee: who.name, dueAt: day, status: "Scheduled" }
-          : w,
-      ),
-    );
+    setSaving(true);
+    const res = await assignWorkOrder({ id: job, assigneeName: who.name, dueAt: day });
+    setSaving(false);
+    if (!res.ok) return setError(res.error);
+
+    s.setWork((prev) => prev.map((w) => (w.id === job ? res.work : w)));
     s.audit(`Scheduled ${wo.ref} — ${wo.title} · ${who.name} · ${day}`);
     setOpen(false);
     setError("");
@@ -187,7 +186,7 @@ export default function Schedule() {
           {error ? (
             <span style={{ fontSize: 14, color: color.critical }}>{error}</span>
           ) : null}
-          <Primary onClick={schedule}>Add to schedule</Primary>
+          <Primary onClick={schedule}>{saving ? "Saving…" : "Add to schedule"}</Primary>
         </AddDrawer>
         <CardHead
           title={weekLabel}

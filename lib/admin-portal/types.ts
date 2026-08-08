@@ -68,11 +68,15 @@ export interface Minutes {
 
 export interface Director {
   id: string; name: string; role: string; address: string; term: string;
+  /** ISO end date when the seat has been closed out; null while seated. */
+  termEnd: string | null;
 }
 
 export interface LegalCase {
   id: string; owner: string; address: string; balance: string;
   stage: LegalStage; counsel: string;
+  /** The board vote that authorized a lien, suit or foreclosure. */
+  boardVoteOn: string | null;
 }
 export type LegalStage =
   | "Referred to counsel" | "Lien filed" | "Suit filed" | "Judgment"
@@ -81,6 +85,9 @@ export type LegalStage =
 export interface Vendor {
   id: string; name: string; trade: string; contract: string;
   spend: string; insurance: string; ok: boolean;
+  /** Deactivated vendors stay on the roster but drop out of assignment lists. */
+  active: boolean;
+  contact: string;
 }
 
 export interface Doc {

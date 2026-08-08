@@ -4,7 +4,8 @@ import React, { useEffect, useState } from "react";
 import { ONBOARD_STEPS } from "@/lib/admin-portal/actions";
 import { emptyAddress, formatAddress } from "@/lib/admin-portal/address";
 import {
-  getCommunityBilling, updateCommunityBilling,
+  createPortfolio, getCommunityBilling, registerCommunity, setCommunityStage,
+  updateCommunityBilling,
 } from "@/lib/admin-portal/community-actions";
 import {
   getCommunityPolicies, setCommunityPolicy, type CommunityPolicy,
@@ -43,6 +44,8 @@ export default function Communities() {
   const [pError, setPError] = useState("");
   const [pName, setPName] = useState("");
   const [pMembers, setPMembers] = useState<string[]>([]);
+  const [pSaving, setPSaving] = useState(false);
+  const [stageError, setStageError] = useState("");
 
   /* communities */
   const [cOpen, setCOpen] = useState(false);
@@ -53,6 +56,8 @@ export default function Communities() {
   const [cDues, setCDues] = useState("");
   const [cCadence, setCCadence] = useState("Quarterly");
   const [cPortfolio, setCPortfolio] = useState("");
+  const [cSaving, setCSaving] = useState(false);
+  const [cNote, setCNote] = useState("");
   const [pending, setPending] = useState<PendingConfirm | null>(null);
 
   /* per-community feature policy */
@@ -134,35 +139,33 @@ export default function Communities() {
     setEditNote("Saved. The fee shows across both portals and the public dues lookup.");
   }
 
-  function savePortfolio() {
+  async function savePortfolio() {
+    if (pSaving) return;
     if (!pName.trim()) return setPError("Name the portfolio.");
     if (pMembers.length === 0) return setPError("Assign at least one community.");
-    const pf: Portfolio = { id: s.uid("pf"), name: pName.trim(), members: [...pMembers] };
-    s.setPortfolios((prev) => [...prev, pf]);
-    s.audit(`Created portfolio ${pf.name}`);
-    setPOpen(false); setPError(""); setPName(""); setPMembers([]);
+    setPSaving(true);
+    setPError("");
+    const res = await createPortfolio({ name: pName, memberCommunities: pMembers });
+    setPSaving(false);
+    if (!res.ok) return setPError(res.error);
+    s.setPortfolios((prev) => [...prev, res.portfolio]);
+    s.audit(`Created portfolio ${res.portfolio.name}`);
+    setPOpen(false); setPName(""); setPMembers([]);
   }
 
-  function saveCommunity() {
+  async function saveCommunity() {
+    if (cSaving) return;
     if (!cName.trim()) return setCError("Name the community.");
-    if (!cAddress.city.trim()) return setCError("Add the city.");
-    if (!cDoors.trim()) return setCError("How many doors?");
-    const doors = parseInt(cDoors.replace(/[^0-9]/g, ""), 10) || 0;
-    const dues = parseFloat(cDues.replace(/[^0-9.]/g, "")) || 0;
-    const c: Community = {
-      id: s.uid("c"), name: cName.trim(),
-      location: formatAddress(cAddress) || cAddress.city.trim(),
-      doors: `${doors} homes`,
-      dues: `$${dues.toFixed(2)}`,
-      cadence: cCadence, stage: "Onboarding",
-      portfolio: cPortfolio,
-    };
-    s.setCommunities((prev) => [...prev, c]);
-    if (cPortfolio) {
-      s.setPortfolios((prev) => prev.map((p) => p.id === cPortfolio ? { ...p, members: [...p.members, c.id] } : p));
-    }
-    s.audit(`Onboarded community ${c.name}`);
-    setCOpen(false); setCError(""); setCName(""); setCAddress(emptyAddress()); setCDoors(""); setCDues(""); setCPortfolio("");
+    setCSaving(true);
+    setCError("");
+    const res = await registerCommunity({ name: cName, stage: "Onboarding" });
+    setCSaving(false);
+    if (!res.ok) return setCError(res.error);
+    s.audit(`Started onboarding ${cName.trim()}`);
+    setCNote(
+      `${cName.trim()} is recorded as onboarding. It joins the list below once its first home is added in Owners.`,
+    );
+    setCName(""); setCAddress(emptyAddress()); setCDoors(""); setCDues(""); setCPortfolio("");
   }
 
   return (
@@ -186,7 +189,9 @@ export default function Communities() {
             </div>
           </div>
           {pError ? <ErrorLine>{pError}</ErrorLine> : null}
-          <Primary onClick={savePortfolio} style={{ justifySelf: "start" }}>Create portfolio</Primary>
+          <Primary onClick={savePortfolio} style={{ justifySelf: "start", opacity: pSaving ? 0.6 : 1 }}>
+            {pSaving ? "Creating\u2026" : "Create portfolio"}
+          </Primary>
         </AddDrawer>
         {s.portfolios.map((p) => (
           <Row key={p.id}>
@@ -224,10 +229,21 @@ export default function Communities() {
                 options={s.portfolios.map((p) => ({ id: p.id, label: p.name }))} />
             </Field>
           </FieldGrid>
+          <p style={{ fontSize: 14, lineHeight: 1.6, color: color.inkTertiary, margin: 0 }}>
+            A community appears on the list once its first home is on the roster.
+            Add the homes in Owners; the fee and cadence are set from the
+            community&rsquo;s own Edit drawer.
+          </p>
           {cError ? <ErrorLine>{cError}</ErrorLine> : null}
-          <Primary onClick={saveCommunity} style={{ justifySelf: "start" }}>Add community</Primary>
+          {cNote ? <span style={{ fontSize: 14, color: color.accent }}>{cNote}</span> : null}
+          <Primary onClick={saveCommunity} style={{ justifySelf: "start", opacity: cSaving ? 0.6 : 1 }}>
+            {cSaving ? "Saving\u2026" : "Start onboarding"}
+          </Primary>
         </AddDrawer>
 
+        {stageError ? (
+          <div style={{ padding: "12px 24px" }}><ErrorLine>{stageError}</ErrorLine></div>
+        ) : null}
         {s.communities.map((c) => {
           const menu = buildActionMenu(ONBOARD_STEPS, c.stage, c.id, c.name, pending, setPending);
           const p = policies.find((x) => x.community === c.id);
@@ -316,10 +332,15 @@ export default function Communities() {
 
               {menu.confirming ? (
                 <ConfirmBar text={menu.confirmText} confirmLabel={menu.confirmLabel} onCancel={menu.cancel}
-                  onConfirm={() => {
+                  onConfirm={async () => {
                     const next = menu.nextValue!;
-                    s.setCommunities((prev) => prev.map((x) => x.id === c.id ? { ...x, stage: next } : x));
+                    setStageError("");
+                    const res = await setCommunityStage({
+                      community: c.id, communityName: c.name, stage: next,
+                    });
                     setPending(null);
+                    if (!res.ok) return setStageError(res.error);
+                    s.setCommunities((prev) => prev.map((x) => x.id === c.id ? { ...x, stage: next } : x));
                     s.audit(`${c.name} moved to ${next}`);
                   }} />
               ) : null}

@@ -2,13 +2,16 @@
 
 import React, { useState } from "react";
 import { VIOLATION_STEPS } from "@/lib/admin-portal/actions";
+import {
+  addViolationNote, createViolation, recordViolationMailing, setViolationStatus,
+} from "@/lib/admin-portal/compliance-actions";
 import { buildActionMenu, useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color, pad, radius, rowGrid } from "@/lib/admin-portal/tokens";
-import type { PendingConfirm, Violation } from "@/lib/admin-portal/types";
+import type { PendingConfirm, Violation, ViolationStatus } from "@/lib/admin-portal/types";
 import {
-  ActionSelect, AddDrawer, Area, Card, ConfirmBar, DropZone, Empty, ErrorLine,
-  Eyebrow, Field, FieldGrid, FilterBar, Input, Mono, PageTitle, Pill, Primary,
-  Row, RowMain, Select, Status, TextButton,
+  ActionSelect, AddDrawer, Area, Card, ConfirmBar, DateInput, DropZone, Empty,
+  ErrorLine, Eyebrow, Field, FieldGrid, FilterBar, Input, Mono, PageTitle, Pill,
+  Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
 
 const FILTERS = ["All", "Open", "Reported", "Courtesy sent", "Notice sent", "Hearing set", "Resolved"];
@@ -37,14 +40,15 @@ export default function Violations() {
 
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
-  const [comm, setComm] = useState(s.communities[0]?.name ?? "Sofi Lakes");
+  const [saving, setSaving] = useState(false);
+  const [flowError, setFlowError] = useState("");
+  const [comm, setComm] = useState(s.communities[0]?.name ?? "");
   const [address, setAddress] = useState("");
   const [type, setType] = useState("");
   const [source, setSource] = useState("Inspection finding");
   const [inspector, setInspector] = useState(s.staff.find((p) => p.role === "Inspector")?.name ?? "");
   const [cure, setCure] = useState("14 days");
   const [note, setNote] = useState("");
-  const [runs, setRuns] = useState(0);
 
   const visible = useSearchFilter(
     s.violations, query, ["title", "detail", "status"],
@@ -55,17 +59,18 @@ export default function Violations() {
     s.setViolations((prev) => prev.map((v) => v.id === id ? { ...v, ...next } : v));
   }
 
-  function logFinding() {
+  async function logFinding() {
+    if (!comm.trim()) return setError("Pick the community this lot belongs to.");
     if (!address.trim()) return setError("Add the address or lot.");
     if (!type) return setError("Pick a violation type.");
-    const v: Violation = {
-      id: s.uid("v"), date: "Today", title: type,
-      detail: `${address.trim()} · ${comm} · ${source.toLowerCase()} by ${inspector} · cure in ${cure.trim() || "14 days"}`,
-      status: "Reported", photos: [], mailings: [], notes: note.trim() ? [{ author: s.currentUser, time: s.stamp(), text: note.trim() }] : [],
-      activity: [{ id: s.uid("a"), text: `Logged as ${source.toLowerCase()}`, who: s.currentUser, time: s.stamp() }],
-    };
-    s.setViolations((prev) => [v, ...prev]);
-    s.audit(`Logged violation — ${type} at ${address.trim()}`);
+    setSaving(true);
+    const res = await createViolation({
+      community: comm, address, violationType: type, source, inspector,
+      cureDays: parseInt(cure, 10), notes: note,
+    });
+    setSaving(false);
+    if (!res.ok) return setError(res.error);
+    s.setViolations((prev) => [res.violation, ...prev]);
     setOpen(false); setError(""); setAddress(""); setType(""); setNote("");
   }
 
@@ -76,7 +81,7 @@ export default function Violations() {
         <AddDrawer
           open={open} onOpen={() => { setOpen(true); setError(""); }} onCancel={() => { setOpen(false); setError(""); }}
           openLabel="Log a finding" title="Log an inspection finding"
-          note={runs ? `${runs} inspection run(s) started today` : "Last full route: Cypress Reserve, Mar 30"}>
+          count={`${s.violations.length} on file`}>
           <FieldGrid>
             <Field label="Community">
               <Select value={comm} onChange={setComm} options={s.communities.map((c) => ({ id: c.name, label: c.name }))} />
@@ -115,13 +120,14 @@ export default function Violations() {
           <DropZone camera>inspection photos — take one now, or drag files here (timestamped in the file)</DropZone>
           {error ? <ErrorLine>{error}</ErrorLine> : null}
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <Primary onClick={logFinding}>Log finding</Primary>
-            <Pill onClick={() => setRuns(runs + 1)}>Start an inspection run</Pill>
+            <Primary onClick={logFinding}>{saving ? "Saving…" : "Log finding"}</Primary>
           </div>
         </AddDrawer>
 
         <FilterBar query={query} onQuery={setQuery} placeholder="Search address, type or community…"
           filters={FILTERS} active={filter} onFilter={setFilter} />
+
+        {flowError ? <div style={{ padding: `12px ${pad.card} 0` }}><ErrorLine>{flowError}</ErrorLine></div> : null}
 
         {visible.length === 0 ? <Empty>No violations match that.</Empty> : visible.map((v) => {
           const menu = buildActionMenu(VIOLATION_STEPS, v.status, v.id, v.detail.split(" · ")[0], pending, setPending);
@@ -142,15 +148,14 @@ export default function Violations() {
 
               {menu.confirming ? (
                 <ConfirmBar text={menu.confirmText} confirmLabel={menu.confirmLabel} onCancel={menu.cancel}
-                  onConfirm={() => {
-                    const next = menu.nextValue!;
+                  onConfirm={async () => {
+                    const next = menu.nextValue! as ViolationStatus;
                     const label = VIOLATION_STEPS.find((x) => x.id === next)?.label ?? `Status set to ${next}`;
-                    patch(v.id, {
-                      status: next,
-                      activity: [...v.activity, { id: s.uid("a"), text: label, who: s.currentUser, time: s.stamp() }],
-                    });
                     setPending(null);
-                    s.audit(`Violation ${v.title} → ${next}`);
+                    setFlowError("");
+                    const res = await setViolationStatus({ id: v.id, status: next, note: label });
+                    if (!res.ok) return setFlowError(res.error);
+                    patch(v.id, { status: res.status, activity: [...v.activity, res.activity] });
                   }} />
               ) : null}
 
@@ -193,18 +198,23 @@ export default function Violations() {
                         <Select value={md.method} onChange={(x) => setMailDrafts({ ...mailDrafts, [v.id]: { ...md, method: x } })}
                           options={["First-class mail", "Certified mail", "Certified + return receipt", "Email + portal", "Hand delivered"].map((k) => ({ id: k, label: k }))} />
                       </Field>
-                      <Field label="Date sent"><Input value={md.sent} onChange={(x) => setMailDrafts({ ...mailDrafts, [v.id]: { ...md, sent: x } })} placeholder="e.g. Apr 22" /></Field>
+                      <Field label="Date sent"><DateInput value={md.sent} onChange={(x) => setMailDrafts({ ...mailDrafts, [v.id]: { ...md, sent: x } })} /></Field>
                       <Field label="Tracking no."><Input value={md.tracking} onChange={(x) => setMailDrafts({ ...mailDrafts, [v.id]: { ...md, tracking: x } })} placeholder="Certified mail only" /></Field>
                     </FieldGrid>
                     <Pill style={{ justifySelf: "start" }}
-                      onClick={() => {
-                        if (!md.sent.trim()) return;
+                      onClick={async () => {
+                        if (!md.sent.trim()) return setFlowError("Pick the date the notice went out.");
+                        setFlowError("");
+                        const res = await recordViolationMailing({
+                          violationId: v.id, kind: md.kind, method: md.method,
+                          tracking: md.tracking, sentOn: md.sent,
+                        });
+                        if (!res.ok) return setFlowError(res.error);
                         patch(v.id, {
-                          mailings: [...v.mailings, { kind: md.kind, method: md.method, sent: md.sent.trim(), tracking: md.tracking.trim(), status: md.method === "Email + portal" ? "Delivered" : "In transit" }],
-                          activity: [...v.activity, { id: s.uid("a"), text: `Recorded mailing — ${md.kind} by ${md.method}`, who: s.currentUser, time: s.stamp() }],
+                          mailings: [...v.mailings, res.mailing],
+                          activity: [...v.activity, res.activity],
                         });
                         setMailDrafts({ ...mailDrafts, [v.id]: { kind: "Courtesy notice", method: "First-class mail", sent: "", tracking: "" } });
-                        s.audit(`Recorded mailing for ${v.title} — ${md.kind}`);
                       }}>
                       Record this mailing
                     </Pill>
@@ -241,12 +251,15 @@ export default function Violations() {
                       onChange={(x) => setNoteDrafts({ ...noteDrafts, [v.id]: x })}
                       placeholder="Add a note for the file — what you observed, who you spoke with." />
                     <Pill style={{ justifySelf: "start" }}
-                      onClick={() => {
+                      onClick={async () => {
                         const text = (noteDrafts[v.id] ?? "").trim();
                         if (!text) return;
+                        setFlowError("");
+                        const res = await addViolationNote({ violationId: v.id, text });
+                        if (!res.ok) return setFlowError(res.error);
                         patch(v.id, {
-                          notes: [...v.notes, { author: s.currentUser, time: s.stamp(), text }],
-                          activity: [...v.activity, { id: s.uid("a"), text: "Added a management note", who: s.currentUser, time: s.stamp() }],
+                          notes: [...v.notes, res.note],
+                          activity: [...v.activity, res.activity],
                         });
                         setNoteDrafts({ ...noteDrafts, [v.id]: "" });
                       }}>

@@ -4,7 +4,9 @@ import React, { useState } from "react";
 import { ROLE_HINTS } from "@/lib/admin-portal/actions";
 import { NAV } from "@/lib/admin-portal/fixtures";
 import { ALL_SECTIONS, SECTION_ACCESS } from "@/lib/admin-portal/permissions";
-import { updateStaffAccount } from "@/lib/admin-portal/team-actions";
+import {
+  removeStaffAccount, setStaffAccountActive, updateStaffAccount,
+} from "@/lib/admin-portal/team-actions";
 import { useStore } from "@/lib/admin-portal/store";
 import { color, font, pad } from "@/lib/admin-portal/tokens";
 import type { Staff, StaffRole } from "@/lib/admin-portal/types";
@@ -109,6 +111,8 @@ export default function Team() {
   const s = useStore();
   /* Rule 3: deletion always confirms. Only one row confirms at a time. */
   const [removing, setRemoving] = useState<string | null>(null);
+  const [rowBusy, setRowBusy] = useState<string | null>(null);
+  const [rowError, setRowError] = useState("");
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [name, setName] = useState("");
@@ -280,6 +284,10 @@ export default function Team() {
           </Primary>
         </AddDrawer>
 
+        {rowError ? (
+          <div style={{ padding: `12px ${pad.card}` }}><ErrorLine>{rowError}</ErrorLine></div>
+        ) : null}
+
         {s.staff.map((p) => (
           /* Tight vertical rhythm: when the action cluster wraps under the
              name at narrower widths, the row shouldn't balloon. */
@@ -297,12 +305,21 @@ export default function Team() {
                 onClick={() => (editing === p.id ? setEditing(null) : openEdit(p))}>
                 {editing === p.id ? "Close" : "Edit"}
               </Pill>
-              <Pill style={{ padding: "6px 13px", fontSize: 13 }}
-                onClick={() => {
-                  s.setStaff((prev) => prev.map((x) => x.id === p.id ? { ...x, active: !x.active } : x));
-                  s.audit(`${p.active ? "Disabled" : "Enabled"} account for ${p.name}`);
+              <Pill style={{ padding: "6px 13px", fontSize: 13, opacity: rowBusy === p.id ? 0.6 : 1 }}
+                onClick={async () => {
+                  if (rowBusy) return;
+                  setRowBusy(p.id);
+                  setRowError("");
+                  const res = await setStaffAccountActive({
+                    employeeId: p.employeeId, profileId: p.profileId,
+                    name: p.name, active: !p.active,
+                  });
+                  setRowBusy(null);
+                  if (!res.ok) return setRowError(res.error);
+                  s.setStaff(() => res.staff);
+                  s.audit(`${p.active ? "Switched off" : "Switched on"} the account for ${p.name}`);
                 }}>
-                {p.active ? "Disable" : "Enable"}
+                {rowBusy === p.id ? "…" : p.active ? "Disable" : "Enable"}
               </Pill>
               {/* Removing an account is Administrator-only; everyone else can
                   disable it, which is reversible. */}
@@ -387,12 +404,20 @@ export default function Team() {
           removing === p.id ? (
             <ConfirmBar
               key={`confirm-${p.id}`}
-              text={`Are you sure you want to delete ${p.name}? This removes the staff account and their access. Work already logged against them stays in the audit trail.`}
+              text={`Are you sure you want to delete ${p.name}? This removes their roster record and their sign-in for good — they will not be able to reach the portal again. Work already logged against them stays, unassigned, and the audit trail keeps the history. To switch someone off temporarily instead, use Disable.`}
               confirmLabel="Yes, delete this account"
               onCancel={() => setRemoving(null)}
-              onConfirm={() => {
-                s.setStaff((prev) => prev.filter((x) => x.id !== p.id));
-                s.audit(`Removed staff account for ${p.name}`);
+              onConfirm={async () => {
+                if (rowBusy) return;
+                setRowBusy(p.id);
+                setRowError("");
+                const res = await removeStaffAccount({
+                  employeeId: p.employeeId, profileId: p.profileId, name: p.name,
+                });
+                setRowBusy(null);
+                if (!res.ok) { setRemoving(null); return setRowError(res.error); }
+                s.setStaff(() => res.staff);
+                s.audit(`Removed the staff account for ${p.name}`);
                 setRemoving(null);
               }}
             />

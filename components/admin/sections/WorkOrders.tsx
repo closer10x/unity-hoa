@@ -3,11 +3,12 @@
 import React, { useState } from "react";
 import { WORK_STEPS } from "@/lib/admin-portal/actions";
 import { buildActionMenu, useSearchFilter, useStore } from "@/lib/admin-portal/store";
-import { color, font } from "@/lib/admin-portal/tokens";
-import type { PendingConfirm, WorkOrder } from "@/lib/admin-portal/types";
+import { color, pad } from "@/lib/admin-portal/tokens";
+import type { PendingConfirm, WorkOrder, WorkStatus } from "@/lib/admin-portal/types";
+import { assignWorkOrder, createWorkOrder, setWorkOrderStatus } from "@/lib/admin-portal/work-actions";
 import {
   DropZone,
-  ActionSelect, AddDrawer, Card, CardHead, Chip, ConfirmBar, Empty, ErrorLine,
+  ActionSelect, AddDrawer, Card, Chip, ConfirmBar, Empty, ErrorLine,
   Field, FieldGrid, FilterBar, Input, Mono, PageTitle, Primary, Row, RowMain,
   Select, Status, Area, TextButton,
 } from "../ui";
@@ -23,7 +24,9 @@ export default function WorkOrders() {
 
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
-  const [comm, setComm] = useState(s.communities[0]?.name ?? "Sofi Lakes");
+  const [flowError, setFlowError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [comm, setComm] = useState(s.communities[0]?.name ?? "");
   const [location, setLocation] = useState("");
   const [title, setTitle] = useState("");
   const [detail, setDetail] = useState("");
@@ -48,16 +51,26 @@ export default function WorkOrders() {
     },
   );
 
-  function save() {
+  /**
+   * A vendor has no employees row, so the database cannot hold their name and
+   * the saved row comes back unassigned. Keep the name the office picked for
+   * the rest of the session rather than blanking the column they just filled.
+   */
+  function withAssignee(saved: WorkOrder, fallback: string): WorkOrder {
+    return saved.assigneeId ? saved : { ...saved, assignee: fallback };
+  }
+
+  async function save() {
+    if (!comm.trim()) return setError("Pick the community.");
     if (!title.trim()) return setError("Give the work order a title.");
     if (!assignee) return setError("Assign it to a tech or a vendor.");
-    const wo: WorkOrder = {
-      id: s.uid("w"),
-      ref: `UG-${Math.floor(400000 + Math.random() * 99999)}`,
-      title: title.trim(),
-      detail: `${comm}${location.trim() ? ` · ${location.trim()}` : ""} · ${priority.toLowerCase()} · internal`,
-      assignee, status: "Scheduled",
-    };
+    setSaving(true);
+    const res = await createWorkOrder({
+      community: comm, location, title, detail, priority, assigneeName: assignee,
+    });
+    setSaving(false);
+    if (!res.ok) return setError(res.error);
+    const wo = withAssignee(res.work, assignee);
     s.setWork((prev) => [wo, ...prev]);
     s.audit(`Created work order ${wo.ref} — ${wo.title} · assigned to ${assignee}`);
     setOpen(false); setError(""); setTitle(""); setLocation(""); setDetail(""); setAssignee("");
@@ -98,11 +111,15 @@ export default function WorkOrders() {
           </div>
           <DropZone camera>photos of the problem — take one now, or drag files here</DropZone>
           {error ? <ErrorLine>{error}</ErrorLine> : null}
-          <Primary onClick={save} style={{ justifySelf: "start" }}>Create work order</Primary>
+          <Primary onClick={save} style={{ justifySelf: "start" }}>
+            {saving ? "Saving…" : "Create work order"}
+          </Primary>
         </AddDrawer>
 
         <FilterBar query={query} onQuery={setQuery} placeholder="Search title, ref or assignee…"
           filters={FILTERS} active={filter} onFilter={setFilter} />
+
+        {flowError ? <div style={{ padding: `12px ${pad.card} 0` }}><ErrorLine>{flowError}</ErrorLine></div> : null}
 
         {visible.length === 0 ? <Empty>No work orders match that.</Empty> : visible.map((w) => {
           const menu = buildActionMenu(WORK_STEPS, w.status, w.id, w.title, pending, setPending);
@@ -126,10 +143,14 @@ export default function WorkOrders() {
 
               {menu.confirming ? (
                 <ConfirmBar text={menu.confirmText} confirmLabel={menu.confirmLabel} onCancel={menu.cancel}
-                  onConfirm={() => {
-                    const next = menu.nextValue!;
-                    s.setWork((prev) => prev.map((x) => x.id === w.id ? { ...x, status: next } : x));
+                  onConfirm={async () => {
+                    const next = menu.nextValue! as WorkStatus;
                     setPending(null);
+                    setFlowError("");
+                    const res = await setWorkOrderStatus({ id: w.id, status: next });
+                    if (!res.ok) return setFlowError(res.error);
+                    const saved = next === "New" ? res.work : withAssignee(res.work, w.assignee);
+                    s.setWork((prev) => prev.map((x) => x.id === w.id ? saved : x));
                     s.audit(`Work order ${w.ref} → ${next} (${w.title})`);
                   }} />
               ) : null}
@@ -140,9 +161,11 @@ export default function WorkOrders() {
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     {assignOptions.map((o) => (
                       <Chip key={o.name} on={w.assignee === o.name}
-                        onClick={() => {
-                          s.setWork((prev) => prev.map((x) => x.id === w.id
-                            ? { ...x, assignee: o.name, status: x.status === "New" ? "Scheduled" : x.status } : x));
+                        onClick={async () => {
+                          setFlowError("");
+                          const res = await assignWorkOrder({ id: w.id, assigneeName: o.name });
+                          if (!res.ok) return setFlowError(res.error);
+                          s.setWork((prev) => prev.map((x) => x.id === w.id ? withAssignee(res.work, o.name) : x));
                           setReassigning("");
                           s.audit(`Reassigned ${w.ref} to ${o.name}`);
                         }}>

@@ -12,22 +12,26 @@ import type {
   Director,
   LegalCase,
   Meeting,
+  OnboardStage,
   Portfolio,
   Vendor,
   Violation,
   AuditEntry,
   BankAccount,
   CalEvent,
+  CaseNote,
   Community,
   Doc,
   Fee,
   LedgerEntry,
+  Mailing,
   Owner,
   Payment,
   ResidentThread,
   ResidentThreadMsg,
   Staff,
   StaffRole,
+  ThreadMsg,
   WorkOrder,
   WorkStatus,
 } from "./types";
@@ -170,6 +174,7 @@ type StaffProfileRow = {
   display_name: string | null;
   section_access: string[] | null;
   communities: string[] | null;
+  disabled: boolean | null;
 };
 
 /**
@@ -219,7 +224,7 @@ export async function loadStaff(db: SupabaseClient): Promise<Staff[]> {
       email: e.email ?? "—",
       role: toStaffRole(linked?.staff_role ?? e.role),
       communities: linked?.communities ?? e.communities ?? [],
-      active: Boolean(e.active),
+      active: Boolean(e.active) && !linked?.disabled,
       load: 0,
       employeeId: e.id,
       profileId: linked?.id ?? null,
@@ -236,7 +241,7 @@ export async function loadStaff(db: SupabaseClient): Promise<Staff[]> {
       email: emailByProfile.get(p.id) ?? "—",
       role: toStaffRole(p.staff_role),
       communities: p.communities ?? [],
-      active: true,
+      active: !p.disabled,
       load: 0,
       employeeId: null,
       profileId: p.id,
@@ -433,18 +438,71 @@ const dateLabel = (d: string | null) =>
   d ? new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—";
 
 async function loadRemainingDomains(db: SupabaseClient) {
-  const [vRes, aRes, bRes, venRes, lRes, mRes, dRes, pRes, pcRes, mmRes] = await Promise.all([
-    db.from("violations").select("*").order("opened_on", { ascending: false }),
-    db.from("arc_applications").select("*").order("submitted_on", { ascending: false }),
-    db.from("bookings").select("*").order("starts_at", { ascending: true }),
-    db.from("vendors").select("*").order("name", { ascending: true }),
-    db.from("legal_cases").select("*").order("opened_on", { ascending: false }),
-    db.from("meetings").select("*").order("starts_at", { ascending: false }),
-    db.from("directors").select("*").order("name", { ascending: true }),
-    db.from("portfolios").select("*").order("name", { ascending: true }),
-    db.from("portfolio_communities").select("*"),
-    db.from("meeting_minutes").select("*"),
-  ]);
+  const [vRes, aRes, bRes, venRes, lRes, mRes, dRes, pRes, pcRes, mmRes, coRes, vmRes, vnRes, amRes] =
+    await Promise.all([
+      db.from("violations").select("*").order("opened_on", { ascending: false }),
+      db.from("arc_applications").select("*").order("submitted_on", { ascending: false }),
+      db.from("bookings").select("*").order("starts_at", { ascending: true }),
+      db.from("vendors").select("*").order("name", { ascending: true }),
+      db.from("legal_cases").select("*").order("opened_on", { ascending: false }),
+      db.from("meetings").select("*").order("starts_at", { ascending: false }),
+      db.from("directors").select("*").order("name", { ascending: true }),
+      db.from("portfolios").select("*").order("name", { ascending: true }),
+      db.from("portfolio_communities").select("*"),
+      db.from("meeting_minutes").select("*"),
+      db.from("community_onboarding").select("community, stage"),
+      db.from("violation_mailings").select("*").order("sent_on", { ascending: false }).limit(2000),
+      db.from("violation_notes").select("*").order("created_at", { ascending: true }).limit(2000),
+      db.from("arc_messages").select("*").order("created_at", { ascending: true }).limit(2000),
+    ]);
+
+  /* The case file is the evidence: notices sent and notes written have to
+     come back on the next page load, not just in the session that made them. */
+  const mailingsByViolation = new Map<string, Mailing[]>();
+  for (const m of (vmRes.data ?? []) as {
+    violation_id: string; kind: string | null; method: string | null;
+    sent_on: string | null; tracking: string | null; delivery_status: string | null;
+  }[]) {
+    const list = mailingsByViolation.get(m.violation_id) ?? [];
+    list.push({
+      kind: m.kind ?? "Notice",
+      method: m.method ?? "—",
+      sent: dateLabel(m.sent_on),
+      tracking: m.tracking ?? "—",
+      status: m.delivery_status ?? "Sent",
+    });
+    mailingsByViolation.set(m.violation_id, list);
+  }
+
+  const notesByViolation = new Map<string, CaseNote[]>();
+  for (const n of (vnRes.data ?? []) as {
+    violation_id: string; body: string | null; author_name: string | null; created_at: string;
+  }[]) {
+    const list = notesByViolation.get(n.violation_id) ?? [];
+    list.push({
+      author: n.author_name ?? "Staff",
+      time: stampTime(n.created_at),
+      text: n.body ?? "",
+    });
+    notesByViolation.set(n.violation_id, list);
+  }
+
+  const threadByApplication = new Map<string, ThreadMsg[]>();
+  for (const m of (amRes.data ?? []) as {
+    application_id: string; body: string | null; author_name: string | null;
+    audience: string | null; created_at: string;
+  }[]) {
+    const list = threadByApplication.get(m.application_id) ?? [];
+    list.push({
+      from: m.author_name ?? "Staff",
+      // Every message on this table is written from the office; owners reply
+      // through their own portal, which does not post here yet.
+      mine: true,
+      time: stampTime(m.created_at),
+      body: m.body ?? "",
+    });
+    threadByApplication.set(m.application_id, list);
+  }
 
   const minutesByMeeting = new Map(
     ((mmRes.data ?? []) as {
@@ -473,8 +531,8 @@ async function loadRemainingDomains(db: SupabaseClient) {
       .join(" · "),
     status: v.status ?? "Reported",
     photos: [],
-    mailings: [],
-    notes: [],
+    mailings: mailingsByViolation.get(v.id) ?? [],
+    notes: notesByViolation.get(v.id) ?? [],
     activity: [],
   }));
 
@@ -487,7 +545,7 @@ async function loadRemainingDomains(db: SupabaseClient) {
     due: dateLabel(a.due_on),
     status: a.status ?? "Awaiting decision",
     decisionNote: a.decision_note ?? undefined,
-    thread: [],
+    thread: threadByApplication.get(a.id) ?? [],
   }));
 
   const bookings: Booking[] = (bRes.data ?? []).map((b) => ({
@@ -517,6 +575,10 @@ async function loadRemainingDomains(db: SupabaseClient) {
       spend: money(v.ytd_spend_cents),
       insurance: expires ? `Expires ${dateLabel(expires)}` : "Not on file",
       ok: current,
+      active: v.active !== false,
+      contact: [v.contact_name, v.contact_phone, v.contact_email]
+        .filter(Boolean)
+        .join(" · ") || "No contact recorded",
     };
   });
 
@@ -527,6 +589,7 @@ async function loadRemainingDomains(db: SupabaseClient) {
     balance: money(c.balance_cents),
     stage: c.stage ?? "Referred to counsel",
     counsel: c.counsel ?? "Not assigned",
+    boardVoteOn: c.board_vote_on ?? null,
   }));
 
   const meetings: Meeting[] = (mRes.data ?? []).map((m) => ({
@@ -563,6 +626,7 @@ async function loadRemainingDomains(db: SupabaseClient) {
       d.term_start && d.term_end
         ? `${dateLabel(d.term_start)} – ${dateLabel(d.term_end)}`
         : "Term not recorded",
+    termEnd: d.term_end ?? null,
   }));
 
   const members = new Map<string, string[]>();
@@ -575,7 +639,15 @@ async function loadRemainingDomains(db: SupabaseClient) {
     members: members.get(p.id) ?? [],
   }));
 
-  return { violations, arcApps, bookings, vendors, legalCases, meetings, directors, portfolios };
+  const communityStages: Record<string, string> = {};
+  for (const r of (coRes.data ?? []) as { community: string; stage: string | null }[]) {
+    communityStages[r.community] = r.stage ?? "Active";
+  }
+
+  return {
+    violations, arcApps, bookings, vendors, legalCases, meetings, directors,
+    portfolios, communityStages,
+  };
 }
 
 /**
@@ -701,8 +773,7 @@ export async function loadPortalData(): Promise<PortalData> {
     // Published = residents can see it: not archived, and public or
     // resident access. Mirrors the resident portal's own read filter.
     published: Boolean(
-      d.is_published ??
-        (!d.is_archived && (d.access_level === "public" || d.access_level === "resident")),
+      !d.is_archived && (d.access_level === "public" || d.access_level === "resident"),
     ),
   }));
 
@@ -732,6 +803,8 @@ export async function loadPortalData(): Promise<PortalData> {
   const doors = m?.total_units ?? lots.length;
   const overdue = m?.overdue_accounts ?? 0;
 
+  const rest = await loadRemainingDomains(db);
+
   /* Communities are derived from the lots roster: there is no communities
      table yet, but scope filtering keys off these ids, so an empty list would
      hide every owner. Dues come from hoa_dashboard_metrics. */
@@ -749,6 +822,11 @@ export async function loadPortalData(): Promise<PortalData> {
   };
   const cadence = billing?.dues_frequency ? (cadenceLabels[billing.dues_frequency] ?? "") : "";
   const communities: Community[] = [...byCommunity.entries()].map(([id, rows]) => {
+    const saved = rest.communityStages[id];
+    const stage: OnboardStage =
+      saved === "Onboarding" || saved === "Records transfer" || saved === "Offboarding"
+        ? saved
+        : "Active";
     const first = rows[0];
     const place = [first?.city, first?.state].filter(Boolean).join(", ");
     return {
@@ -761,7 +839,7 @@ export async function loadPortalData(): Promise<PortalData> {
       doors: `${rows.length} lots`,
       dues: feeCents ? usd(feeCents) : "Not set",
       cadence,
-      stage: "Active",
+      stage,
       portfolio: "",
     };
   });
@@ -833,7 +911,6 @@ export async function loadPortalData(): Promise<PortalData> {
     },
   ];
 
-  const rest = await loadRemainingDomains(db);
   const signIns = await loadSignIns(db);
   const residentThreads = await loadResidentThreads(db, profiles);
 

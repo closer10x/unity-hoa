@@ -2,19 +2,35 @@
 
 import React, { useState } from "react";
 import { MEETING_STEPS } from "@/lib/admin-portal/actions";
-import { emptyAddress, formatAddress } from "@/lib/admin-portal/address";
-import { createMeeting, saveMinutes, setMeetingStatus } from "@/lib/admin-portal/board-actions";
+import { emptyAddress } from "@/lib/admin-portal/address";
+import {
+  createMeeting, endDirectorTerm, saveMinutes, seatDirector, setMeetingStatus,
+} from "@/lib/admin-portal/board-actions";
 import { buildActionMenu, useStore } from "@/lib/admin-portal/store";
 import { color, pad } from "@/lib/admin-portal/tokens";
-import type { Address, Director, MeetingStatus, PendingConfirm } from "@/lib/admin-portal/types";
+import type { Address, MeetingStatus, PendingConfirm } from "@/lib/admin-portal/types";
 import {
   ActionSelect, AddDrawer, AddressFields, Area, Card, CardHead, ConfirmBar,
-  DateInput, ErrorLine, Eyebrow, Field, FieldGrid, Input, Mono, PageTitle,
+  DateInput, Empty, ErrorLine, Eyebrow, Field, FieldGrid, Input, Mono, PageTitle,
   Pill, Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
 
 const ROLES = ["President", "Vice president", "Treasurer", "Secretary", "Director at large"];
 const TYPES = ["Regular board meeting", "Annual meeting", "Special meeting", "Budget workshop", "Architectural committee", "Executive session"];
+
+/**
+ * The roster is history — a closed-out term keeps its row. A term whose end
+ * date has arrived is no longer seated.
+ */
+function termEnded(term: string): boolean {
+  const end = term.split("–").pop()?.trim();
+  if (!end || end === term.trim()) return false;
+  const parsed = new Date(`${end} 12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return false;
+  const noonToday = new Date();
+  noonToday.setHours(12, 0, 0, 0);
+  return parsed.getTime() <= noonToday.getTime();
+}
 
 export default function Board() {
   const s = useStore();
@@ -27,11 +43,14 @@ export default function Board() {
   const [dAddress, setDAddress] = useState<Address>(emptyAddress());
   const [dStart, setDStart] = useState("");
   const [dEnd, setDEnd] = useState("");
+  const [dSaving, setDSaving] = useState(false);
+  const [dFlowError, setDFlowError] = useState("");
+  const [ending, setEnding] = useState("");
 
   /* meetings */
   const [mOpen, setMOpen] = useState(false);
   const [mError, setMError] = useState("");
-  const [mComm, setMComm] = useState(s.communities[0]?.name ?? "Sofi Lakes");
+  const [mComm, setMComm] = useState(s.communities[0]?.name ?? "");
   const [mType, setMType] = useState(TYPES[0]);
   const [mDate, setMDate] = useState("");
   const [mTime, setMTime] = useState("");
@@ -44,20 +63,24 @@ export default function Board() {
   const [minutesSaved, setMinutesSaved] = useState("");
   const [drafts, setDrafts] = useState<Record<string, { attendance: string; body: string; motions: string }>>({});
 
-  function saveDirector() {
+  async function saveDirector() {
     if (!dName.trim()) return setDError("Add the director's name.");
     if (!dStart.trim() || !dEnd.trim()) return setDError("Add the term start and end years.");
-    const d: Director = {
-      id: s.uid("dir"), name: dName.trim(), role: dRole,
-      address: formatAddress(dAddress) || "Address on file",
-      term: `Term ${dStart.trim()}–${dEnd.trim()}`,
-    };
-    s.setDirectors((prev) => [...prev, d]);
-    s.audit(`Seated ${d.name} as ${d.role}`);
+    setDSaving(true);
+    const res = await seatDirector({
+      name: dName, role: dRole,
+      streetNumber: dAddress.streetNo, streetName: dAddress.street, unit: dAddress.unit,
+      city: dAddress.city, state: dAddress.state, zip: dAddress.zip,
+      termStart: dStart, termEnd: dEnd,
+    });
+    setDSaving(false);
+    if (!res.ok) return setDError(res.error);
+    s.setDirectors((prev) => [...prev, res.director]);
     setDOpen(false); setDError(""); setDName(""); setDAddress(emptyAddress()); setDStart(""); setDEnd("");
   }
 
   async function saveMeeting() {
+    if (!mComm.trim()) return setMError("Pick the community this meeting belongs to.");
     if (!mDate.trim()) return setMError("Add the meeting date.");
     if (!mTime.trim()) return setMError("Add a start time.");
     if (!mPlace.trim()) return setMError("Add a location.");
@@ -77,7 +100,7 @@ export default function Board() {
       <PageTitle title="Board & meetings" lede="Directors, the meeting calendar, statutory notice and the minutes record." />
 
       <Card>
-        <CardHead title="Directors" meta={`${s.directors.length} seated`} />
+        <CardHead title="Directors" meta={`${s.directors.filter((d) => !termEnded(d.term)).length} seated`} />
         <AddDrawer open={dOpen} onOpen={() => { setDOpen(true); setDError(""); }} onCancel={() => { setDOpen(false); setDError(""); }}
           openLabel="Seat a director" title="Seat a director">
           <FieldGrid>
@@ -86,26 +109,56 @@ export default function Board() {
           </FieldGrid>
           <AddressFields value={dAddress} onChange={setDAddress} />
           <FieldGrid>
-            <Field label="Term start"><Input value={dStart} onChange={setDStart} placeholder="e.g. 2026" /></Field>
-            <Field label="Term end"><Input value={dEnd} onChange={setDEnd} placeholder="e.g. 2029" /></Field>
+            <Field label="Term start" hint="A year starts the term on January 1.">
+              <Input value={dStart} onChange={setDStart} placeholder="e.g. 2026" />
+            </Field>
+            <Field label="Term end" hint="A year runs the term through December 31.">
+              <Input value={dEnd} onChange={setDEnd} placeholder="e.g. 2029" />
+            </Field>
           </FieldGrid>
           {dError ? <ErrorLine>{dError}</ErrorLine> : null}
-          <Primary onClick={saveDirector} style={{ justifySelf: "start" }}>Seat director</Primary>
+          <Primary onClick={saveDirector} style={{ justifySelf: "start" }}>{dSaving ? "Saving…" : "Seat director"}</Primary>
         </AddDrawer>
-        {s.directors.map((d) => (
-          <Row key={d.id}>
-            <RowMain label={d.name} detail={d.address} />
-            <Mono size={12} style={{ color: color.neutral }}>{d.role}</Mono>
-            <span style={{ fontSize: 14, color: color.inkTertiary }}>{d.term}</span>
-            <TextButton tone="destructive"
-              onClick={() => {
-                s.setDirectors((prev) => prev.filter((x) => x.id !== d.id));
-                s.audit(`Ended term for ${d.name} (${d.role})`);
-              }}>
-              End term
-            </TextButton>
-          </Row>
-        ))}
+
+        {dFlowError ? <div style={{ padding: `12px ${pad.card} 0` }}><ErrorLine>{dFlowError}</ErrorLine></div> : null}
+
+        {s.directors.length === 0 ? (
+          <Empty>No directors on the roster. Seat the board here — each seat carries a role and a term, and the roster keeps past terms.</Empty>
+        ) : null}
+
+        {s.directors.map((d) => {
+          const ended = termEnded(d.term);
+          return (
+            <React.Fragment key={d.id}>
+              <Row>
+                <RowMain label={d.name} detail={d.address} />
+                <Mono size={12} style={{ color: color.neutral }}>{d.role}</Mono>
+                <span style={{ fontSize: 14, color: color.inkTertiary }}>{d.term}</span>
+                {ended ? (
+                  <Status tone="neutral">Term ended</Status>
+                ) : (
+                  <TextButton tone="destructive"
+                    onClick={() => { setDFlowError(""); setEnding(ending === d.id ? "" : d.id); }}>
+                    End term
+                  </TextButton>
+                )}
+              </Row>
+              {ending === d.id ? (
+                <ConfirmBar
+                  text={`End ${d.name}'s term as ${d.role}? The seat closes out as of today and they come off the seated count. The term stays on the roster with its end date, and the change is written to the audit trail.`}
+                  confirmLabel="Yes, end the term"
+                  onCancel={() => setEnding("")}
+                  onConfirm={async () => {
+                    setEnding("");
+                    setDFlowError("");
+                    const res = await endDirectorTerm({ id: d.id, name: d.name });
+                    if (!res.ok) return setDFlowError(res.error);
+                    s.setDirectors((prev) => prev.map((x) => (x.id === d.id ? res.director : x)));
+                  }} />
+              ) : null}
+            </React.Fragment>
+          );
+        })}
       </Card>
 
       <Card>
@@ -113,7 +166,10 @@ export default function Board() {
         <AddDrawer open={mOpen} onOpen={() => { setMOpen(true); setMError(""); }} onCancel={() => { setMOpen(false); setMError(""); }}
           openLabel="Schedule a meeting" title="Schedule a meeting">
           <FieldGrid>
-            <Field label="Community"><Select value={mComm} onChange={setMComm} options={s.communities.map((c) => ({ id: c.name, label: c.name }))} /></Field>
+            <Field label="Community">
+              <Select value={mComm} onChange={setMComm} placeholder="Pick a community"
+                options={s.communities.map((c) => ({ id: c.name, label: c.name }))} />
+            </Field>
             <Field label="Meeting type" hint="The annual meeting carries a 10-day notice window; everything else 144 hours.">
               <Select value={mType} onChange={setMType} options={TYPES.map((t) => ({ id: t, label: t }))} />
             </Field>
@@ -129,6 +185,10 @@ export default function Board() {
         </AddDrawer>
 
         {flowError ? <div style={{ padding: `12px ${pad.card} 0` }}><ErrorLine>{flowError}</ErrorLine></div> : null}
+
+        {s.meetings.length === 0 ? (
+          <Empty>No meetings on the calendar. Schedule one here — the notice window is set from the meeting type, and minutes attach to the meeting once it is held.</Empty>
+        ) : null}
 
         {s.meetings.map((m) => {
           const menu = buildActionMenu(MEETING_STEPS, m.status, m.id, `${m.title} · ${m.date}`, pending, setPending);

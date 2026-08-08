@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { setDocumentPublished } from "@/lib/admin-portal/document-actions";
 import { useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color } from "@/lib/admin-portal/tokens";
 import {
@@ -23,6 +24,8 @@ export default function Documents() {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [rowError, setRowError] = useState("");
 
   useEffect(() => {
     if (!open || categories.length > 0) return;
@@ -110,6 +113,7 @@ export default function Documents() {
 
         <FilterBar query={query} onQuery={setQuery} placeholder="Search documents…"
           filters={FILTERS} active={filter} onFilter={setFilter} />
+        {rowError ? <div style={{ padding: "12px 24px" }}><ErrorLine>{rowError}</ErrorLine></div> : null}
         {visible.length === 0 ? <Empty>No documents match that.</Empty> : visible.map((d) => (
           <Row key={d.id}>
             <RowMain label={d.title} detail={d.meta} />
@@ -118,11 +122,19 @@ export default function Documents() {
               <TextButton onClick={() => window.open(`/api/documents/${d.id}/download`, "_blank", "noopener")}>
                 View
               </TextButton>
-              <Pill style={{ padding: "8px 16px", fontSize: 14 }} onClick={() => {
-                s.setDocs((prev) => prev.map((x) => x.id === d.id ? { ...x, published: !x.published } : x));
-                s.audit(`${d.published ? "Unpublished" : "Published"} ${d.title}`);
-              }}>
-                {d.published ? "Unpublish" : "Publish"}
+              <Pill style={{ padding: "8px 16px", fontSize: 14, opacity: busyId === d.id ? 0.6 : 1 }}
+                onClick={async () => {
+                  if (busyId) return;
+                  setBusyId(d.id);
+                  setRowError("");
+                  const next = !d.published;
+                  const res = await setDocumentPublished({ id: d.id, title: d.title, published: next });
+                  setBusyId(null);
+                  if (!res.ok) return setRowError(res.error);
+                  s.setDocs((prev) => prev.map((x) => x.id === d.id ? { ...x, published: next } : x));
+                  s.audit(`${next ? "Published" : "Unpublished"} ${d.title}`);
+                }}>
+                {busyId === d.id ? "…" : d.published ? "Unpublish" : "Publish"}
               </Pill>
             </span>
           </Row>

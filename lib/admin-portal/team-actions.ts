@@ -39,6 +39,148 @@ async function managerContext() {
   return { db, actorName, actorId };
 }
 
+/** The staff roster as the database has it — used to resync after an invite. */
+export async function listStaffAccounts(): Promise<Ok | Fail> {
+  try {
+    const { db } = await managerContext();
+    return { ok: true, staff: await loadStaff(db), changed: "" };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
+
+/**
+ * Switch an account off (or back on). Reversible, unlike removal: the
+ * employees row keeps its history and the profile keeps its permissions —
+ * the account simply can't sign in while it is off.
+ */
+export async function setStaffAccountActive(input: {
+  employeeId: string | null;
+  profileId: string | null;
+  name: string;
+  active: boolean;
+}): Promise<Ok | Fail> {
+  try {
+    const { db, actorName, actorId } = await managerContext();
+    const session = await requireAdminUser();
+
+    if (!input.active && input.profileId && input.profileId === session.user.id) {
+      return { ok: false, error: "You can't switch off your own account." };
+    }
+
+    if (input.employeeId) {
+      const { error } = await db
+        .from("employees")
+        .update({ active: input.active })
+        .eq("id", input.employeeId);
+      if (error) throw new Error(error.message);
+    }
+    if (input.profileId) {
+      const { error } = await db
+        .from("profiles")
+        .update({ disabled: !input.active })
+        .eq("id", input.profileId);
+      if (error) throw new Error(error.message);
+    }
+    if (!input.employeeId && !input.profileId) {
+      return { ok: false, error: "That account has no record to change." };
+    }
+
+    const { error: auditErr } = await db.from("admin_audit_log").insert({
+      action: `Team: ${input.active ? "switched on" : "switched off"} the account for ${input.name}`,
+      actor_name: actorName,
+      actor_user_id: actorId,
+    });
+    if (auditErr) throw new Error(`Audit write failed: ${auditErr.message}`);
+
+    revalidatePath("/admin");
+    return {
+      ok: true,
+      staff: await loadStaff(db),
+      changed: input.active ? "switched on" : "switched off",
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
+
+/**
+ * Remove an account for good: the roster record goes, and so does the
+ * sign-in account behind it. Work already logged against them survives —
+ * those columns null out rather than cascade — and the audit trail keeps
+ * the history. Two guards: nobody can remove themselves, and the last
+ * Administrator can't be removed, which would lock everyone out.
+ */
+export async function removeStaffAccount(input: {
+  employeeId: string | null;
+  profileId: string | null;
+  name: string;
+}): Promise<Ok | Fail> {
+  try {
+    const { db, actorName, actorId } = await managerContext();
+    const session = await requireAdminUser();
+
+    if (input.profileId && input.profileId === session.user.id) {
+      return { ok: false, error: "You can't remove your own account." };
+    }
+
+    if (input.profileId) {
+      const { data: admins, error } = await db
+        .from("profiles")
+        .select("id, staff_role")
+        .eq("role", "admin");
+      if (error) throw new Error(error.message);
+      const administrators = (admins ?? []).filter(
+        (a) => a.staff_role === "Administrator" || a.staff_role === "Owner",
+      );
+      const isLast =
+        administrators.length <= 1 &&
+        administrators.some((a) => a.id === input.profileId);
+      if (isLast) {
+        return {
+          ok: false,
+          error:
+            "This is the last Administrator account. Give someone else the Administrator role first, or the office would be locked out.",
+        };
+      }
+    }
+
+    if (!input.employeeId && !input.profileId) {
+      return { ok: false, error: "That account has no record to remove." };
+    }
+
+    if (input.employeeId) {
+      const { error } = await db.from("employees").delete().eq("id", input.employeeId);
+      if (error) throw new Error(error.message);
+    }
+
+    if (input.profileId) {
+      const { error: profErr } = await db
+        .from("profiles")
+        .delete()
+        .eq("id", input.profileId);
+      if (profErr) throw new Error(`Profile removal failed: ${profErr.message}`);
+      const { error: authErr } = await db.auth.admin.deleteUser(input.profileId);
+      // The profile is already gone, so a missing auth user is not a failure.
+      if (authErr && !/not found/i.test(authErr.message)) {
+        throw new Error(`Sign-in removal failed: ${authErr.message}`);
+      }
+    }
+
+    const { error: auditErr } = await db.from("admin_audit_log").insert({
+      action: `Team: removed the staff account for ${input.name}`,
+      actor_name: actorName,
+      actor_user_id: actorId,
+    });
+    if (auditErr) throw new Error(`Audit write failed: ${auditErr.message}`);
+
+    revalidatePath("/admin");
+    return { ok: true, staff: await loadStaff(db), changed: "removed" };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
+
 export async function updateStaffAccount(input: {
   employeeId: string | null;
   profileId: string | null;

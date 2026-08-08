@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { ADMIN_CALENDAR, LEGAL_CALENDAR, MONTH_NAMES, TODAY } from "@/lib/admin-portal/fixtures";
+import { MONTH_NAMES } from "@/lib/admin-portal/fixtures";
+import { createCalendarEvent, moveCalendarEvent } from "@/lib/admin-portal/calendar-actions";
 import { useStore } from "@/lib/admin-portal/store";
 import { calColor, calTint, color, font, pad, radius } from "@/lib/admin-portal/tokens";
 import type { CalEvent } from "@/lib/admin-portal/types";
 import {
-  Card, Chip, ErrorLine, Field, FieldGrid, Input, Mono, PageTitle, Pill,
-  Primary, Row, RowMain, Select, TextButton,
+  Card, Chip, DateInput, ErrorLine, Field, FieldGrid, Input, Mono, PageTitle,
+  Pill, Primary, Row, RowMain, Select, TextButton,
 } from "../ui";
 
 const KINDS = [
@@ -19,63 +20,68 @@ const KINDS = [
   { id: "Community", label: "Community" },
 ];
 
-const FEED_OF: Record<string, string> = {
-  Meeting: "meetings", Inspection: "inspections", Booking: "bookings",
-  Legal: "legal", Community: "community",
-};
+/**
+ * Events arrive in two shapes: rows from the database carry an ISO date,
+ * while sections that format for display hand over "Aug 7". Both have to land
+ * on the same day of the grid, so everything is read through here.
+ */
+function parseDay(d: string): { year: number | null; month: number; day: number } | null {
+  const text = d.trim();
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (iso) {
+    return {
+      year: parseInt(iso[1], 10),
+      month: parseInt(iso[2], 10) - 1,
+      day: parseInt(iso[3], 10),
+    };
+  }
+  const named = /^([A-Za-z]{3})\s+(\d{1,2})$/.exec(text);
+  if (!named) return null;
+  const mi = MONTH_NAMES.findIndex((x) => x.slice(0, 3) === named[1]);
+  return mi < 0 ? null : { year: null, month: mi, day: parseInt(named[2], 10) };
+}
 
-/** Parses the fixture "Apr 14" format. Production data should carry real dates. */
-function parseDay(d: string): { month: number; day: number } | null {
-  const m = /^([A-Za-z]{3})\s+(\d{1,2})$/.exec(d.trim());
-  if (!m) return null;
-  const mi = MONTH_NAMES.findIndex((x) => x.slice(0, 3) === m[1]);
-  return mi < 0 ? null : { month: mi, day: parseInt(m[2], 10) };
+function isoOf(year: number, month: number, day: number): string {
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/** How a day reads in the agenda heading, whichever shape it arrived in. */
+function dayLabel(d: string): string {
+  const p = parseDay(d);
+  if (!p) return d;
+  return `${MONTH_NAMES[p.month].slice(0, 3)} ${p.day}`;
 }
 
 export default function Calendar() {
   const s = useStore();
-  const [month, setMonth] = useState(TODAY.month);
-  const [year, setYear] = useState(TODAY.year);
+  const now = useMemo(() => new Date(), []);
+  const [month, setMonth] = useState(now.getMonth());
+  const [year, setYear] = useState(now.getFullYear());
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState("");
   const [dragging, setDragging] = useState("");
-
-  const [syncOpen, setSyncOpen] = useState(false);
-  /* No Google account is linked yet; the sync panel starts empty. */
-  const [connected, setConnected] = useState(false);
-  const [lastSync, setLastSync] = useState("never");
-  const [direction, setDirection] = useState("Two-way");
-  /* Set when a real OAuth connection is made; there is no account until then. */
-  const [syncAccount] = useState("");
-  const [reminder, setReminder] = useState("1 day");
-  const [copied, setCopied] = useState(false);
-  const [feeds, setFeeds] = useState<Record<string, boolean>>({
-    meetings: true, inspections: true, bookings: true, legal: false, community: true,
-  });
-  const [calsOn, setCalsOn] = useState<Record<string, boolean>>({});
+  const [moveError, setMoveError] = useState("");
 
   const [addOpen, setAddOpen] = useState(false);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [kind, setKind] = useState("Meeting");
-  const [comm, setComm] = useState(s.communities[0]?.name ?? "Sofi Lakes");
+  const [comm, setComm] = useState(s.communities[0]?.name ?? "");
   const [detail, setDetail] = useState("");
 
-  const allEvents: CalEvent[] = useMemo(() => {
-    const base: CalEvent[] = [
-      ...ADMIN_CALENDAR,
-      ...LEGAL_CALENDAR,
-      ...s.bookings.filter((b) => b.status !== "Completed" && b.status !== "Cancelled")
-        .map((b) => ({ id: b.id, date: b.date, title: b.amenity, detail: b.detail, kind: "Booking", community: "" })),
-      ...s.customEvents,
-    ];
-    return base.map((e) => {
-      const moved = s.eventMoves[`${e.kind}|${e.title}`];
-      return moved ? { ...e, date: moved } : e;
-    });
-  }, [s.bookings, s.customEvents, s.eventMoves]);
+  /* Meetings, bookings and legal dates belong to their own sections; the
+     calendar gathers them alongside the events the office adds here. */
+  const allEvents: CalEvent[] = useMemo(() => [
+    ...s.bookings.filter((b) => b.status !== "Completed" && b.status !== "Cancelled")
+      .map((b) => ({ id: b.id, date: b.date, title: b.amenity, detail: b.detail, kind: "Booking", community: "" })),
+    ...s.meetings.map((m) => ({
+      id: m.id, date: m.date, title: m.title, detail: m.detail, kind: "Meeting", community: "",
+    })),
+    ...s.customEvents,
+  ], [s.bookings, s.meetings, s.customEvents]);
 
   const visible = allEvents.filter((e) => filter === "all" || e.kind === filter);
   const compact = s.isMobile;
@@ -90,12 +96,19 @@ export default function Calendar() {
     return out;
   }, [month, year]);
 
+  /* A day is "in this month" when it matches the month, and the year too when
+     the source carried one. */
+  const onDay = (e: CalEvent, day: number | null) => {
+    const p = parseDay(e.date);
+    if (!p || p.month !== month) return false;
+    if (p.year != null && p.year !== year) return false;
+    return day == null || p.day === day;
+  };
+
+  const selectedDay = selected ? (parseDay(selected)?.day ?? null) : null;
+
   const agenda = visible
-    .filter((e) => {
-      const p = parseDay(e.date);
-      if (selected) return e.date === selected;
-      return p && p.month === month;
-    })
+    .filter((e) => onDay(e, selectedDay))
     .sort((a, b) => (parseDay(a.date)?.day ?? 99) - (parseDay(b.date)?.day ?? 99));
 
   const myCalendars = s.communities.filter((c) => {
@@ -103,17 +116,22 @@ export default function Calendar() {
     return me ? me.communities.includes(c.id) : true;
   });
 
-  const label = (d: number) => `${MONTH_NAMES[month].slice(0, 3)} ${d < 10 ? `0${d}` : d}`;
+  const label = (d: number) => isoOf(year, month, d);
 
-  function saveEvent() {
+  async function saveEvent() {
+    if (saving) return;
     if (!title.trim()) return setError("Give the event a title.");
-    if (!date.trim()) return setError("Add a date.");
-    s.setCustomEvents((prev) => [...prev, {
-      id: s.uid("ce"), date: date.trim(), title: title.trim(), kind, community: comm,
-      detail: `${comm}${time.trim() ? ` · ${time.trim()}` : ""}${detail.trim() ? ` · ${detail.trim()}` : ""} · added by ${s.currentUser.split(" · ")[0]}`,
-    }]);
-    s.audit(`Added calendar event \u201C${title.trim()}\u201D on ${date.trim()}`);
-    setAddOpen(false); setError(""); setTitle(""); setDate(""); setTime(""); setDetail("");
+    if (!date.trim()) return setError("Pick a date.");
+    setSaving(true);
+    setError("");
+    const res = await createCalendarEvent({
+      title, date, time, kind, community: comm, detail,
+    });
+    setSaving(false);
+    if (!res.ok) return setError(res.error);
+    s.setCustomEvents((prev) => [...prev, res.event]);
+    s.audit(`Added calendar event \u201C${res.event.title}\u201D on ${res.event.date}`);
+    setAddOpen(false); setTitle(""); setDate(""); setTime(""); setDetail("");
   }
 
   return (
@@ -132,7 +150,7 @@ export default function Calendar() {
             </div>
             <FieldGrid>
               <Field label="Title"><Input value={title} onChange={setTitle} placeholder="e.g. Reserve study walk-through" /></Field>
-              <Field label="Date"><Input value={date} onChange={setDate} placeholder="e.g. Jun 09" /></Field>
+              <Field label="Date"><DateInput value={date} onChange={setDate} /></Field>
               <Field label="Start time"><Input value={time} onChange={setTime} placeholder="e.g. 6:30 PM" /></Field>
             </FieldGrid>
             <FieldGrid>
@@ -149,8 +167,8 @@ export default function Calendar() {
               <Field label="Location"><Input value={detail} onChange={setDetail} placeholder="Place, room or address" /></Field>
             </FieldGrid>
             {error ? <ErrorLine>{error}</ErrorLine> : null}
-            <Primary onClick={saveEvent} style={{ justifySelf: "start" }}>
-              {connected && feeds[FEED_OF[kind]] ? "Create & push to Google" : "Create event"}
+            <Primary onClick={saveEvent} style={{ justifySelf: "start", opacity: saving ? 0.6 : 1 }}>
+              {saving ? "Creating…" : "Create event"}
             </Primary>
           </div>
         </Card>
@@ -171,7 +189,7 @@ export default function Calendar() {
               onClick={() => { setMonth((m) => m === 11 ? 0 : m + 1); if (month === 11) setYear((y) => y + 1); setSelected(""); }}
               style={{ font: "inherit", fontSize: 15, background: "none", border: `1px solid ${color.borderInput}`, borderRadius: 8, width: 32, height: 32, cursor: "pointer", color: color.inkSecondary }}>›</button>
             <Pill style={{ padding: "8px 16px", fontSize: 14 }}
-              onClick={() => { setMonth(TODAY.month); setYear(TODAY.year); setSelected(""); }}>Today</Pill>
+              onClick={() => { setMonth(now.getMonth()); setYear(now.getFullYear()); setSelected(""); }}>Today</Pill>
           </span>
           <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {KINDS.map((k) => (
@@ -188,7 +206,7 @@ export default function Calendar() {
         <p style={{ padding: "10px 22px", fontSize: 13, color: color.inkQuaternary, borderBottom: `1px solid ${color.hairlineSoft}` }}>
           {compact
             ? "Tap a day to add an event or see what's on it — the full list is below."
-            : "Click any day to add an event · drag an event to another day to reschedule it — the move is logged with your name."}
+            : "Click any day to add an event · drag an event added here to another day to reschedule it. Meetings and bookings move from their own sections."}
         </p>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", background: color.surfaceMuted, borderBottom: `1px solid ${color.hairlineSoft}` }}>
@@ -205,11 +223,9 @@ export default function Calendar() {
               return <div key={`pad${i}`} style={{ background: color.surfaceMuted, borderRight: `1px solid ${color.hairlineSoft}`, borderBottom: `1px solid ${color.hairlineSoft}`, minHeight: "clamp(72px, 13vw, 108px)" }} />;
             }
             const key = label(d);
-            const dayEvents = visible.filter((e) => {
-              const p = parseDay(e.date);
-              return p && p.month === month && p.day === d;
-            });
-            const isToday = year === TODAY.year && month === TODAY.month && d === TODAY.day;
+            const dayEvents = visible.filter((e) => onDay(e, d));
+            const isToday =
+              year === now.getFullYear() && month === now.getMonth() && d === now.getDate();
             const isSel = selected === key;
             return (
               <button key={key} type="button"
@@ -219,12 +235,17 @@ export default function Calendar() {
                   setAddOpen(true); setDate(key); setError("");
                 }}
                 onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
-                onDrop={(e) => {
+                onDrop={async (e) => {
                   e.preventDefault();
-                  if (!dragging) return;
-                  s.setEventMoves((prev) => ({ ...prev, [dragging]: key }));
-                  s.audit(`Moved \u201C${dragging.split("|")[1]}\u201D to ${key}`);
+                  const moved = allEvents.find((x) => x.id === dragging);
                   setDragging("");
+                  if (!moved) return;
+                  setMoveError("");
+                  const res = await moveCalendarEvent({ id: moved.id, title: moved.title, date: key });
+                  if (!res.ok) return setMoveError(res.error);
+                  s.setCustomEvents((prev) =>
+                    prev.map((x) => (x.id === moved.id ? { ...x, date: key } : x)));
+                  s.audit(`Moved \u201C${moved.title}\u201D to ${key}`);
                 }}
                 style={{
                   textAlign: "left", font: "inherit", color: "inherit",
@@ -239,7 +260,7 @@ export default function Calendar() {
                 </span>
                 <span style={{ display: "flex", flexWrap: "wrap", gap: compact ? 3 : 4 }}>
                   {dayEvents.slice(0, 3).map((e) => {
-                    const dragKey = `${e.kind}|${e.title}`;
+                    const dragKey = e.id;
                     return (
                       <span key={e.id} draggable title={e.title}
                         onDragStart={(ev) => { ev.dataTransfer.effectAllowed = "move"; ev.dataTransfer.setData("text/plain", e.title); setDragging(dragKey); }}
@@ -270,116 +291,24 @@ export default function Calendar() {
       <Card>
         <div style={{ padding: `20px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>
-            {selected ? `Agenda · ${selected}` : `Everything in ${MONTH_NAMES[month]}`}
+            {selected ? `Agenda · ${dayLabel(selected)}` : `Everything in ${MONTH_NAMES[month]}`}
           </h2>
           <span style={{ fontSize: 14, color: color.inkTertiary }}>{agenda.length} {agenda.length === 1 ? "item" : "items"}</span>
         </div>
+        {moveError ? <div style={{ padding: `12px ${pad.card}` }}><ErrorLine>{moveError}</ErrorLine></div> : null}
         {agenda.length === 0 ? (
           <div style={{ padding: `28px ${pad.card}`, fontSize: 15, color: color.inkTertiary }}>Nothing scheduled here.</div>
-        ) : agenda.map((e) => {
-          const synced = connected && feeds[FEED_OF[e.kind]];
-          return (
-            <Row key={e.id}>
-              <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                <span style={{ width: 8, height: 8, borderRadius: 2, background: calColor[e.kind] ?? color.neutral, display: "inline-block" }} />
-                <Mono size={13} style={{ color: color.inkSecondary }}>{e.date}</Mono>
-              </span>
-              <RowMain label={e.title} detail={e.detail} />
-              <Mono size={11} style={{ letterSpacing: "0.08em", textTransform: "uppercase", color: calColor[e.kind] ?? color.neutral }}>{e.kind}</Mono>
-              <Mono size={12} style={{ color: synced ? color.positive : color.inkQuaternary }}>{synced ? "on Google" : "local only"}</Mono>
-            </Row>
-          );
-        })}
-      </Card>
-      {/* Google sync sits at the end: it is configuration, not the
-          working calendar. */}
-      <Card style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, alignItems: "center", padding: "18px 22px" }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 3, background: connected ? color.positive : "oklch(0.7 0.02 150)", display: "inline-block" }} />
-          <span>
-            <span style={{ display: "block", fontSize: 15, fontWeight: 500 }}>{connected ? syncAccount : "No Google account connected"}</span>
-            <span style={{ display: "block", fontSize: 13, color: connected ? color.positive : color.attention, marginTop: 2 }}>
-              {connected
-                ? `Last synced ${lastSync} · ${direction.toLowerCase()} · ${allEvents.length} events`
-                : "Connect a Google account to push meetings, inspections and bookings to it."}
+        ) : agenda.map((e) => (
+          <Row key={e.id}>
+            <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, background: calColor[e.kind] ?? color.neutral, display: "inline-block" }} />
+              <Mono size={13} style={{ color: color.inkSecondary }}>{dayLabel(e.date)}</Mono>
             </span>
-          </span>
-        </span>
-        <span style={{ display: "flex", gap: 10, flexWrap: "wrap", justifySelf: "end" }}>
-          <Pill style={{ padding: "8px 16px", fontSize: 14 }} onClick={() => { setLastSync("just now"); setConnected(true); }}>Sync now</Pill>
-          <Pill style={{ padding: "8px 16px", fontSize: 14 }} onClick={() => setSyncOpen(!syncOpen)}>
-            {syncOpen ? "Hide sync settings" : "Manage sync"}
-          </Pill>
-        </span>
+            <RowMain label={e.title} detail={e.detail} />
+            <Mono size={11} style={{ letterSpacing: "0.08em", textTransform: "uppercase", color: calColor[e.kind] ?? color.neutral }}>{e.kind}</Mono>
+          </Row>
+        ))}
       </Card>
-      {syncOpen ? (
-        <Card>
-          <div style={{ padding: 24, display: "grid", gap: 18 }}>
-            <div style={{ display: "grid", gap: 10 }}>
-              <span style={{ fontSize: 14, color: color.inkSecondary }}>What syncs to Google</span>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                {[
-                  { id: "meetings", label: "Board & committee meetings" },
-                  { id: "inspections", label: "Inspection routes" },
-                  { id: "bookings", label: "Amenity bookings" },
-                  { id: "legal", label: "Legal dates" },
-                  { id: "community", label: "Community events" },
-                ].map((f) => (
-                  <Chip key={f.id} size="sm" on={feeds[f.id]} onClick={() => setFeeds({ ...feeds, [f.id]: !feeds[f.id] })}>
-                    {f.label}
-                  </Chip>
-                ))}
-              </div>
-            </div>
-            <FieldGrid>
-              <Field label="Direction">
-                <Select value={direction} onChange={setDirection} options={[
-                  { id: "Push only", label: "Push to Google only" },
-                  { id: "Two-way", label: "Two-way — pull Google edits back" },
-                ]} />
-              </Field>
-              <Field label="Reminders">
-                <Select value={reminder} onChange={setReminder} options={[
-                  { id: "1 day", label: "1 day before" }, { id: "3 days", label: "3 days before" },
-                  { id: "1 week", label: "1 week before" }, { id: "None", label: "No reminders" },
-                ]} />
-              </Field>
-              <div>
-                <span style={{ display: "block", fontSize: 14, color: color.inkSecondary, marginBottom: 8 }}>Subscribe link (iCal)</span>
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  <Mono style={{ flex: "1 1 auto", color: color.inkTertiary, background: color.surfaceSunken, border: `1px solid ${color.hairline}`, borderRadius: 8, padding: "10px 12px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    https://cal.unitygrid.com/{s.scope}/feed.ics
-                  </Mono>
-                  <Pill style={{ padding: "8px 16px", fontSize: 14 }} onClick={() => setCopied(true)}>{copied ? "Copied" : "Copy link"}</Pill>
-                </div>
-              </div>
-            </FieldGrid>
-            <div style={{ display: "grid", gap: 10 }}>
-              <span style={{ fontSize: 14, color: color.inkSecondary }}>Community calendars you cover</span>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                {myCalendars.map((c, i) => {
-                  const on = calsOn[c.id] !== false;
-                  const palette = ["oklch(0.5 0.06 155)", "oklch(0.52 0.08 250)", "oklch(0.55 0.09 60)", "oklch(0.5 0.09 320)"];
-                  return (
-                    <Chip key={c.id} size="sm" on={on} onClick={() => setCalsOn({ ...calsOn, [c.id]: !on })}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: 2, background: palette[i % palette.length], display: "inline-block" }} />
-                        {c.name}
-                      </span>
-                    </Chip>
-                  );
-                })}
-              </div>
-            </div>
-            <p style={{ fontSize: 13, lineHeight: 1.6, color: color.inkQuaternary }}>
-              {direction === "Two-way"
-                ? "Edits made in Google flow back here. Deletions in Google only remove the calendar entry, never the underlying record."
-                : "Events push one way. Nothing in Google can change a meeting, booking or legal date here."}
-            </p>
-          </div>
-        </Card>
-      ) : null}
-
     </>
   );
 }

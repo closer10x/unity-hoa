@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import { emptyAddress, formatAddress } from "@/lib/admin-portal/address";
+import { emptyAddress } from "@/lib/admin-portal/address";
+import { createVendor, setVendorActive } from "@/lib/admin-portal/operations-actions";
 import { useSearchFilter, useStore } from "@/lib/admin-portal/store";
-import { color } from "@/lib/admin-portal/tokens";
-import type { Address, Vendor } from "@/lib/admin-portal/types";
+import { color, pad } from "@/lib/admin-portal/tokens";
+import type { Address } from "@/lib/admin-portal/types";
 import {
-  AddDrawer, AddressFields, Card, CardHead, DropZone, Empty, ErrorLine, Field,
-  FieldGrid, FilterBar, Input, Mono, PageTitle, Primary, Row, RowMain, Select, Status,
+  ActionSelect, AddDrawer, AddressFields, Card, ConfirmBar, DateInput, DropZone,
+  Empty, ErrorLine, Field, FieldGrid, FilterBar, Input, Mono, PageTitle, Primary,
+  Row, RowMain, Select, Status,
 } from "../ui";
 
 const FILTERS = ["All", "Insurance current", "Insurance expired"];
@@ -17,6 +19,8 @@ const TRADES = [
   "Legal counsel", "Accounting & audit", "Insurance", "Other",
 ];
 
+const DEACTIVATE = [{ id: "deactivate", label: "Deactivate vendor" }];
+
 export default function Vendors() {
   const s = useStore();
   const [query, setQuery] = useState("");
@@ -24,33 +28,43 @@ export default function Vendors() {
 
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [trade, setTrade] = useState(TRADES[0]);
-  const [contact, setContact] = useState("");
-  const [contract, setContract] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contractStart, setContractStart] = useState("");
+  const [contractEnd, setContractEnd] = useState("");
   const [insurance, setInsurance] = useState("");
   const [address, setAddress] = useState<Address>(emptyAddress());
+
+  const [pending, setPending] = useState("");
+  const [flowError, setFlowError] = useState("");
+  /* Deactivation is recorded on the vendor row; the loader doesn't read the
+     flag back yet, so the marker is session-local until it does. */
+  const [deactivated, setDeactivated] = useState<string[]>([]);
 
   const visible = useSearchFilter(
     s.vendors, query, ["name", "trade", "contract", "insurance"],
     (v) => filter === "All" ? true : filter === "Insurance current" ? v.ok : !v.ok,
   );
 
-  function save() {
+  async function save() {
     if (!name.trim()) return setError("Add the company name.");
-    if (!contact.trim()) return setError("Add a contact — a name, phone or email.");
-    const line = formatAddress(address);
-    const v: Vendor = {
-      id: s.uid("vn"), name: name.trim(),
-      trade: `${trade} · ${contact.trim()}${line ? ` · ${line}` : ""}`,
-      contract: contract.trim() || "Per job",
-      spend: "$0 YTD",
-      insurance: insurance.trim() || "Not on file",
-      ok: Boolean(insurance.trim()),
-    };
-    s.setVendors((prev) => [...prev, v]);
-    s.audit(`Added vendor ${v.name}`);
-    setOpen(false); setError(""); setName(""); setContact(""); setContract(""); setInsurance(""); setAddress(emptyAddress());
+    if (!contactName.trim() && !contactPhone.trim() && !contactEmail.trim())
+      return setError("Add a contact — a name, phone or email.");
+    setSaving(true);
+    const res = await createVendor({
+      name, trade, contactName, contactPhone, contactEmail, address,
+      contractStart, contractEnd, insuranceExpiresOn: insurance,
+    });
+    setSaving(false);
+    if (!res.ok) return setError(res.error);
+    s.setVendors((prev) => [...prev, res.vendor]);
+    setOpen(false); setError(""); setName(""); setContactName(""); setContactPhone("");
+    setContactEmail(""); setContractStart(""); setContractEnd(""); setInsurance("");
+    setAddress(emptyAddress());
   }
 
   return (
@@ -62,29 +76,59 @@ export default function Vendors() {
           <FieldGrid>
             <Field label="Company"><Input value={name} onChange={setName} placeholder="Legal business name" /></Field>
             <Field label="Trade"><Select value={trade} onChange={setTrade} options={TRADES.map((t) => ({ id: t, label: t }))} /></Field>
-            <Field label="Contact"><Input value={contact} onChange={setContact} placeholder="Name, phone or email" /></Field>
+            <Field label="Contact name"><Input value={contactName} onChange={setContactName} placeholder="Who to ask for" /></Field>
           </FieldGrid>
           <FieldGrid>
-            <Field label="Contract"><Input value={contract} onChange={setContract} placeholder="e.g. Thru Dec 2027" /></Field>
-            <Field label="Insurance expires"><Input value={insurance} onChange={setInsurance} placeholder="e.g. Renews Mar 1" /></Field>
+            <Field label="Contact phone"><Input value={contactPhone} onChange={setContactPhone} placeholder="(713) 555-0100" /></Field>
+            <Field label="Contact email"><Input value={contactEmail} onChange={setContactEmail} placeholder="office@company.com" /></Field>
+          </FieldGrid>
+          <FieldGrid>
+            <Field label="Contract start"><DateInput value={contractStart} onChange={setContractStart} /></Field>
+            <Field label="Contract end"><DateInput value={contractEnd} onChange={setContractEnd} /></Field>
+            <Field label="Insurance expires" hint="The certificate's expiry date — what decides whether coverage reads current.">
+              <DateInput value={insurance} onChange={setInsurance} />
+            </Field>
           </FieldGrid>
           <AddressFields value={address} onChange={setAddress} stateLocked={false} unitLabel="Suite or unit" />
           <DropZone>W-9, certificate of insurance and signed contract — drag files here</DropZone>
           {error ? <ErrorLine>{error}</ErrorLine> : null}
-          <Primary onClick={save} style={{ justifySelf: "start" }}>Add vendor</Primary>
+          <Primary onClick={save} style={{ justifySelf: "start" }}>{saving ? "Saving…" : "Add vendor"}</Primary>
         </AddDrawer>
 
         <FilterBar query={query} onQuery={setQuery} placeholder="Search vendor or trade…"
           filters={FILTERS} active={filter} onFilter={setFilter} />
 
-        {visible.length === 0 ? <Empty>No vendors match that.</Empty> : visible.map((v) => (
-          <Row key={v.id}>
-            <RowMain label={v.name} detail={v.trade} />
-            <span style={{ fontSize: 14, color: color.inkTertiary }}>{v.contract}</span>
-            <Mono size={14}>{v.spend}</Mono>
-            <Status tone={v.ok ? "positive" : "critical"}>{v.insurance}</Status>
-          </Row>
-        ))}
+        {flowError ? <div style={{ padding: `12px ${pad.card} 0` }}><ErrorLine>{flowError}</ErrorLine></div> : null}
+
+        {visible.length === 0 ? <Empty>No vendors match that.</Empty> : visible.map((v) => {
+          const off = deactivated.includes(v.id);
+          return (
+            <React.Fragment key={v.id}>
+              <Row>
+                <RowMain label={v.name} detail={v.trade} />
+                <span style={{ fontSize: 14, color: color.inkTertiary }}>{v.contract}</span>
+                <Mono size={14}>{v.spend}</Mono>
+                <Status tone={v.ok ? "positive" : "critical"}>{v.insurance}</Status>
+                {off
+                  ? <Status tone="critical">Deactivated</Status>
+                  : <ActionSelect options={DEACTIVATE} onChoose={(id) => { if (id) setPending(v.id); }} />}
+              </Row>
+              {pending === v.id ? (
+                <ConfirmBar
+                  text={`Deactivate ${v.name}? They stop counting as an approved vendor and can't be given new work. The record, its contract dates and its spend history all stay.`}
+                  confirmLabel="Deactivate vendor"
+                  onCancel={() => setPending("")}
+                  onConfirm={async () => {
+                    setPending("");
+                    setFlowError("");
+                    const res = await setVendorActive({ id: v.id, active: false });
+                    if (!res.ok) return setFlowError(res.error);
+                    setDeactivated((prev) => [...prev, v.id]);
+                  }} />
+              ) : null}
+            </React.Fragment>
+          );
+        })}
       </Card>
     </>
   );

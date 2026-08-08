@@ -1,8 +1,10 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
 import { requireAdminUser } from "@/lib/auth/require-admin";
+import { sendWelcomeEmailViaResend } from "@/lib/email/send-welcome-email";
 import { requireServiceSupabase } from "@/lib/supabase/service";
 
 import type { Owner } from "./types";
@@ -250,5 +252,268 @@ export async function unlinkOwner(input: {
       ok: false,
       error: e instanceof Error ? e.message : "Something went wrong.",
     };
+  }
+}
+
+/* ─── Second owners on the household, and re-sending sign-in details ─── */
+
+export type HouseholdOwner = {
+  id: string;
+  name: string;
+  email: string;
+  relationship: string;
+  inviteStatus: string;
+};
+
+/** Everyone else on the deed for this lot, besides the primary owner. */
+export async function listHouseholdOwners(
+  lotId: string,
+): Promise<{ ok: true; members: HouseholdOwner[] } | Fail> {
+  try {
+    const { db } = await officeContext();
+    const { data: lot, error } = await db
+      .from("lots")
+      .select("owner_profile_id")
+      .eq("id", lotId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!lot?.owner_profile_id) return { ok: true, members: [] };
+
+    const { data, error: mErr } = await db
+      .from("household_members")
+      .select("id, name, email, relationship, invite_status, removed_at")
+      .eq("user_id", lot.owner_profile_id)
+      .is("removed_at", null)
+      .order("created_at", { ascending: true });
+    if (mErr) throw new Error(mErr.message);
+
+    return {
+      ok: true,
+      members: (data ?? []).map((m) => ({
+        id: m.id as string,
+        name: (m.name as string) ?? "",
+        email: (m.email as string) ?? "",
+        relationship: (m.relationship as string) ?? "Co-owner",
+        inviteStatus: (m.invite_status as string) ?? "invited",
+      })),
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
+
+/**
+ * Adds a second name on the deed. They get their own sign-in for the same
+ * property, so the welcome email carries their own temporary password.
+ */
+export async function addHouseholdOwner(input: {
+  lotId: string;
+  name: string;
+  email: string;
+  phone: string;
+  relationship: string;
+  sendWelcome: boolean;
+}): Promise<{ ok: true; member: HouseholdOwner; note: string } | Fail> {
+  try {
+    const { db, actorName, actorId } = await officeContext();
+
+    const name = input.name.trim();
+    const email = input.email.trim().toLowerCase();
+    if (!name) return { ok: false, error: "Add the name on the deed." };
+    if (!email) return { ok: false, error: "Add an email — the second owner needs one to sign in." };
+    if (!EMAIL_RE.test(email)) return { ok: false, error: "That email doesn't look right." };
+
+    const { data: lot, error: lotErr } = await db
+      .from("lots")
+      .select("id, owner_profile_id, lot_number, street_number, street_name")
+      .eq("id", input.lotId)
+      .maybeSingle();
+    if (lotErr) throw new Error(lotErr.message);
+    if (!lot) return { ok: false, error: "That lot no longer exists." };
+    if (!lot.owner_profile_id) {
+      return {
+        ok: false,
+        error: "Link the primary owner first — a second owner joins their household.",
+      };
+    }
+
+    const { data: existingRows } = await db
+      .from("household_members")
+      .select("id")
+      .eq("user_id", lot.owner_profile_id)
+      .eq("email", email)
+      .is("removed_at", null)
+      .maybeSingle();
+    if (existingRows) {
+      return { ok: false, error: `${email} is already on this household.` };
+    }
+
+    // Their own sign-in, so each owner has their own password.
+    const { data: users } = await db.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const match = users?.users.find((u) => u.email?.toLowerCase() === email);
+    let memberUserId = match?.id ?? null;
+    let tempPassword = "";
+    if (!memberUserId) {
+      tempPassword = randomBytes(9).toString("base64url");
+      const { data: created, error: createErr } = await db.auth.admin.createUser({
+        email,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: { display_name: name },
+      });
+      if (createErr) throw new Error(`Could not create the sign-in account: ${createErr.message}`);
+      memberUserId = created.user?.id ?? null;
+    }
+
+    if (memberUserId) {
+      const { error: profErr } = await db.from("profiles").upsert({
+        id: memberUserId,
+        role: "resident",
+        display_name: name,
+        phone: input.phone.trim() || null,
+        unit_lot: (lot.lot_number as string | null) ?? null,
+      });
+      if (profErr) throw new Error(`Profile write failed: ${profErr.message}`);
+    }
+
+    const { data: row, error: insErr } = await db
+      .from("household_members")
+      .insert({
+        user_id: lot.owner_profile_id,
+        member_user_id: memberUserId,
+        name,
+        email,
+        phone: input.phone.trim() || null,
+        relationship: input.relationship || "Co-owner",
+        access_level: "full",
+        invite_status: "invited",
+        invited_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+    if (insErr) throw new Error(insErr.message);
+
+    let note = `${name} added to the household.`;
+    if (tempPassword && input.sendWelcome) {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3001";
+      const sent = await sendWelcomeEmailViaResend({
+        name,
+        email,
+        role: "Resident",
+        tempPassword,
+        loginUrl: `${siteUrl}/portal/login`,
+      });
+      note +=
+        "error" in sent
+          ? ` The welcome email could not be sent: ${sent.error}.`
+          : " Welcome email sent with a temporary password.";
+    } else if (!tempPassword) {
+      note += " That email already had an account, so it was linked instead of created.";
+    }
+
+    const where = [lot.street_number, lot.street_name].filter(Boolean).join(" ");
+    const { error: auditErr } = await db.from("admin_audit_log").insert({
+      action: `Owners: added ${name} as a second owner at ${where || "the lot"}`,
+      actor_name: actorName,
+      actor_user_id: actorId,
+    });
+    if (auditErr) throw new Error(`Audit write failed: ${auditErr.message}`);
+
+    revalidatePath("/admin");
+    revalidatePath("/portal");
+    return {
+      ok: true,
+      note,
+      member: {
+        id: row.id as string,
+        name,
+        email,
+        relationship: input.relationship || "Co-owner",
+        inviteStatus: "invited",
+      },
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
+
+/**
+ * Sends the welcome email again. The original temporary password is never
+ * stored, so this issues a fresh one — which is why it needs confirming:
+ * any password the household already set stops working.
+ */
+export async function resendWelcomeEmail(input: {
+  lotId: string;
+  memberEmail?: string;
+}): Promise<{ ok: true; note: string } | Fail> {
+  try {
+    const { db, actorName, actorId } = await officeContext();
+
+    const { data: lot, error } = await db
+      .from("lots")
+      .select("owner_profile_id")
+      .eq("id", input.lotId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!lot?.owner_profile_id) {
+      return { ok: false, error: "There is no owner account on this lot to email." };
+    }
+
+    let targetId = lot.owner_profile_id as string;
+    let name = "";
+    let email = input.memberEmail?.trim().toLowerCase() ?? "";
+
+    if (email) {
+      const { data: users } = await db.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const match = users?.users.find((u) => u.email?.toLowerCase() === email);
+      if (!match) return { ok: false, error: `No sign-in account is on file for ${email}.` };
+      targetId = match.id;
+    }
+
+    const { data: profile } = await db
+      .from("profiles")
+      .select("display_name")
+      .eq("id", targetId)
+      .maybeSingle();
+    name = profile?.display_name?.trim() || "Resident";
+
+    if (!email) {
+      const { data } = await db.auth.admin.getUserById(targetId);
+      email = data.user?.email ?? "";
+    }
+    if (!email) return { ok: false, error: "That account has no email address on file." };
+
+    const tempPassword = randomBytes(9).toString("base64url");
+    const { error: pwErr } = await db.auth.admin.updateUserById(targetId, {
+      password: tempPassword,
+    });
+    if (pwErr) throw new Error(`Could not issue a new password: ${pwErr.message}`);
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3001";
+    const sent = await sendWelcomeEmailViaResend({
+      name,
+      email,
+      role: "Resident",
+      tempPassword,
+      loginUrl: `${siteUrl}/portal/login`,
+    });
+    if ("error" in sent) {
+      return {
+        ok: false,
+        error: `A new password was issued but the email failed: ${sent.error}. Their old password no longer works, so share the new details another way.`,
+      };
+    }
+
+    const { error: auditErr } = await db.from("admin_audit_log").insert({
+      action: `Owners: re-sent the welcome email to ${email} with a new temporary password`,
+      actor_name: actorName,
+      actor_user_id: actorId,
+    });
+    if (auditErr) throw new Error(`Audit write failed: ${auditErr.message}`);
+
+    revalidatePath("/admin");
+    return { ok: true, note: `Welcome email re-sent to ${email} with a new temporary password.` };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
   }
 }

@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 
 import { recordAuthEvent } from "@/lib/auth/auth-events";
 import { normalizeAdminNext } from "@/lib/admin/normalize-admin-next";
+import { sendPasswordResetViaResend } from "@/lib/email/send-password-reset";
+import { requireServiceSupabase } from "@/lib/supabase/service";
 import { isSupabaseAuthConfigured } from "@/lib/supabase/keys";
 import { createSupabaseServerClient } from "@/lib/supabase/server-user";
 
@@ -100,7 +102,7 @@ export async function signInAdmin(formData: FormData) {
 }
 
 export async function requestPasswordReset(formData: FormData) {
-  const email = String(formData.get("email") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
   if (!isSupabaseAuthConfigured()) {
     redirect("/admin/login?error=config");
   }
@@ -108,12 +110,33 @@ export async function requestPasswordReset(formData: FormData) {
     redirect("/admin/login?error=missing_email");
   }
 
-  const supabase = await createSupabaseServerClient();
   const origin =
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000";
-  await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/auth/callback?next=/admin/settings/account`,
-  });
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3001";
+
+  /* The link is generated with the service key and delivered through Resend:
+     Supabase's own mailer is rate-limited to a couple of messages an hour and
+     rejects addresses it cannot verify, so resets went nowhere. */
+  try {
+    const service = requireServiceSupabase();
+    const { data, error } = await service.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: { redirectTo: `${origin}/auth/callback?next=/admin/profile` },
+    });
+    const link = data?.properties?.action_link;
+    if (!error && link) {
+      const name =
+        (data.user?.user_metadata?.display_name as string | undefined)?.trim() || "";
+      await sendPasswordResetViaResend({
+        name,
+        email,
+        resetUrl: link,
+        portalLabel: "admin portal",
+      });
+    }
+  } catch {
+    // Never disclose whether the address matched an account.
+  }
 
   await recordAuthEvent({
     event: "password_reset_requested",

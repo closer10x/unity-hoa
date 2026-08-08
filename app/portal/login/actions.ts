@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 
 import { recordAuthEvent } from "@/lib/auth/auth-events";
 import { normalizePortalNext } from "@/lib/resident-portal/normalize-next";
+import { sendPasswordResetViaResend } from "@/lib/email/send-password-reset";
 import { isSupabaseAuthConfigured } from "@/lib/supabase/keys";
+import { requireServiceSupabase } from "@/lib/supabase/service";
 import { createSupabaseServerClient } from "@/lib/supabase/server-user";
 
 export async function signInResident(formData: FormData) {
@@ -63,7 +65,7 @@ export async function signInResident(formData: FormData) {
 }
 
 export async function requestResidentPasswordReset(formData: FormData) {
-  const email = String(formData.get("email") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
 
   if (!isSupabaseAuthConfigured()) {
     redirect("/portal/login?error=config");
@@ -72,10 +74,38 @@ export async function requestResidentPasswordReset(formData: FormData) {
     redirect("/portal/login?error=missing_email");
   }
 
-  const supabase = await createSupabaseServerClient();
-  const site = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "";
-  await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: site ? `${site}/portal/login` : undefined,
+  const origin =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3001";
+
+  /* Delivered through Resend like the rest of the app's mail: Supabase's own
+     mailer is rate-limited and refuses addresses it cannot verify, so resets
+     were going nowhere. */
+  try {
+    const service = requireServiceSupabase();
+    const { data, error } = await service.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: { redirectTo: `${origin}/auth/callback?next=/portal` },
+    });
+    const link = data?.properties?.action_link;
+    if (!error && link) {
+      const name =
+        (data.user?.user_metadata?.display_name as string | undefined)?.trim() || "";
+      await sendPasswordResetViaResend({
+        name,
+        email,
+        resetUrl: link,
+        portalLabel: "resident portal",
+      });
+    }
+  } catch {
+    // Never disclose whether the address matched an account.
+  }
+
+  await recordAuthEvent({
+    event: "password_reset_requested",
+    email,
+    succeeded: true,
   });
 
   // Always the same notice — whether the account exists is not disclosed.
