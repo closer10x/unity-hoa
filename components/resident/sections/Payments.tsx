@@ -14,10 +14,16 @@ const CARD_FEE_RATE = 0.0295;
 const usd = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
-/** The four-column ledger grid from the handoff. */
+/**
+ * The four-column ledger from the handoff. The floors use min() so they can
+ * collapse below their own width: fixed tracks added up to 454px, and the card
+ * clips rather than scrolls, so on a phone the amount was cut in half and the
+ * running balance was invisible with nothing to swipe.
+ */
 const ledgerGrid: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "88px minmax(120px, 1fr) 96px 96px",
+  gridTemplateColumns:
+    "repeat(auto-fit, minmax(min(120px, 100%), 1fr))",
   gap: "8px 18px",
   alignItems: "baseline",
   padding: `14px ${pad.card}`,

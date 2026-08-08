@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { ONBOARD_STEPS } from "@/lib/admin-portal/actions";
-import { emptyAddress, formatAddress } from "@/lib/admin-portal/address";
+import { emptyAddress } from "@/lib/admin-portal/address";
 import {
   createPortfolio, getCommunityBilling, registerCommunity, setCommunityStage,
   updateCommunityBilling,
@@ -12,7 +12,7 @@ import {
 } from "@/lib/admin-portal/policy-actions";
 import { buildActionMenu, useStore } from "@/lib/admin-portal/store";
 import { color, radius } from "@/lib/admin-portal/tokens";
-import type { Address, Community, PendingConfirm, Portfolio } from "@/lib/admin-portal/types";
+import type { Address, Community, PendingConfirm } from "@/lib/admin-portal/types";
 import {
   ActionSelect, AddDrawer, AddressFields, Card, CardHead, Chip, ConfirmBar,
   ErrorLine, Field, FieldGrid, Input, Mono, PageTitle, Primary, Row, RowMain,

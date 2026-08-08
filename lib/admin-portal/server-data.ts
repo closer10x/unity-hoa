@@ -40,17 +40,10 @@ export type { AddressSuggestion, SignInEvent };
 
 /**
  * Reads the admin portal's collections from the database and maps them onto
- * the portal's domain types.
- *
- * Only the sections whose tables exist are loaded. The rest — violations,
- * architectural applications, bookings, vendors, legal cases, meetings,
- * directors and portfolios — have no schema yet, so they resolve to empty
- * arrays rather than fixtures: an empty section is honest, invented rows are
- * not. See PORTAL_SECTIONS_WITHOUT_TABLES below.
+ * the portal's domain types. Every domain has a table now; a section that
+ * looks empty is empty, not stubbed — invented rows would be worse than
+ * nothing.
  */
-
-/** Every portal domain now has a table; nothing is fixture-only. */
-export const PORTAL_SECTIONS_WITHOUT_TABLES = [] as const;
 
 export type PortalData = {
   owners: Owner[];
@@ -184,26 +177,40 @@ type StaffProfileRow = {
  * stand alone — a tech who never logs in, or the original Administrator
  * account that predates the employees table.
  */
-export async function loadStaff(db: SupabaseClient): Promise<Staff[]> {
+export async function loadStaff(
+  db: SupabaseClient,
+  /* loadPortalData has already read these; a standalone caller has not. */
+  prefetched?: { employees?: unknown[]; profiles?: unknown[] },
+): Promise<Staff[]> {
   const [empRes, profRes] = await Promise.all([
-    db.from("employees").select("*").order("name", { ascending: true }),
-    db.from("profiles").select("*"),
+    prefetched?.employees
+      ? Promise.resolve({ data: prefetched.employees })
+      : db.from("employees").select("*").order("name", { ascending: true }),
+    prefetched?.profiles
+      ? Promise.resolve({ data: prefetched.profiles })
+      : db.from("profiles").select("*"),
   ]);
-
-  // auth is the only place emails live for sign-in accounts.
-  const emailByProfile = new Map<string, string>();
-  try {
-    const { data } = await db.auth.admin.listUsers({ page: 1, perPage: 500 });
-    for (const u of data?.users ?? []) {
-      if (u.email) emailByProfile.set(u.id, u.email.toLowerCase());
-    }
-  } catch {
-    // Without auth admin access, sign-in rows simply show no email.
-  }
 
   const adminProfiles = ((profRes.data ?? []) as StaffProfileRow[]).filter(
     (p) => p.role === "admin",
   );
+
+  /* auth is the only place sign-in emails live. Asked per account rather than
+     by listing every user: the roster is a handful of people, and listUsers
+     ships the whole table — which also silently truncates past its page size
+     once the community's own accounts outnumber it. */
+  const emailByProfile = new Map<string, string>();
+  try {
+    const found = await Promise.all(
+      adminProfiles.map(async (p) => {
+        const { data } = await db.auth.admin.getUserById(p.id);
+        return [p.id, data.user?.email?.toLowerCase() ?? ""] as const;
+      }),
+    );
+    for (const [id, email] of found) if (email) emailByProfile.set(id, email);
+  } catch {
+    // Without auth admin access, sign-in rows simply show no email.
+  }
   const profileByEmail = new Map(
     adminProfiles
       .map((p) => [emailByProfile.get(p.id) ?? "", p] as const)
@@ -394,10 +401,17 @@ export async function loadFees(db: SupabaseClient): Promise<Fee[]> {
 }
 
 /** "Maria Alvarez · Lot 12" or just "Lot 12" when no owner is on file. */
-export async function loadOwnerNames(db: SupabaseClient): Promise<Map<string, string>> {
+export async function loadOwnerNames(
+  db: SupabaseClient,
+  prefetched?: { lots?: unknown[]; profiles?: unknown[] },
+): Promise<Map<string, string>> {
   const [lotsRes, profRes] = await Promise.all([
-    db.from("lots").select("id, lot_number, owner_profile_id"),
-    db.from("profiles").select("id, display_name"),
+    prefetched?.lots
+      ? Promise.resolve({ data: prefetched.lots })
+      : db.from("lots").select("id, lot_number, owner_profile_id"),
+    prefetched?.profiles
+      ? Promise.resolve({ data: prefetched.profiles })
+      : db.from("profiles").select("id, display_name"),
   ]);
   const nameByProfile = new Map(
     ((profRes.data ?? []) as { id: string; display_name: string | null }[]).map((p) => [
@@ -421,6 +435,7 @@ export async function loadOwnerNames(db: SupabaseClient): Promise<Map<string, st
 /** Ledger + bank accounts together so imported rows carry their account label. */
 export async function loadAccounting(
   db: SupabaseClient,
+  prefetched?: { lots?: unknown[]; profiles?: unknown[] },
 ): Promise<{ ledger: LedgerEntry[]; bankAccounts: BankAccount[] }> {
   const [ftRes, baRes, ownerNames] = await Promise.all([
     db
@@ -430,7 +445,7 @@ export async function loadAccounting(
       .order("created_at", { ascending: false })
       .limit(1000),
     db.from("bank_accounts").select("*").order("created_at", { ascending: true }),
-    loadOwnerNames(db),
+    loadOwnerNames(db, prefetched),
   ]);
   const bankAccounts = ((baRes.data ?? []) as BankAccountRow[]).map(mapBankAccountRow);
   const names = new Map(bankAccounts.map((b) => [b.id, bankAccountLabel(b)]));
@@ -806,7 +821,14 @@ export async function loadPortalData(): Promise<PortalData> {
     ),
   }));
 
-  const staff = await loadStaff(db);
+  /* These four are independent of one another and of everything computed
+     below, so they go out together rather than in series. */
+  const [staff, rest, signIns, residentThreads] = await Promise.all([
+    loadStaff(db, { employees: empRes.data ?? undefined, profiles: profiles }),
+    loadRemainingDomains(db),
+    loadSignIns(db),
+    loadResidentThreads(db, profiles),
+  ]);
 
   const calendar: CalEvent[] = (eventsRes.data ?? []).map((e) => ({
     id: e.id,
@@ -831,8 +853,6 @@ export async function loadPortalData(): Promise<PortalData> {
   const openWork = work.filter((w) => w.status !== "Closed").length;
   const doors = m?.total_units ?? lots.length;
   const overdue = m?.overdue_accounts ?? 0;
-
-  const rest = await loadRemainingDomains(db);
 
   /* Communities are derived from the lots roster: there is no communities
      table yet, but scope filtering keys off these ids, so an empty list would
@@ -939,9 +959,6 @@ export async function loadPortalData(): Promise<PortalData> {
           : "No owners behind on their HOA fees",
     },
   ];
-
-  const signIns = await loadSignIns(db);
-  const residentThreads = await loadResidentThreads(db, profiles);
 
   return {
     owners,

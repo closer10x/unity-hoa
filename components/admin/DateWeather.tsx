@@ -12,6 +12,14 @@ import { color, font } from "@/lib/admin-portal/tokens";
 
 const ZONE = "America/Chicago";
 
+/* Built once: constructing an Intl formatter is the costly part, and these
+   take no dynamic input. */
+const DAY_FMT = new Intl.DateTimeFormat("en-US", { weekday: "long", timeZone: ZONE });
+const MONTH_DAY_FMT = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", timeZone: ZONE });
+const YEAR_FMT = new Intl.DateTimeFormat("en-US", { year: "numeric", timeZone: ZONE });
+const DAY_NUM_FMT = new Intl.DateTimeFormat("en-US", { day: "numeric", timeZone: ZONE });
+const TIME_FMT = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: ZONE });
+
 type Weather = { tempF: number; label: string; kind: string; isDay: boolean };
 
 /**
@@ -48,9 +56,19 @@ export default function DateWeather() {
   const [weather, setWeather] = useState<Weather | null>(null);
 
   useEffect(() => {
-    setNow(new Date());
-    const tick = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(tick);
+    /* The clock shows minutes, so it wakes on the minute boundary rather than
+       every second — a tab left open all day re-renders 1,440 times, not
+       86,400. */
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      const t = new Date();
+      setNow(t);
+      timer = setTimeout(schedule, 60_000 - (t.getSeconds() * 1000 + t.getMilliseconds()));
+    };
+    /* Deferred a tick so the first paint matches the server's empty render
+       and the clock does not set state during the effect body itself. */
+    timer = setTimeout(schedule, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -72,20 +90,20 @@ export default function DateWeather() {
 
   if (!now) return null;
 
-  const dayName = now.toLocaleDateString("en-US", { weekday: "long", timeZone: ZONE });
-  const monthDay = now.toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: ZONE });
-  const year = now.toLocaleDateString("en-US", { year: "numeric", timeZone: ZONE });
-  const day = Number(now.toLocaleDateString("en-US", { day: "numeric", timeZone: ZONE }));
-  const time = now.toLocaleTimeString("en-US", {
-    hour: "numeric", minute: "2-digit", timeZone: ZONE,
-  });
+  const dayName = DAY_FMT.format(now);
+  const monthDay = MONTH_DAY_FMT.format(now);
+  const year = YEAR_FMT.format(now);
+  const day = Number(DAY_NUM_FMT.format(now));
+  const time = TIME_FMT.format(now);
 
   return (
-    /* One line, never stacked: the date, the clock and the conditions read as
-       a single sentence across the header. */
+    /* One line wherever it fits — which is every desktop width. It is allowed
+       to wrap rather than hold the line, because an unbreakable strip pushes
+       the whole page sideways on a phone: "Wednesday, September 30th, 2026"
+       alone is wider than a 375px viewport. */
     <span style={{
       display: "flex", alignItems: "baseline", gap: 10,
-      flexWrap: "nowrap", minWidth: 0, whiteSpace: "nowrap",
+      flexWrap: "wrap", minWidth: 0, flex: "1 1 auto",
     }}>
       <span style={{ fontSize: 14, color: color.ink }}>
         {dayName}, {monthDay.replace(String(day), ordinal(day))}, {year}

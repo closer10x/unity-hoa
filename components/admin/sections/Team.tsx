@@ -181,6 +181,10 @@ export default function Team() {
       if (!res.ok || !data.ok) return setRowError(data.error ?? "The photo could not be saved.");
       s.setStaff((prev) => prev.map((x) => x.id === p.id ? { ...x, photoUrl: data.photoUrl ?? null } : x));
       s.audit(`Updated the profile photo for ${p.name}`);
+    } catch {
+      /* A dropped connection, or a proxy returning HTML for an oversized
+         upload, would otherwise stop the spinner and say nothing. */
+      setRowError("The photo could not be uploaded. Check the connection and try again.");
     } finally {
       setPhotoBusy(null);
     }
@@ -308,6 +312,8 @@ export default function Team() {
         return;
       }
       setOpen(false); setName(""); setEmail(""); setPhone(""); setComms([]);
+    } catch {
+      setError("The invite could not be sent. Check the connection and try again.");
     } finally {
       setSending(false);
     }
@@ -378,11 +384,11 @@ export default function Team() {
             {/* One line, always: the three controls read as a set, and a
                 wrapped "Remove" under the others looks like a separate row. */}
             <span style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "nowrap", justifySelf: "end" }}>
-              <Pill style={{ padding: "5px 11px", fontSize: 12.5 }}
+              <Pill style={{ padding: "10px 12px", fontSize: 12.5 }}
                 onClick={() => (editing === p.id ? setEditing(null) : openEdit(p))}>
                 {editing === p.id ? "Close" : "Edit"}
               </Pill>
-              <Pill style={{ padding: "5px 11px", fontSize: 12.5, opacity: rowBusy === p.id ? 0.6 : 1 }}
+              <Pill style={{ padding: "10px 12px", fontSize: 12.5, opacity: rowBusy === p.id ? 0.6 : 1 }}
                 onClick={() => {
                   if (rowBusy) return;
                   setRowError("");
@@ -397,7 +403,7 @@ export default function Team() {
                   style={{
                     font: "inherit", fontSize: 12.5, fontWeight: 500,
                     background: "none", border: "1px solid transparent",
-                    borderRadius: 999, padding: "5px 8px", cursor: "pointer",
+                    borderRadius: 999, padding: "10px 10px", cursor: "pointer",
                     color: "oklch(0.5 0.09 30)", whiteSpace: "nowrap",
                   }}>
                   Remove
@@ -405,7 +411,7 @@ export default function Team() {
               ) : (
                 <span
                   title="Only an Administrator can remove a staff account"
-                  style={{ fontSize: 12.5, color: color.inkQuaternary, padding: "5px 8px", whiteSpace: "nowrap" }}
+                  style={{ fontSize: 12.5, color: color.inkQuaternary, padding: "10px 10px", whiteSpace: "nowrap" }}
                 >
                   Remove
                 </span>

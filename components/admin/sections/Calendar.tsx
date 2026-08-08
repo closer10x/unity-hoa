@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import { MONTH_NAMES } from "@/lib/admin-portal/fixtures";
 import { createCalendarEvent, moveCalendarEvent } from "@/lib/admin-portal/calendar-actions";
 import { useStore } from "@/lib/admin-portal/store";
-import { calColor, calTint, color, font, pad, radius } from "@/lib/admin-portal/tokens";
+import { calColor, calTint, color, font, pad } from "@/lib/admin-portal/tokens";
 import type { CalEvent } from "@/lib/admin-portal/types";
 import {
   Card, Chip, DateInput, ErrorLine, Field, FieldGrid, Input, Mono, PageTitle,
@@ -177,12 +177,12 @@ export default function Calendar() {
 
 
       <Card>
-        <div style={{ padding: "18px 22px", borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ padding: `18px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <button type="button" aria-label="Previous month"
               onClick={() => { setMonth((m) => m === 0 ? 11 : m - 1); if (month === 0) setYear((y) => y - 1); setSelected(""); }}
               style={{ font: "inherit", fontSize: 15, background: "none", border: `1px solid ${color.borderInput}`, borderRadius: 8, width: 32, height: 32, cursor: "pointer", color: color.inkSecondary }}>‹</button>
-            <span style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-0.015em", minWidth: 170, textAlign: "center" }}>
+            <span style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-0.015em", minWidth: "11ch", textAlign: "center" }}>
               {MONTH_NAMES[month]} {year}
             </span>
             <button type="button" aria-label="Next month"

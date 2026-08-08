@@ -120,7 +120,7 @@ export function TextButton({ children, onClick, tone = "accent" }: { children: R
   const map = { accent: "oklch(0.44 0.045 155)", muted: color.inkTertiary, destructive: color.destructive };
   return (
     <button type="button" onClick={onClick}
-      style={{ background: "none", border: "none", padding: "10px 2px", font: "inherit", fontSize: 14, color: map[tone], cursor: "pointer", whiteSpace: "nowrap" }}>
+      style={{ background: "none", border: "none", padding: "10px 8px", font: "inherit", fontSize: 14, color: map[tone], cursor: "pointer", whiteSpace: "nowrap" }}>
       {children}
     </button>
   );
@@ -265,7 +265,7 @@ export function DateInput({ value, onChange }: { value: string; onChange: (v: st
           <button type="button" aria-label="Close the calendar" onClick={() => setOpen(false)}
             style={{ position: "fixed", inset: 0, background: "transparent", border: "none", cursor: "default", zIndex: 29 }} />
           <div style={{
-            position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 30, width: 292,
+            position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 30, width: "min(292px, calc(100vw - 48px))",
             background: color.surface, border: `1px solid ${color.borderInput}`, borderRadius: radius.lg,
             boxShadow: "0 14px 36px oklch(0.4 0.02 150 / 0.14)", padding: 14, display: "grid", gap: 10,
           }}>
@@ -535,10 +535,15 @@ export function ActionSelect({ options, onChoose }: { options: { id: string; lab
 
 export function ConfirmBar({ text, confirmLabel, onCancel, onConfirm }: { text: string; confirmLabel: string; onCancel: () => void; onConfirm: () => void }) {
   return (
-    <div style={{ padding: `16px ${pad.card}`, background: color.confirmBg, borderBottom: `1px solid ${color.hairlineSoft}`, display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto auto", gap: 16, alignItems: "center" }}>
-      <span style={{ fontSize: 15, lineHeight: 1.55, color: "oklch(0.32 0.02 150)" }}>{text}</span>
-      <TextButton tone="muted" onClick={onCancel}>Cancel</TextButton>
-      <Primary onClick={onConfirm} style={{ padding: "9px 20px", borderRadius: radius.pill, fontSize: 14 }}>{confirmLabel}</Primary>
+    /* The consequence sentence is the point of this bar, so it takes a whole
+       line before it is allowed to be squeezed — a fixed track crushed it to a
+       few characters wide on a phone. */
+    <div style={{ padding: `16px ${pad.card}`, background: color.confirmBg, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", flexWrap: "wrap", alignItems: "center", gap: "12px 16px" }}>
+      <span style={{ flex: "1 1 260px", fontSize: 15, lineHeight: 1.55, color: "oklch(0.32 0.02 150)" }}>{text}</span>
+      <span style={{ display: "flex", alignItems: "center", gap: 16, marginLeft: "auto", flex: "0 0 auto" }}>
+        <TextButton tone="muted" onClick={onCancel}>Cancel</TextButton>
+        <Primary onClick={onConfirm} style={{ padding: "9px 20px", borderRadius: radius.pill, fontSize: 14 }}>{confirmLabel}</Primary>
+      </span>
     </div>
   );
 }

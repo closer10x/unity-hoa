@@ -36,7 +36,8 @@ export async function countAnnouncementAudience(
 ): Promise<{ ok: true; households: number; emails: number } | Fail> {
   try {
     const { db } = await officeContext();
-    const recipients = await resolveRecipients(db, audience);
+    // The count comes from the roster; only an actual send needs addresses.
+    const recipients = await resolveRecipients(db, audience, false);
     return { ok: true, households: recipients.households, emails: recipients.emails.length };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
@@ -46,6 +47,7 @@ export async function countAnnouncementAudience(
 async function resolveRecipients(
   db: ReturnType<typeof requireServiceSupabase>,
   audience: AnnouncementAudience,
+  needEmails = true,
 ): Promise<{ households: number; emails: string[]; label: string }> {
   const { data: lots, error } = await db
     .from("lots")
@@ -63,7 +65,7 @@ async function resolveRecipients(
     .filter((id): id is string => Boolean(id));
 
   const emails: string[] = [];
-  if (profileIds.length) {
+  if (needEmails && profileIds.length) {
     const { data: users } = await db.auth.admin.listUsers({ page: 1, perPage: 1000 });
     const wanted = new Set(profileIds);
     for (const u of users?.users ?? []) {

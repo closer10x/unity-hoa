@@ -17,6 +17,14 @@ import {
   Row, RowMain, Select, Status, TextButton,
 } from "../ui";
 
+/* Built once: constructing a collator is the costly part, and it takes no
+   dynamic input. */
+const COLLATOR = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
+
+/* The roster is nearly four hundred homes; rendering them all rebuilds a few
+   thousand nodes on every keystroke of the search box. */
+const ROW_CAP = 100;
+
 /* These match the statuses the roster actually produces — a filter naming a
    status no lot can hold would always come back empty. */
 const FILTERS = ["All", "Owner on file", "No owner linked"];
@@ -145,17 +153,27 @@ export default function Owners() {
     setEditLoading(true);
     setEditError("");
     setUnlinkPending(false);
-    const res = await getOwnerEditData(o.id);
-    setEditLoading(false);
-    if (!res.ok) return setEditError(res.error);
-    setEditLinked(res.linked);
-    setEditName(res.name);
-    setEditEmail(res.email);
-    setEditCurrentEmail(res.email);
-    setEditPhone(res.phone);
     setCoOpen(false); setCoNote(""); setResendFor(null); setResendNote("");
-    const members = await listHouseholdOwners(o.id);
-    setHousehold(members.ok ? members.members : []);
+    try {
+      // Independent reads: one round trip instead of two.
+      const [res, members] = await Promise.all([
+        getOwnerEditData(o.id),
+        listHouseholdOwners(o.id),
+      ]);
+      if (!res.ok) return setEditError(res.error);
+      setEditLinked(res.linked);
+      setEditName(res.name);
+      setEditEmail(res.email);
+      setEditCurrentEmail(res.email);
+      setEditPhone(res.phone);
+      setHousehold(members.ok ? members.members : []);
+    } catch {
+      setEditError("That did not load. Check the connection and try again.");
+    } finally {
+      /* Always clears: without this a failed read leaves the drawer stuck on
+         "Loading…" with no way out but a reload. */
+      setEditLoading(false);
+    }
   }
 
   function closeEdit() {
@@ -253,18 +271,17 @@ export default function Owners() {
 
   /* Lot numbers are strings, so "Lot 10" would sort before "Lot 2" with a
      plain compare. numeric collation keeps them in human order. */
-  const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
-  const visible = useMemo(
+  const sorted = useMemo(
     () =>
       [...filtered].sort((a, b) =>
-        collator.compare(
+        COLLATOR.compare(
           String(a[sort as keyof typeof a] ?? ""),
           String(b[sort as keyof typeof b] ?? ""),
         ),
       ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [filtered, sort],
   );
+  const visible = sorted.slice(0, ROW_CAP);
 
   async function save() {
     if (saving) return;
@@ -619,6 +636,11 @@ export default function Owners() {
 
           </React.Fragment>
         ))}
+        {sorted.length > visible.length ? (
+          <div style={{ padding: `14px ${"clamp(16px, 2.4vw, 24px)"}`, fontSize: 14, color: color.inkTertiary }}>
+            Showing the first {visible.length} of {sorted.length} homes. Search or filter to narrow it down.
+          </div>
+        ) : null}
       </Card>
     </>
   );

@@ -215,7 +215,7 @@ export async function updateCommunityBilling(input: {
     const { db, actorName, actorId } = await officeContext();
 
     const feeRaw = input.feeDollars.trim();
-    let hoa_fee_amount_cents: number | null =
+    const hoa_fee_amount_cents: number | null =
       feeRaw === "" ? null : parseDollarsToCents(feeRaw);
     if (hoa_fee_amount_cents != null && hoa_fee_amount_cents < 0) {
       return { ok: false, error: "The HOA fee can't be negative." };

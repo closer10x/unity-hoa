@@ -14,14 +14,15 @@ import type {
 } from "./types";
 
 /**
- * Client store for the prototype. In production, split this: server records
- * belong in a data-fetching layer (React Query / RSC + server actions) and only
- * UI state — scope, section, open drawer, pending confirmation, form drafts —
- * stays on the client.
+ * Client store for the admin portal. Server records arrive as `initialData`
+ * from the RSC layer and are mutated through server actions; what lives here
+ * is that data plus the UI state around it — scope, section, open drawer,
+ * pending confirmation, form drafts.
  *
- * The audit log MUST be written server-side inside the same transaction as the
- * mutation it records. The client-side append here exists only to demonstrate
- * the surface.
+ * The audit log is written server-side, inside the same action as the mutation
+ * it records. The `audit()` append below is the optimistic echo of that write,
+ * so the trail updates without waiting for a reload — it is never the record
+ * itself.
  */
 
 function stamp(): string {
@@ -83,8 +84,6 @@ interface Store {
   setResidentThreads: React.Dispatch<React.SetStateAction<ResidentThread[]>>;
   customEvents: CalEvent[];
   setCustomEvents: React.Dispatch<React.SetStateAction<CalEvent[]>>;
-  eventMoves: Record<string, string>;
-  setEventMoves: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   ledger: LedgerEntry[];
   setLedger: React.Dispatch<React.SetStateAction<LedgerEntry[]>>;
   bankAccounts: BankAccount[];
@@ -203,7 +202,6 @@ export function StoreProvider({
   const addressBook = initialData?.addressBook ?? [];
   const signIns = initialData?.signIns ?? [];
   const [customEvents, setCustomEvents] = useState<CalEvent[]>(initialData?.calendar ?? []);
-  const [eventMoves, setEventMoves] = useState<Record<string, string>>({});
   const [ledger, setLedger] = useState<LedgerEntry[]>(initialData?.ledger ?? []);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(initialData?.bankAccounts ?? []);
   const [fees, setFees] = useState<Fee[]>(initialData?.fees ?? []);
@@ -211,10 +209,14 @@ export function StoreProvider({
   const [auditLog, setAuditLog] = useState<AuditEntry[]>(initialData?.audit ?? []);
 
   useEffect(() => {
-    const onResize = () => setVw(window.innerWidth);
-    onResize();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    /* Only the breakpoint matters, so listen for the boundary being crossed
+       rather than every resize frame — dragging a window edge otherwise
+       re-rendered the whole portal, list rows and all, at screen rate. */
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const apply = () => setVw(mq.matches ? MOBILE_BREAKPOINT - 1 : MOBILE_BREAKPOINT);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
   }, []);
 
   const audit = useCallback((text: string) => {
@@ -252,7 +254,7 @@ export function StoreProvider({
     legalCases, setLegalCases, vendors, setVendors, docs, setDocs,
     communities, setCommunities, portfolios, setPortfolios, staff, setStaff,
     residentThreads, setResidentThreads,
-    customEvents, setCustomEvents, eventMoves, setEventMoves,
+    customEvents, setCustomEvents,
     ledger, setLedger, bankAccounts, setBankAccounts,
     fees, setFees, focusOwnerId, setFocusOwnerId,
     auditLog, audit, stamp, uid, currentUser: actor, currentRole, isAdministrator, metrics, addressBook, signIns,
