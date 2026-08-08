@@ -16,9 +16,13 @@ import {
   Input, Mono, PageTitle, Pill, Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
 
+/* Ordered by how much each role can reach, narrowest first, so the matrix
+   below reads left to right as access widening and the role picker offers
+   the least-privileged choice first. Roles reaching the same number of
+   sections are ordered by how sensitive those sections are. */
 const ROLES: StaffRole[] = [
-  "Community manager", "Assistant manager", "Maintenance tech",
-  "Inspector", "Accounting", "Front desk", "Administrator", "Owner",
+  "Accounting", "Maintenance tech", "Inspector", "Front desk",
+  "Assistant manager", "Community manager", "Administrator", "Owner",
 ];
 
 /** Card-header collapse toggle — same chevron as the nav icons. */

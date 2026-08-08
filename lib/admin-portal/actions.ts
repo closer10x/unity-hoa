@@ -121,14 +121,14 @@ export const DELINQ_STEPS: ActionStep[] = [
 ];
 
 export const ROLE_MATRIX: { role: string; access: string }[] = [
-  { role: "Owner", access: "The business owner's account. Everything, with no restrictions — new sections are included automatically." },
-  { role: "Administrator", access: "Everything, plus staff accounts, billing setup and community onboarding." },
-  { role: "Community manager", access: "Full access to their assigned communities: accounting, owners, work orders, violations, board and communications." },
-  { role: "Assistant manager", access: "Same as a manager minus legal referrals, lien filings and fee waivers." },
+  { role: "Accounting", access: "Ledgers, payments, delinquencies, budgets and statements across every community." },
   { role: "Maintenance tech", access: "Work orders assigned to them, amenity schedules and vendor contacts. No owner financials." },
   { role: "Inspector", access: "Inspection routes, violation logging with photos, and read-only owner files." },
-  { role: "Accounting", access: "Ledgers, payments, delinquencies, budgets and statements across every community." },
   { role: "Front desk", access: "Owner lookup, bookings, guest passes and message intake. No financial edits." },
+  { role: "Assistant manager", access: "Same as a manager minus legal referrals, lien filings and fee waivers." },
+  { role: "Community manager", access: "Full access to their assigned communities: accounting, owners, work orders, violations, board and communications." },
+  { role: "Administrator", access: "Everything, plus staff accounts, billing setup and community onboarding." },
+  { role: "Owner", access: "The business owner's account. Everything, with no restrictions — new sections are included automatically." },
 ];
 
 export const ROLE_HINTS: Record<string, string> = {
