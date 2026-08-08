@@ -5,10 +5,12 @@ import { WORK_STEPS } from "@/lib/admin-portal/actions";
 import { buildActionMenu, useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color, pad } from "@/lib/admin-portal/tokens";
 import type { PendingConfirm, WorkOrder, WorkStatus } from "@/lib/admin-portal/types";
-import { assignWorkOrder, createWorkOrder, setWorkOrderStatus } from "@/lib/admin-portal/work-actions";
+import {
+  assignWorkOrder, createWorkOrder, setWorkOrderStatus, updateWorkOrder,
+} from "@/lib/admin-portal/work-actions";
 import {
   DropZone,
-  ActionSelect, AddDrawer, Card, Chip, ConfirmBar, Empty, ErrorLine,
+  ActionSelect, AddDrawer, Card, Chip, ConfirmBar, DateInput, Empty, ErrorLine,
   Field, FieldGrid, FilterBar, Input, Mono, PageTitle, Primary, Row, RowMain,
   Select, Status, Area, TextButton,
 } from "../ui";
@@ -21,6 +23,40 @@ export default function WorkOrders() {
   const [filter, setFilter] = useState("All");
   const [pending, setPending] = useState<PendingConfirm | null>(null);
   const [reassigning, setReassigning] = useState("");
+
+  /* Editing the order itself: what the job is, where and how urgent. */
+  const [editing, setEditing] = useState("");
+  const [ef, setEf] = useState({ title: "", location: "", detail: "", priority: "normal", dueAt: "" });
+  const [editSaving, setEditSaving] = useState(false);
+
+  function openEdit(w: WorkOrder) {
+    if (editing === w.id) { setEditing(""); return; }
+    setEditing(w.id);
+    setReassigning("");
+    setFlowError("");
+    setEf({
+      title: w.title,
+      location: w.detail === "No detail recorded" ? "" : w.detail,
+      detail: "",
+      priority: w.priority ?? "normal",
+      dueAt: w.dueAt ? String(w.dueAt).slice(0, 10) : "",
+    });
+  }
+
+  async function saveEdit(w: WorkOrder) {
+    if (editSaving) return;
+    setEditSaving(true);
+    setFlowError("");
+    const res = await updateWorkOrder({
+      id: w.id, title: ef.title, location: ef.location,
+      description: ef.detail, priority: ef.priority, dueAt: ef.dueAt,
+    });
+    setEditSaving(false);
+    if (!res.ok) return setFlowError(res.error);
+    s.setWork((prev) => prev.map((x) => x.id === w.id ? withAssignee(res.work, w.assignee) : x));
+    s.audit(`Work order ${w.ref} edited — ${res.changed}`);
+    setEditing("");
+  }
 
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
@@ -137,9 +173,43 @@ export default function WorkOrders() {
                 <Status tone={w.status === "Closed" ? "positive" : w.status === "New" ? "attention" : "neutral"}>{w.status}</Status>
                 <span style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                   <ActionSelect options={menu.options} onChoose={menu.onChoose} />
+                  <TextButton onClick={() => openEdit(w)}>{editing === w.id ? "Close" : "Edit"}</TextButton>
                   <TextButton onClick={() => setReassigning(reassigning === w.id ? "" : w.id)}>Reassign</TextButton>
                 </span>
               </Row>
+
+              {editing === w.id ? (
+                <div style={{ padding: "0 24px 20px", borderBottom: `1px solid ${color.hairlineSoft}` }}>
+                  <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: 14, padding: 20, display: "grid", gap: 14 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16 }}>
+                      <span style={{ fontSize: 15, fontWeight: 600 }}>Edit {w.ref}</span>
+                      <TextButton tone="muted" onClick={() => setEditing("")}>Cancel</TextButton>
+                    </div>
+                    <FieldGrid>
+                      <Field label="Title"><Input value={ef.title} onChange={(v) => setEf({ ...ef, title: v })} placeholder="What needs doing" /></Field>
+                      <Field label="Location"><Input value={ef.location} onChange={(v) => setEf({ ...ef, location: v })} placeholder="e.g. Park 1" /></Field>
+                      <Field label="Priority">
+                        <Select value={ef.priority} onChange={(v) => setEf({ ...ef, priority: v })} options={[
+                          { id: "low", label: "Low" },
+                          { id: "normal", label: "Routine" },
+                          { id: "high", label: "Urgent" },
+                          { id: "urgent", label: "Emergency" },
+                        ]} />
+                      </Field>
+                      <Field label="Due date"><DateInput value={ef.dueAt} onChange={(v: string) => setEf({ ...ef, dueAt: v })} /></Field>
+                    </FieldGrid>
+                    <Field label="Add to the description" hint="Appended detail for whoever picks the job up">
+                      <Area value={ef.detail} onChange={(v) => setEf({ ...ef, detail: v })} rows={2} placeholder="Anything the tech should know" />
+                    </Field>
+                    <span style={{ fontSize: 13, color: color.inkQuaternary }}>
+                      Status and who it is assigned to are changed from the row itself, so an edit never moves the job along on its own.
+                    </span>
+                    <Primary onClick={() => saveEdit(w)} style={{ justifySelf: "start", opacity: editSaving ? 0.6 : 1 }}>
+                      {editSaving ? "Saving…" : "Save changes"}
+                    </Primary>
+                  </div>
+                </div>
+              ) : null}
 
               {menu.confirming ? (
                 <ConfirmBar text={menu.confirmText} confirmLabel={menu.confirmLabel} onCancel={menu.cancel}

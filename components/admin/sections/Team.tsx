@@ -199,13 +199,13 @@ export default function Team() {
   const [matrixOpen, setMatrixOpen] = useState(false);
 
   /* ----- sign-in activity: collapse + pages of five ----- */
-  const [signInsOpen, setSignInsOpen] = useState(true);
+  const [signInsOpen, setSignInsOpen] = useState(false);
   const [signInPage, setSignInPage] = useState(1);
   const signInPages = Math.max(1, Math.ceil(s.signIns.length / 5));
   const signInPageSafe = Math.min(signInPage, signInPages);
 
   /* ----- audit trail: collapse + search + filter by user ----- */
-  const [auditOpen, setAuditOpen] = useState(true);
+  const [auditOpen, setAuditOpen] = useState(false);
   const [auditQuery, setAuditQuery] = useState("");
   const [auditWho, setAuditWho] = useState("All");
   const auditUsers = ["All", ...[...new Set(s.auditLog.map((a) => a.who))].slice(0, 7)];
@@ -327,12 +327,14 @@ export default function Team() {
             <Status tone={!p.active ? "neutral" : p.load > 7 ? "attention" : "positive"}>
               {p.active ? `${p.load} open` : "Disabled"}
             </Status>
-            <span style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-              <Pill style={{ padding: "6px 13px", fontSize: 13 }}
+            {/* One line, always: the three controls read as a set, and a
+                wrapped "Remove" under the others looks like a separate row. */}
+            <span style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "nowrap", justifySelf: "end" }}>
+              <Pill style={{ padding: "5px 11px", fontSize: 12.5 }}
                 onClick={() => (editing === p.id ? setEditing(null) : openEdit(p))}>
                 {editing === p.id ? "Close" : "Edit"}
               </Pill>
-              <Pill style={{ padding: "6px 13px", fontSize: 13, opacity: rowBusy === p.id ? 0.6 : 1 }}
+              <Pill style={{ padding: "5px 11px", fontSize: 12.5, opacity: rowBusy === p.id ? 0.6 : 1 }}
                 onClick={() => {
                   if (rowBusy) return;
                   setRowError("");
@@ -343,13 +345,19 @@ export default function Team() {
               {/* Removing an account is Administrator-only; everyone else can
                   disable it, which is reversible. */}
               {s.isAdministrator ? (
-                <TextButton tone="destructive" onClick={() => setRemoving(p.id)}>
+                <button type="button" onClick={() => setRemoving(p.id)}
+                  style={{
+                    font: "inherit", fontSize: 12.5, fontWeight: 500,
+                    background: "none", border: "1px solid transparent",
+                    borderRadius: 999, padding: "5px 8px", cursor: "pointer",
+                    color: "oklch(0.5 0.09 30)", whiteSpace: "nowrap",
+                  }}>
                   Remove
-                </TextButton>
+                </button>
               ) : (
                 <span
                   title="Only an Administrator can remove a staff account"
-                  style={{ fontSize: 14, color: color.inkQuaternary, padding: "10px 2px", whiteSpace: "nowrap" }}
+                  style={{ fontSize: 12.5, color: color.inkQuaternary, padding: "5px 8px", whiteSpace: "nowrap" }}
                 >
                   Remove
                 </span>

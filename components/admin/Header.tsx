@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { signOutAdmin } from "@/app/admin/(dashboard)/sign-out-action";
 import { useStore } from "@/lib/admin-portal/store";
+import DateWeather from "./DateWeather";
 import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
 
 /** Two-letter initials from the account name for the profile chip. */
@@ -67,6 +68,8 @@ export default function Header() {
             style={{ display: "block", height: 28, width: "auto" }}
           />
         </span>
+
+        <DateWeather />
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "1 1 auto", minWidth: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
           <div style={{ position: "relative" }}>

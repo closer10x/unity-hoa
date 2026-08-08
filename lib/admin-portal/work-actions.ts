@@ -273,3 +273,84 @@ export async function assignWorkOrder(input: {
     return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
   }
 }
+
+/**
+ * Editing the order itself — what the job is, where, how urgent and when it
+ * is due. Status and assignment have their own actions; this leaves both
+ * alone so an edit never silently moves a job along the ladder.
+ */
+export async function updateWorkOrder(input: {
+  id: string;
+  title: string;
+  location: string;
+  description: string;
+  priority: string;
+  dueAt: string;
+}): Promise<{ ok: true; work: WorkOrder; changed: string } | Fail> {
+  try {
+    const { db, actorName, actorId } = await officeContext();
+    if (!UUID_RE.test(input.id)) {
+      return { ok: false, error: "That work order has not been saved yet." };
+    }
+
+    const title = input.title.trim();
+    if (!title) return { ok: false, error: "Give the work order a title." };
+
+    const { data: before, error: readErr } = await db
+      .from("work_orders")
+      .select(ROW_COLUMNS)
+      .eq("id", input.id)
+      .maybeSingle();
+    if (readErr) throw new Error(readErr.message);
+    if (!before) return { ok: false, error: "That work order no longer exists." };
+
+    const priority = toDbPriority(input.priority);
+    const location = input.location.trim();
+    const description = input.description.trim();
+    const dueAt = input.dueAt.trim()
+      ? /^\d{4}-\d{2}-\d{2}$/.test(input.dueAt.trim())
+        ? `${input.dueAt.trim()}T12:00:00.000Z`
+        : input.dueAt.trim()
+      : null;
+
+    const changes: string[] = [];
+    if ((before.title ?? "") !== title) changes.push(`title → ${title}`);
+    if ((before.location ?? "") !== location) changes.push(location ? `location → ${location}` : "location cleared");
+    if ((before.description ?? "") !== description) changes.push("description updated");
+    if ((before.priority ?? "") !== priority) changes.push(`priority → ${priority}`);
+    if ((before.due_at ?? null) !== dueAt) changes.push(dueAt ? `due ${dueAt.slice(0, 10)}` : "due date cleared");
+
+    const { data, error } = await db
+      .from("work_orders")
+      .update({ title, location: location || null, description: description || null, priority, due_at: dueAt })
+      .eq("id", input.id)
+      .select(ROW_COLUMNS)
+      .single();
+    if (error) throw new Error(error.message);
+
+    let assigneeName = "";
+    if (data.assigned_to) {
+      const { data: emp } = await db
+        .from("employees")
+        .select("name")
+        .eq("id", data.assigned_to)
+        .maybeSingle();
+      assigneeName = (emp?.name as string) ?? "";
+    }
+
+    const changed = changes.length ? changes.join(", ") : "no changes";
+    if (changes.length) {
+      await audit(
+        db,
+        actorName,
+        actorId,
+        `Work orders: edited ${data.work_order_number ?? input.id.slice(0, 8)} — ${changed}`,
+      );
+    }
+
+    revalidatePath("/admin");
+    return { ok: true, work: toWorkOrder(data as WorkOrderRow, assigneeName), changed };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
