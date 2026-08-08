@@ -175,6 +175,7 @@ type StaffProfileRow = {
   section_access: string[] | null;
   communities: string[] | null;
   disabled: boolean | null;
+  avatar_path: string | null;
 };
 
 /**
@@ -229,6 +230,7 @@ export async function loadStaff(db: SupabaseClient): Promise<Staff[]> {
       employeeId: e.id,
       profileId: linked?.id ?? null,
       sections: linked?.section_access ?? null,
+      photoUrl: null,
     };
   });
 
@@ -246,7 +248,34 @@ export async function loadStaff(db: SupabaseClient): Promise<Staff[]> {
       employeeId: null,
       profileId: p.id,
       sections: p.section_access ?? null,
+      photoUrl: null,
     });
+  }
+
+  /* The avatar bucket is private, so each photo is handed over as a short
+     signed URL rather than a public link. */
+  const pathByProfile = new Map(
+    adminProfiles
+      .filter((p) => p.avatar_path)
+      .map((p) => [p.id, p.avatar_path as string]),
+  );
+  if (pathByProfile.size > 0) {
+    try {
+      const { data: signed } = await db.storage
+        .from("profile-avatars")
+        .createSignedUrls([...pathByProfile.values()], 60 * 60 * 8);
+      const urlByPath = new Map(
+        (signed ?? [])
+          .filter((r) => r.signedUrl && r.path)
+          .map((r) => [r.path as string, r.signedUrl as string]),
+      );
+      for (const person of staff) {
+        const path = person.profileId ? pathByProfile.get(person.profileId) : undefined;
+        if (path) person.photoUrl = urlByPath.get(path) ?? null;
+      }
+    } catch {
+      // Without storage access the rows simply show initials.
+    }
   }
 
   return staff;

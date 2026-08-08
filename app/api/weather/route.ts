@@ -19,7 +19,7 @@ const LONGITUDE = Number(process.env.WEATHER_LONGITUDE ?? "-95.8245");
 
 const REVALIDATE_SECONDS = 900;
 
-type Conditions = { tempF: number; label: string; kind: string };
+type Conditions = { tempF: number; label: string; kind: string; isDay: boolean };
 
 /** WMO codes from Open-Meteo, grouped into the states worth naming to staff. */
 function fromWmoCode(code: number): { label: string; kind: string } {
@@ -56,7 +56,7 @@ async function fromOpenWeather(key: string): Promise<Conditions | null> {
   if (!res.ok) return null;
   const data = (await res.json()) as {
     main?: { temp?: number };
-    weather?: { id?: number; main?: string; description?: string }[];
+    weather?: { id?: number; main?: string; description?: string; icon?: string }[];
   };
   const temp = data.main?.temp;
   const first = data.weather?.[0];
@@ -66,23 +66,25 @@ async function fromOpenWeather(key: string): Promise<Conditions | null> {
     tempF: Math.round(temp),
     label: described ? described.charAt(0).toUpperCase() + described.slice(1) : "—",
     kind: fromOpenWeatherId(first.id),
+    // OpenWeather's icon code ends in "d" or "n" for day or night.
+    isDay: !(first.icon ?? "").endsWith("n"),
   };
 }
 
 async function fromOpenMeteo(): Promise<Conditions | null> {
   const url =
     `https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}` +
-    `&longitude=${LONGITUDE}&current=temperature_2m,weather_code` +
+    `&longitude=${LONGITUDE}&current=temperature_2m,weather_code,is_day` +
     `&temperature_unit=fahrenheit&timezone=America%2FChicago`;
   const res = await fetch(url, { next: { revalidate: REVALIDATE_SECONDS } });
   if (!res.ok) return null;
   const data = (await res.json()) as {
-    current?: { temperature_2m?: number; weather_code?: number };
+    current?: { temperature_2m?: number; weather_code?: number; is_day?: number };
   };
   const temp = data.current?.temperature_2m;
   const code = data.current?.weather_code;
   if (typeof temp !== "number" || typeof code !== "number") return null;
-  return { tempF: Math.round(temp), ...fromWmoCode(code) };
+  return { tempF: Math.round(temp), ...fromWmoCode(code), isDay: data.current?.is_day !== 0 };
 }
 
 export async function GET() {

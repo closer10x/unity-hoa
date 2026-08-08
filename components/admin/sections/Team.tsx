@@ -47,6 +47,29 @@ const MATRIX_SECTIONS = [
 ];
 
 
+/** Profile photo, falling back to initials so a row is never a blank circle. */
+function Avatar({ name, url, size = 34 }: { name: string; url: string | null; size?: number }) {
+  const letters = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("") || "?";
+  return (
+    <span style={{
+      display: "grid", placeItems: "center", flex: "0 0 auto",
+      width: size, height: size, borderRadius: "50%", overflow: "hidden",
+      background: color.accentTint, color: "oklch(0.34 0.05 155)",
+      fontSize: size * 0.36, fontWeight: 600,
+    }}>
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      ) : letters}
+    </span>
+  );
+}
+
 /** Card-header collapse toggle — same chevron as the nav icons. */
 function Chevron({ open, onToggle, label }: { open: boolean; onToggle: () => void; label: string }) {
   return (
@@ -140,6 +163,28 @@ export default function Team() {
   const [rowBusy, setRowBusy] = useState<string | null>(null);
   const [rowError, setRowError] = useState("");
   const [disabling, setDisabling] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState<string | null>(null);
+
+  async function uploadPhoto(p: Staff, file: File) {
+    if (!p.profileId) {
+      return setRowError("This person has no sign-in account yet, so there is nowhere to keep a photo. Send them an invite first.");
+    }
+    setPhotoBusy(p.id);
+    setRowError("");
+    const form = new FormData();
+    form.set("file", file);
+    form.set("profileId", p.profileId);
+    form.set("name", p.name);
+    try {
+      const res = await fetch("/api/staff/avatar", { method: "POST", body: form });
+      const data = (await res.json()) as { ok?: boolean; error?: string; photoUrl?: string | null };
+      if (!res.ok || !data.ok) return setRowError(data.error ?? "The photo could not be saved.");
+      s.setStaff((prev) => prev.map((x) => x.id === p.id ? { ...x, photoUrl: data.photoUrl ?? null } : x));
+      s.audit(`Updated the profile photo for ${p.name}`);
+    } finally {
+      setPhotoBusy(null);
+    }
+  }
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [name, setName] = useState("");
@@ -246,7 +291,7 @@ export default function Team() {
         role, communities: [...comms], active: true, load: 0,
         /* The server created the rows; this optimistic entry is replaced on
            the next load, so it carries no ids and the role default applies. */
-        employeeId: null, profileId: null, sections: null,
+        employeeId: null, profileId: null, sections: null, photoUrl: null,
       };
       s.setStaff((prev) => [...prev, p]);
       const delivery = data.emailError
@@ -319,7 +364,10 @@ export default function Team() {
           /* Tight vertical rhythm: when the action cluster wraps under the
              name at narrower widths, the row shouldn't balloon. */
           <Row key={p.id} style={{ padding: `10px ${pad.card}`, rowGap: 4, alignItems: "center" }}>
-            <RowMain label={p.name} detail={p.email} />
+            <span style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
+              <Avatar name={p.name} url={p.photoUrl} />
+              <RowMain label={p.name} detail={p.email} />
+            </span>
             <Mono size={12} style={{ color: color.neutral }}>{p.role}</Mono>
             <span style={{ fontSize: 14, color: color.inkTertiary, overflow: "hidden", textOverflow: "ellipsis" }}>
               {p.communities.map((id) => s.communities.find((c) => c.id === id)?.name).filter(Boolean).join(", ") || "None assigned"}
@@ -371,6 +419,51 @@ export default function Team() {
               style={{ padding: `18px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, background: color.surfaceSunken }}>
               <div style={{ display: "grid", gap: 16, maxWidth: 860 }}>
                 <span style={{ fontSize: 15, fontWeight: 600 }}>Edit {p.name}&rsquo;s account</span>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                  <Avatar name={p.name} url={p.photoUrl} size={56} />
+                  <div style={{ display: "grid", gap: 6, justifyItems: "start" }}>
+                    {/* A styled label standing in for the file input: the raw
+                        control is nearly invisible against the card and reads
+                        as nothing to click. */}
+                    <label
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 8,
+                        font: "inherit", fontSize: 13, fontWeight: 500,
+                        background: color.surface,
+                        border: `1px solid ${color.borderInput}`,
+                        borderRadius: 999, padding: "7px 15px",
+                        cursor: p.profileId && photoBusy !== p.id ? "pointer" : "default",
+                        color: p.profileId ? color.ink : color.inkQuaternary,
+                        opacity: photoBusy === p.id ? 0.6 : 1,
+                      }}
+                    >
+                      {photoBusy === p.id
+                        ? "Uploading\u2026"
+                        : p.photoUrl ? "Replace photo" : "Upload a photo"}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        disabled={!p.profileId || photoBusy === p.id}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          e.target.value = "";
+                          if (file) uploadPhoto(p, file);
+                        }}
+                        style={{
+                          position: "absolute", width: 1, height: 1,
+                          padding: 0, margin: -1, overflow: "hidden",
+                          clip: "rect(0 0 0 0)", whiteSpace: "nowrap", border: 0,
+                        }}
+                      />
+                    </label>
+                    <span style={{ fontSize: 11.5, lineHeight: 1.5, color: color.inkQuaternary }}>
+                      {p.profileId
+                        ? "JPEG, PNG or WebP \u00B7 up to 5 MB \u00B7 office only"
+                        : "No sign-in account yet \u2014 send an invite first"}
+                    </span>
+                  </div>
+                </div>
                 <FieldGrid>
                   <Field label="Name"><Input value={ef.name} onChange={(v) => setEf({ ...ef, name: v })} /></Field>
                   <Field label="Work email"><Input value={ef.email} onChange={(v) => setEf({ ...ef, email: v })} placeholder="name@unitygrid.com" /></Field>

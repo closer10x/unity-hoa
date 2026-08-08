@@ -12,7 +12,7 @@ import { color, font } from "@/lib/admin-portal/tokens";
 
 const ZONE = "America/Chicago";
 
-type Weather = { tempF: number; label: string; kind: string };
+type Weather = { tempF: number; label: string; kind: string; isDay: boolean };
 
 /**
  * Colour emoji, at the owner's request — a deliberate exception to the
@@ -28,6 +28,18 @@ const WEATHER_EMOJI: Record<string, string> = {
   storm: "\u26C8\uFE0F",
   fog: "\uD83C\uDF2B\uFE0F",
 };
+
+/* After dark a sun is simply wrong. Only the sky-facing states change —
+   rain, snow, storms and fog read the same at any hour. */
+const NIGHT_EMOJI: Record<string, string> = {
+  clear: "\uD83C\uDF19",
+  cloud: "\u2601\uFE0F",
+};
+
+function weatherEmoji(w: Weather): string {
+  if (!w.isDay && NIGHT_EMOJI[w.kind]) return NIGHT_EMOJI[w.kind];
+  return WEATHER_EMOJI[w.kind] ?? WEATHER_EMOJI.cloud;
+}
 
 export default function DateWeather() {
   /* Rendered only after mount: the server and the browser would otherwise
@@ -93,7 +105,7 @@ export default function DateWeather() {
             title={`${weather.label}, ${weather.tempF}\u00B0F`}
             style={{ fontSize: 17, lineHeight: 1, flex: "0 0 auto" }}
           >
-            {WEATHER_EMOJI[weather.kind] ?? WEATHER_EMOJI.cloud}
+            {weatherEmoji(weather)}
           </span>
         </>
       ) : null}

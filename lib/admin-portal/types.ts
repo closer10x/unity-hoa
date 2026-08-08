@@ -110,6 +110,8 @@ export interface Staff {
   profileId: string | null;
   /** Custom section override an Administrator granted; null = role default. */
   sections: string[] | null;
+  /** Signed URL for the profile photo; null when none is on file. */
+  photoUrl: string | null;
 }
 export type StaffRole =
   | "Owner" | "Administrator" | "Community manager" | "Assistant manager"
