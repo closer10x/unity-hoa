@@ -129,7 +129,7 @@ export default function AssistantWidget() {
             ) : null}
             {messages.map((m, i) => (
               <div key={i} style={{ display: "grid", gap: 4, justifyItems: m.role === "user" ? "end" : "start" }}>
-                m.role === "assistant" ? (
+                {m.role === "assistant" ? (
                   <div style={{
                     maxWidth: "88%",
                     background: color.surfaceSunken,
@@ -149,7 +149,7 @@ export default function AssistantWidget() {
                   }}>
                     {m.content}
                   </div>
-                )
+                )}
                 {m.sources?.length ? (
                   <span style={{ fontFamily: font.mono, fontSize: 11, color: color.inkQuaternary }}>
                     Read: {m.sources.join(" · ")}
