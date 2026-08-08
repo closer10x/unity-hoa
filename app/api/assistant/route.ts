@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { loadPortalData } from "@/lib/admin-portal/server-data";
 import { loadResidentData } from "@/lib/resident-portal/server-data";
 import { DOCUMENTS_BUCKET } from "@/lib/supabase/documents";
 import { isSupabaseAuthConfigured } from "@/lib/supabase/keys";
@@ -166,15 +167,24 @@ export async function POST(req: Request) {
     )
     .join("\n");
   const catalog = docs
-    .map((d) => `- ${d.title} (${d.document_categories?.name ?? "General"})`)
+    .map(
+      (d) =>
+        `- [${d.title}](/api/documents/${d.id}/download) (${d.document_categories?.name ?? "General"})`,
+    )
+    .join("\n");
+  const attachedList = attached
+    .map((d) => `- "${d.title}" — link template: /api/documents/${d.id}/download#page=N`)
     .join("\n");
 
-  const shared = `Cite the document you drew from by title. If the answer isn't in the documents or data, say so plainly and suggest contacting the management office — never guess at rules, deadlines, or dollar amounts.
+  const shared = `Every claim drawn from a document must carry a clickable citation as a markdown link that opens the document at the exact page you read, using that document's link template with the page number filled in — e.g. [CC&Rs, p. 12](/api/documents/<id>/download#page=12). Use the real page position in the attached PDF. When mentioning a document you did not read, link its title from the catalog below without a page. If the answer isn't in the documents or data, say so plainly and suggest contacting the management office — never guess at rules, deadlines, or dollar amounts.
+
+Attached to this conversation (cite these with page numbers):
+${attachedList || "- None attached for this question."}
 
 Fee schedule (authoritative amounts):
 ${fees || "- No fees recorded yet."}
 
-Documents in the library (the most relevant are attached as PDFs to this conversation):
+Full document catalog:
 ${catalog || "- None yet."}
 
 Keep answers focused, brief, and concise. Lead with the answer; add the citation after.`;
@@ -203,8 +213,50 @@ Keep answers focused, brief, and concise. Lead with the answer; add the citation
       ].join("\n")
     : "";
 
+  // Staff get the whole portal: every collection the admin dashboard loads,
+  // serialized compactly so questions about any owner, order, case or entry
+  // can be answered from live data.
+  let portalContext = "";
+  if (isStaff) {
+    const p = await loadPortalData();
+    const cap = <T,>(arr: T[], n: number, fmt: (x: T) => string) =>
+      arr.length
+        ? arr.slice(0, n).map(fmt).join("\n") +
+          (arr.length > n ? `\n… and ${arr.length - n} more` : "")
+        : "- none";
+    portalContext = [
+      `Owners roster (${p.owners.length} homes):`,
+      cap(p.owners, 400, (o) => `- ${o.name} · ${o.address} · ${o.account} · ${o.status}`),
+      `\nWork orders (${p.work.length}):`,
+      cap(p.work, 40, (w) => `- ${w.ref} ${w.title} — ${w.status}, ${w.assignee}`),
+      `\nLedger (most recent of ${p.ledger.length}):`,
+      cap(p.ledger, 25, (l) => `- ${l.dateLabel} ${l.kind} ${l.amount} ${l.category} — ${l.description}${l.ownerName ? ` (${l.ownerName})` : ""}`),
+      `\nBank accounts:`,
+      cap(p.bankAccounts, 10, (b) => `- ${b.institution || b.name} ····${b.mask} — ${b.balance}, ${b.status}`),
+      `\nViolations (${p.violations.length}):`,
+      cap(p.violations, 25, (v) => `- ${v.title} — ${v.status} (${v.date})`),
+      `\nArchitectural applications (${p.arcApps.length}):`,
+      cap(p.arcApps, 25, (a) => `- ${a.ref} ${a.title} — ${a.status}, owner ${a.owner}`),
+      `\nBookings (${p.bookings.length}):`,
+      cap(p.bookings, 20, (b) => `- ${b.date} ${b.amenity} — ${b.status}`),
+      `\nLegal cases (${p.legalCases.length}):`,
+      cap(p.legalCases, 15, (c) => `- ${c.owner} · ${c.address} — ${c.stage}, ${c.balance}`),
+      `\nMeetings (${p.meetings.length}):`,
+      cap(p.meetings, 15, (mt) => `- ${mt.date} ${mt.title} — ${mt.status}`),
+      `\nVendors (${p.vendors.length}):`,
+      cap(p.vendors, 20, (v) => `- ${v.name} (${v.trade}) — insurance ${v.insurance}`),
+      `\nStaff (${p.staff.length}):`,
+      cap(p.staff, 20, (st) => `- ${st.name} — ${st.role}${st.active ? "" : " (disabled)"}`),
+      `\nRecent audit trail:`,
+      cap(p.audit, 20, (a) => `- ${a.time} ${a.who}: ${a.text}`),
+    ].join("\n");
+  }
+
   const system = isStaff
-    ? `You are the Unity Grid assistant for the Sofi Lakes residential association in Katy, Texas, embedded in the community's management portal and speaking with a staff member. Answer using the attached governing documents and the live data below.
+    ? `You are the Unity Grid assistant for the Sofi Lakes residential association in Katy, Texas, embedded in the community's management portal and speaking with a staff member. Answer using the attached governing documents and the live portal data below — owners, work orders, finances, cases, everything the office tracks.
+
+Live portal data:
+${portalContext}
 
 ${shared}`
     : `You are the Unity Grid assistant for the Sofi Lakes residential association in Katy, Texas, embedded in the resident portal and speaking with the homeowner ${profile?.display_name?.trim() || "on file"}. Answer using the attached governing documents, the community data, and this homeowner's own records below. You know nothing about any other resident or the management company's internal records, and if asked, say that isn't available here.

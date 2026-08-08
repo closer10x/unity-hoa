@@ -12,6 +12,24 @@ import { color, font, radius } from "@/lib/admin-portal/tokens";
 
 type Msg = { role: "user" | "assistant"; content: string; sources?: string[] };
 
+/**
+ * Minimal markdown for answers: bold, italics and links (citations open the
+ * cited document at its exact page). Everything is HTML-escaped first; only
+ * same-origin and https links are allowed.
+ */
+function renderAnswer(text: string): string {
+  const escaped = text
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+  return escaped
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, label: string, url: string) => {
+      if (!url.startsWith("/") && !url.startsWith("https://")) return m;
+      return `<a href="${url}" target="_blank" rel="noopener" style="color: oklch(0.42 0.05 155); text-decoration: underline;">${label}</a>`;
+    })
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+}
+
 /** AI sparkle, drawn in white for the launcher button. */
 function Mark({ size = 22 }: { size?: number }) {
   return (
@@ -111,15 +129,27 @@ export default function AssistantWidget() {
             ) : null}
             {messages.map((m, i) => (
               <div key={i} style={{ display: "grid", gap: 4, justifyItems: m.role === "user" ? "end" : "start" }}>
-                <div style={{
-                  maxWidth: "88%",
-                  background: m.role === "user" ? color.accentTint : color.surfaceSunken,
-                  border: `1px solid ${m.role === "user" ? color.accentTintBorder : color.hairlineSoft}`,
-                  borderRadius: radius.xl, padding: "10px 14px",
-                  fontSize: 14.5, lineHeight: 1.55, whiteSpace: "pre-wrap",
-                }}>
-                  {m.content}
-                </div>
+                m.role === "assistant" ? (
+                  <div style={{
+                    maxWidth: "88%",
+                    background: color.surfaceSunken,
+                    border: `1px solid ${color.hairlineSoft}`,
+                    borderRadius: radius.xl, padding: "10px 14px",
+                    fontSize: 14.5, lineHeight: 1.55, whiteSpace: "pre-wrap",
+                  }}
+                    dangerouslySetInnerHTML={{ __html: renderAnswer(m.content) }}
+                  />
+                ) : (
+                  <div style={{
+                    maxWidth: "88%",
+                    background: color.accentTint,
+                    border: `1px solid ${color.accentTintBorder}`,
+                    borderRadius: radius.xl, padding: "10px 14px",
+                    fontSize: 14.5, lineHeight: 1.55, whiteSpace: "pre-wrap",
+                  }}>
+                    {m.content}
+                  </div>
+                )
                 {m.sources?.length ? (
                   <span style={{ fontFamily: font.mono, fontSize: 11, color: color.inkQuaternary }}>
                     Read: {m.sources.join(" · ")}
