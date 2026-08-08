@@ -548,39 +548,69 @@ export default function Team() {
         {matrixOpen ? (
           /* Rendered from SECTION_ACCESS — the same map the server enforces —
              so this table cannot drift from real permissions. */
-          <div style={{ overflowX: "auto", padding: `6px ${pad.card} 18px` }}>
-            <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 780 }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: "left", padding: "12px 14px 10px 0", fontFamily: font.mono, fontSize: 11, fontWeight: 400, letterSpacing: "0.12em", textTransform: "uppercase", color: color.inkTertiary, whiteSpace: "nowrap" }}>
-                    Section
-                  </th>
-                  {ROLES.map((r) => (
-                    <th key={r} style={{ padding: "12px 8px 10px", fontFamily: font.mono, fontSize: 11, fontWeight: 400, letterSpacing: "0.06em", textTransform: "uppercase", color: color.inkTertiary, textAlign: "center", maxWidth: 96, lineHeight: 1.4 }}>
-                      {r}
+          <div style={{ display: "grid", gap: 12, padding: `6px ${pad.card} 18px` }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", fontSize: 13, color: color.inkTertiary }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 22, height: 22, borderRadius: 6, background: color.chipOn, border: `1px solid ${color.chipOnBorder}`, display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: font.mono, fontSize: 12, color: color.chipOnText }}>
+                  ✓
+                </span>
+                Can reach it
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 22, height: 22, borderRadius: 6, background: color.surfaceMuted, border: `1px solid ${color.hairlineSoft}`, display: "inline-block" }} />
+                No access
+              </span>
+            </span>
+
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ borderCollapse: "separate", borderSpacing: 0, width: "100%", minWidth: 780 }}>
+                <thead>
+                  <tr>
+                    <th style={{ position: "sticky", left: 0, zIndex: 1, background: color.surface, textAlign: "left", padding: "12px 14px 10px 0", fontFamily: font.mono, fontSize: 11, fontWeight: 400, letterSpacing: "0.12em", textTransform: "uppercase", color: color.inkTertiary, whiteSpace: "nowrap" }}>
+                      Section
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {ALL_SECTIONS.map((sec) => (
-                  <tr key={sec} style={{ borderTop: `1px solid ${color.hairlineSoft}` }}>
-                    <td style={{ padding: "10px 14px 10px 0", fontSize: 14, color: color.inkSecondary, whiteSpace: "nowrap" }}>
-                      {NAV.find((n) => n.id === sec)?.label ?? sec}
-                    </td>
-                    {ROLES.map((r) => {
-                      const has = SECTION_ACCESS[r].includes(sec);
-                      return (
-                        <td key={r} aria-label={has ? `${r} can reach` : `${r} cannot reach`}
-                          style={{ padding: "10px 8px", textAlign: "center", fontFamily: font.mono, fontSize: 13, color: has ? "oklch(0.44 0.045 155)" : color.inkQuaternary }}>
-                          {has ? "✓" : "—"}
-                        </td>
-                      );
-                    })}
+                    {ROLES.map((r) => (
+                      <th key={r} style={{ padding: "12px 6px 10px", fontFamily: font.mono, fontSize: 11, fontWeight: 400, letterSpacing: "0.06em", textTransform: "uppercase", color: color.inkTertiary, textAlign: "center", maxWidth: 96, lineHeight: 1.4 }}>
+                        {r}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {ALL_SECTIONS.map((sec, i) => {
+                    /* Banding the rows is what makes a wide grid readable —
+                       without it the eye loses the row between distant columns. */
+                    const band = i % 2 === 1 ? color.surfaceSunken : color.surface;
+                    return (
+                      <tr key={sec}>
+                        <td style={{ position: "sticky", left: 0, zIndex: 1, background: band, padding: "8px 14px 8px 0", fontSize: 14, color: color.inkSecondary, whiteSpace: "nowrap", borderTop: `1px solid ${color.hairlineSoft}` }}>
+                          {NAV.find((n) => n.id === sec)?.label ?? sec}
+                        </td>
+                        {ROLES.map((r) => {
+                          const has = SECTION_ACCESS[r].includes(sec);
+                          return (
+                            <td key={r}
+                              aria-label={has ? `${r} can reach ${sec}` : `${r} cannot reach ${sec}`}
+                              style={{ padding: "6px 6px", textAlign: "center", background: band, borderTop: `1px solid ${color.hairlineSoft}` }}>
+                              <span style={{
+                                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                width: 26, height: 26, borderRadius: 7,
+                                fontFamily: font.mono, fontSize: 13,
+                                background: has ? color.chipOn : "transparent",
+                                border: `1px solid ${has ? color.chipOnBorder : color.hairlineSoft}`,
+                                color: has ? color.chipOnText : color.inkQuaternary,
+                              }}>
+                                {has ? "✓" : ""}
+                              </span>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : null}
       </Card>
