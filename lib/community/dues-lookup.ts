@@ -97,34 +97,41 @@ export async function lookupDues(input: {
     // Same answer whether the lot is unknown or the street number is wrong.
     if (!lot) return { found: false, reason: NO_MATCH };
 
-    const { data: rows, error: txErr } = await db
-      .from("finance_transactions")
-      .select("id, occurred_on, description, amount_cents, owner_entry")
+    /* What is owed lives on the invoices, not the ledger — the ledger only
+       records money that actually arrived. */
+    const { data: invoices, error: invErr } = await db
+      .from("invoices")
+      .select("id, invoice_number, issued_on, due_on, status, total_cents, paid_on")
       .eq("lot_id", lot.id)
-      .not("owner_entry", "is", null)
-      .order("occurred_on", { ascending: false })
-      .limit(200);
-    if (txErr) throw new Error(txErr.message);
+      .in("status", ["sent", "paid"])
+      .order("issued_on", { ascending: false })
+      .limit(100);
+    if (invErr) throw new Error(invErr.message);
 
     const charges: DuesLine[] = [];
     const payments: DuesLine[] = [];
     let balanceCents = 0;
     let lastPaymentOn: string | null = null;
 
-    for (const r of rows ?? []) {
-      const cents = Number(r.amount_cents) || 0;
-      const line: DuesLine = {
-        id: r.id as string,
-        date: dateLabel(r.occurred_on as string | null),
-        description: (r.description as string) ?? "",
-        amount: usd(cents),
-      };
-      if (r.owner_entry === "payment") {
-        payments.push(line);
-        balanceCents -= cents;
-        if (!lastPaymentOn) lastPaymentOn = dateLabel(r.occurred_on as string | null);
+    for (const r of invoices ?? []) {
+      const cents = Number(r.total_cents) || 0;
+      const number = (r.invoice_number as string) ?? "Invoice";
+      if (r.status === "paid") {
+        payments.push({
+          id: r.id as string,
+          date: dateLabel(r.paid_on as string | null),
+          description: `${number} paid`,
+          amount: usd(cents),
+        });
+        if (!lastPaymentOn) lastPaymentOn = dateLabel(r.paid_on as string | null);
       } else {
-        charges.push(line);
+        const due = r.due_on ? ` · due ${dateLabel(r.due_on as string)}` : "";
+        charges.push({
+          id: r.id as string,
+          date: dateLabel(r.issued_on as string | null),
+          description: `${number}${due}`,
+          amount: usd(cents),
+        });
         balanceCents += cents;
       }
     }

@@ -176,8 +176,11 @@ export async function transferLot(input: {
       .eq("id", input.lotId);
     if (linkErr) throw new Error(`The lot could not be relinked: ${linkErr.message}`);
 
-    // ── Post the chosen fees to the new owner's ledger ──
-    let feeNote = "no fees posted";
+    /* ── Bill the chosen fees to the new owner ──
+       An invoice, not a ledger entry: the fees are owed at closing, but no
+       money has moved yet. It posts to the books when the office collects
+       it, which for a sale is usually out of escrow. */
+    let feeNote = "no fees billed";
     let feeTotalCents = 0;
     const feeIds = input.feeIds.filter((id) => UUID_RE.test(id));
     if (feeIds.length) {
@@ -188,21 +191,38 @@ export async function transferLot(input: {
         .eq("active", true);
       if (feeErr) throw new Error(feeErr.message);
       if (fees?.length) {
-        const rows = fees.map((f) => ({
-          occurred_on: effectiveDate,
-          kind: "income",
-          category: f.category,
-          description: `${f.name} — ${KINDS[input.kind].toLowerCase()} · ${lotAddress(l)}`,
-          amount_cents: f.amount_cents,
-          source: "manual",
-          lot_id: input.lotId,
-          entered_by_user_id: actorId,
-          entered_by_name: actorName,
-        }));
-        const { error: postErr } = await db.from("finance_transactions").insert(rows);
-        if (postErr) throw new Error(`Fee posting failed: ${postErr.message}`);
+        // Due on the closing date: these are settled at the table.
+        const { data: inv, error: invErr } = await db
+          .from("invoices")
+          .insert({
+            lot_id: input.lotId,
+            community: l.community,
+            bill_to_name: name,
+            issued_on: effectiveDate,
+            due_on: effectiveDate,
+            status: "sent",
+            sent_at: new Date().toISOString(),
+            memo: `${KINDS[input.kind]} at ${lotAddress(l)}`,
+            created_by_name: actorName,
+          })
+          .select("id, invoice_number")
+          .single();
+        if (invErr) throw new Error(`The invoice could not be raised: ${invErr.message}`);
+
+        const { error: lineErr } = await db.from("invoice_lines").insert(
+          fees.map((f) => ({
+            invoice_id: inv.id as string,
+            fee_id: f.id,
+            description: f.name,
+            quantity: 1,
+            unit_amount_cents: f.amount_cents,
+            amount_cents: f.amount_cents,
+          })),
+        );
+        if (lineErr) throw new Error(`The invoice saved but its lines did not: ${lineErr.message}`);
+
         feeTotalCents = fees.reduce((s, f) => s + f.amount_cents, 0);
-        feeNote = `${fees.map((f) => f.name).join(", ")} posted (${(feeTotalCents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })})`;
+        feeNote = `${inv.invoice_number} raised for ${fees.map((f) => f.name).join(", ")} (${(feeTotalCents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })}), due on collection`;
       }
     }
 

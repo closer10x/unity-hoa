@@ -83,6 +83,7 @@ interface Store {
   setLedger: React.Dispatch<React.SetStateAction<LedgerEntry[]>>;
   bankAccounts: BankAccount[];
   setBankAccounts: React.Dispatch<React.SetStateAction<BankAccount[]>>;
+  invoiceMemos: string[];
   invoices: Invoice[];
   setInvoices: React.Dispatch<React.SetStateAction<Invoice[]>>;
   fees: Fee[];
@@ -146,6 +147,7 @@ export function StoreProvider({
     ledger: LedgerEntry[];
     bankAccounts: BankAccount[];
     invoices: Invoice[];
+    invoiceMemos: string[];
     fees: Fee[];
     /** Server-written audit trail (admin_audit_log), newest first. */
     audit: AuditEntry[];
@@ -255,7 +257,7 @@ export function StoreProvider({
     residentThreads, setResidentThreads,
     customEvents, setCustomEvents,
     ledger, setLedger, bankAccounts, setBankAccounts,
-    invoices, setInvoices, fees, setFees, focusOwnerId, setFocusOwnerId,
+    invoices, setInvoices, invoiceMemos: initialData?.invoiceMemos ?? [], fees, setFees, focusOwnerId, setFocusOwnerId,
     auditLog, audit, stamp, uid, currentUser: actor, currentRole, isAdministrator, metrics, addressBook, signIns,
     allowedSections: allowed,
   };

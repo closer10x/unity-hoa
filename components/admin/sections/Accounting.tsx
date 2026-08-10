@@ -50,6 +50,8 @@ type AccountingTab = (typeof ACCOUNTING_TABS)[number]["id"];
 
 export default function Accounting() {
   const s = useStore();
+  /* Issued and not yet collected — what the office still has to chase. */
+  const outstandingCount = s.invoices.filter((i) => i.status === "sent").length;
 
   /* ----- take a payment (collapsed at the top; product rule 1) ----- */
   const [open, setOpen] = useState(false);
@@ -141,7 +143,24 @@ export default function Accounting() {
               boxShadow: tab === t.id ? `inset 0 -2px 0 ${color.accent}` : "none",
               whiteSpace: "nowrap",
             }}>
-            {t.label}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+              {t.label}
+              {/* Only invoices carry a count, and only when something is
+                  actually waiting — a badge reading zero is noise. */}
+              {t.id === "invoices" && outstandingCount > 0 ? (
+                <span aria-label={`${outstandingCount} outstanding`}
+                  style={{
+                    display: "inline-grid", placeItems: "center",
+                    minWidth: 19, height: 19, padding: "0 6px",
+                    borderRadius: 999, background: "oklch(0.62 0.22 25)",
+                    color: "oklch(0.99 0.01 25)",
+                    fontFamily: font.mono, fontSize: 11, fontWeight: 600,
+                    lineHeight: 1,
+                  }}>
+                  {outstandingCount}
+                </span>
+              ) : null}
+            </span>
           </button>
         ))}
       </div>
@@ -411,6 +430,29 @@ function InvoicesCard() {
   const [collecting, setCollecting] = useState<string | null>(null);
   const [paidOn, setPaidOn] = useState("");
   const [method, setMethod] = useState("Bank transfer");
+  const [payMemo, setPayMemo] = useState("");
+  const [reference, setReference] = useState("");
+  const [bank, setBank] = useState("");
+  const [attaching, setAttaching] = useState(false);
+  const [attached, setAttached] = useState<string[]>([]);
+
+  async function attach(invoiceId: string, file: File) {
+    setAttaching(true);
+    setError("");
+    try {
+      const form = new FormData();
+      form.set("file", file);
+      form.set("invoiceId", invoiceId);
+      const res = await fetch("/api/invoices/attachment", { method: "POST", body: form });
+      const data = (await res.json()) as { ok?: boolean; error?: string; fileName?: string };
+      if (!res.ok || !data.ok) return setError(data.error ?? "The file could not be attached.");
+      setAttached((prev) => [...prev, data.fileName ?? file.name]);
+    } catch {
+      setError("The file could not be attached. Check the connection and try again.");
+    } finally {
+      setAttaching(false);
+    }
+  }
   const [voiding, setVoiding] = useState<string | null>(null);
   const [voidReason, setVoidReason] = useState("");
 
@@ -460,12 +502,14 @@ function InvoicesCard() {
 
   async function collect(id: string, number: string) {
     setError("");
-    const res = await recordInvoicePayment({ id, paidOn, method });
-    setCollecting(null);
+    const res = await recordInvoicePayment({
+      id, paidOn, method, memo: payMemo, reference, bank,
+    });
     if (!res.ok) return setError(res.error);
+    setCollecting(null);
     s.setInvoices(res.invoices);
     s.audit(`Invoices: collected ${number}`);
-    setPaidOn("");
+    setPaidOn(""); setPayMemo(""); setReference(""); setBank(""); setAttached([]);
   }
 
   async function discard(id: string, number: string) {
@@ -490,7 +534,7 @@ function InvoicesCard() {
 
       <Card>
         <CardHead title="Invoices"
-          meta="Bill a household, then record the payment — issuing posts the charge and collecting posts the ledger entry" />
+          meta="Bill a household, then record the payment when it arrives — nothing reaches the ledger until the money does" />
 
         <AddDrawer open={drawer}
           onOpen={() => { setDrawer(true); setError(""); setNote(""); }}
@@ -563,9 +607,23 @@ function InvoicesCard() {
             </div>
           </div>
 
-          <Field label="Memo" hint="Appears on the invoice">
-            <Input value={memo} onChange={setMemo} placeholder="Optional" />
-          </Field>
+          <div style={{ display: "grid", gap: 8 }}>
+            <Field label="Memo" hint="Appears on the invoice">
+              <Input value={memo} onChange={setMemo} placeholder="Optional" />
+            </Field>
+            {/* Whatever gets written here comes back as a one-tap choice on
+                the next invoice, so the same phrases are never retyped. */}
+            {s.invoiceMemos.length > 0 ? (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {s.invoiceMemos.map((m) => (
+                  <Chip key={m} size="sm" on={memo.trim() === m}
+                    onClick={() => setMemo(memo.trim() === m ? "" : m)}>
+                    {m}
+                  </Chip>
+                ))}
+              </div>
+            ) : null}
+          </div>
 
           {error ? <ErrorLine>{error}</ErrorLine> : null}
           <Primary onClick={save} style={{ justifySelf: "start", opacity: saving ? 0.6 : 1 }}>
@@ -655,11 +713,73 @@ function InvoicesCard() {
                         { id: "Card", label: "Card" },
                         { id: "Check", label: "Check" },
                         { id: "Cash", label: "Cash" },
+                        { id: "Escrow", label: "Escrow / title company" },
                       ]} />
                     </Field>
                   </FieldGrid>
+
+                  {/* A check has to be traceable back to a statement, so its
+                      number is required and the bank is worth having. */}
+                  {method === "Check" ? (
+                    <FieldGrid>
+                      <Field label="Check number" hint="Required — it is what ties this to a statement">
+                        <Input value={reference} onChange={setReference} placeholder="e.g. 1042" mono />
+                      </Field>
+                      <Field label="Drawn on" hint="The bank on the check">
+                        <Input value={bank} onChange={setBank} placeholder="e.g. Frost Bank" />
+                      </Field>
+                    </FieldGrid>
+                  ) : method === "Cash" ? null : (
+                    <Field label="Reference" hint="Wire reference, transaction id or escrow file number">
+                      <Input value={reference} onChange={setReference} placeholder="Optional" mono />
+                    </Field>
+                  )}
+
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <Field label="Memo" hint="Anything worth remembering about this payment">
+                      <Input value={payMemo} onChange={setPayMemo} placeholder="Optional" />
+                    </Field>
+                    {s.invoiceMemos.length > 0 ? (
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {s.invoiceMemos.map((m) => (
+                          <Chip key={m} size="sm" on={payMemo.trim() === m}
+                            onClick={() => setPayMemo(payMemo.trim() === m ? "" : m)}>
+                            {m}
+                          </Chip>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div style={{ display: "grid", gap: 6, justifyItems: "start" }}>
+                    <label style={{
+                      display: "inline-flex", alignItems: "center", gap: 8,
+                      font: "inherit", fontSize: 13, fontWeight: 500,
+                      background: color.surface, border: `1px solid ${color.borderInput}`,
+                      borderRadius: 999, padding: "7px 15px",
+                      cursor: attaching ? "default" : "pointer", opacity: attaching ? 0.6 : 1,
+                    }}>
+                      {attaching ? "Attaching…" : "Attach proof of payment"}
+                      <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf"
+                        disabled={attaching}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          e.target.value = "";
+                          if (file) attach(inv.id, file);
+                        }}
+                        style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap", border: 0 }} />
+                    </label>
+                    <span style={{ fontSize: 11.5, lineHeight: 1.5, color: color.inkQuaternary }}>
+                      A photographed check or receipt · image or PDF, up to 10 MB · office only
+                    </span>
+                    {attached.length > 0 ? (
+                      <Mono size={12} style={{ color: color.positive }}>
+                        Attached: {attached.join(", ")}
+                      </Mono>
+                    ) : null}
+                  </div>
                   <span style={{ fontSize: 13, color: color.inkQuaternary }}>
-                    {inv.total} posts to the ledger against {inv.billTo} and clears their balance.
+                    {inv.total} posts to the ledger against {inv.billTo} and settles this invoice.
                   </span>
                   <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
                     <Primary onClick={() => collect(inv.id, inv.number)} style={{ justifySelf: "start" }}>

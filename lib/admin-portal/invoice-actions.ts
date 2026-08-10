@@ -10,10 +10,10 @@ import type { Invoice, InvoiceLine } from "./types";
 /**
  * Invoices sit in front of the ledger, not beside it.
  *
- * Issuing one posts a charge against the household, which is what the owner
- * balance and the public dues lookup read. Collecting it posts the payment.
- * Both are ordinary finance_transactions rows carrying the invoice's number,
- * so there is one set of books and the invoice is the paperwork over it.
+ * Issuing one bills the household — it does not touch the ledger. What is
+ * owed lives on the invoice until the money actually arrives; only then does
+ * a ledger entry appear, for the amount collected. The books therefore record
+ * money, not expectations, and an unpaid invoice never inflates income.
  *
  * A sent invoice is never edited or deleted. It has gone out; the record of
  * what was billed has to keep saying what was billed. Corrections are a void
@@ -142,6 +142,35 @@ export async function loadInvoices(
   );
 }
 
+/**
+ * Memos already used on invoices, most recent first. The office types the
+ * same handful of phrases — "Paid via escrow", "Closing statement" — so they
+ * come back as one-tap choices instead of being retyped.
+ */
+export async function loadInvoiceMemos(
+  db: ReturnType<typeof requireServiceSupabase>,
+): Promise<string[]> {
+  const { data } = await db
+    .from("invoices")
+    .select("memo, created_at")
+    .not("memo", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const r of data ?? []) {
+    const memo = ((r.memo as string) ?? "").trim();
+    if (!memo) continue;
+    const key = memo.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(memo);
+    if (out.length >= 12) break;
+  }
+  return out;
+}
+
 export async function createInvoice(input: {
   lotId: string;
   dueOn: string;
@@ -257,30 +286,13 @@ export async function sendInvoice(id: string): Promise<Ok<{ invoices: Invoice[] 
       return { ok: false, error: "An invoice with no amount cannot be issued." };
     }
 
-    const { data: tx, error: txErr } = await db
-      .from("finance_transactions")
-      .insert({
-        occurred_on: inv.issued_on,
-        kind: "income",
-        category: "HOA fees",
-        description: `${inv.invoice_number} issued to ${inv.bill_to_name ?? "owner"}`,
-        amount_cents: inv.total_cents,
-        source: "manual",
-        lot_id: inv.lot_id,
-        owner_entry: "charge",
-        entered_by_user_id: actorId,
-        entered_by_name: actorName,
-      })
-      .select("id")
-      .single();
-    if (txErr) throw new Error(`The charge could not be posted: ${txErr.message}`);
-
+    /* Deliberately no ledger entry here. Issuing bills the household; the
+       books stay quiet until the money turns up. */
     const { error: upErr } = await db
       .from("invoices")
       .update({
         status: "sent",
         sent_at: new Date().toISOString(),
-        charge_transaction_id: tx.id,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id);
@@ -288,7 +300,7 @@ export async function sendInvoice(id: string): Promise<Ok<{ invoices: Invoice[] 
 
     await audit(
       db,
-      `Invoices: issued ${inv.invoice_number} to ${inv.bill_to_name ?? "owner"} — ${usd(inv.total_cents)} charged`,
+      `Invoices: issued ${inv.invoice_number} to ${inv.bill_to_name ?? "owner"} — ${usd(inv.total_cents)} owed`,
       actorName,
       actorId,
     );
@@ -301,11 +313,19 @@ export async function sendInvoice(id: string): Promise<Ok<{ invoices: Invoice[] 
   }
 }
 
-/** Collecting it: the payment lands in the ledger and clears the balance. */
+/**
+ * Collecting it. This is the only point money enters the books: one ledger
+ * entry for what was actually received, against the household that paid.
+ */
 export async function recordInvoicePayment(input: {
   id: string;
   paidOn: string;
   method: string;
+  memo: string;
+  /** Check number, wire reference or transaction id. */
+  reference: string;
+  /** Bank the check was drawn on. */
+  bank: string;
 }): Promise<Ok<{ invoices: Invoice[] }> | Fail> {
   try {
     const { db, actorName, actorId } = await officeContext();
@@ -326,15 +346,31 @@ export async function recordInvoicePayment(input: {
       ? input.paidOn
       : new Date().toISOString().slice(0, 10);
 
+    const method = input.method.trim();
+    const reference = input.reference.trim();
+    const bank = input.bank.trim();
+    const memo = input.memo.trim();
+
+    /* A check without its number cannot be traced back to a statement later,
+       which is the whole reason for writing it down. */
+    if (method === "Check" && !reference) {
+      return { ok: false, error: "Add the check number — it is what ties this payment to a statement." };
+    }
+
+    const detail = [
+      method,
+      reference ? (method === "Check" ? `check ${reference}` : `ref ${reference}`) : "",
+      bank,
+      memo,
+    ].filter(Boolean).join(" · ");
+
     const { data: tx, error: txErr } = await db
       .from("finance_transactions")
       .insert({
         occurred_on: paidOn,
         kind: "income",
         category: "HOA fees",
-        description: `Payment received for ${inv.invoice_number}${
-          input.method.trim() ? ` — ${input.method.trim()}` : ""
-        }`,
+        description: `Payment received for ${inv.invoice_number}${detail ? ` — ${detail}` : ""}`,
         amount_cents: inv.total_cents,
         source: "manual",
         lot_id: inv.lot_id,
@@ -352,6 +388,10 @@ export async function recordInvoicePayment(input: {
         status: "paid",
         paid_on: paidOn,
         payment_transaction_id: tx.id,
+        payment_method: method || null,
+        payment_memo: memo || null,
+        payment_reference: reference || null,
+        payment_bank: bank || null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", input.id);
@@ -359,9 +399,7 @@ export async function recordInvoicePayment(input: {
 
     await audit(
       db,
-      `Invoices: collected ${inv.invoice_number} — ${usd(inv.total_cents)} received${
-        input.method.trim() ? ` by ${input.method.trim()}` : ""
-      }`,
+      `Invoices: collected ${inv.invoice_number} — ${usd(inv.total_cents)} received${detail ? ` (${detail})` : ""}`,
       actorName,
       actorId,
     );
@@ -375,9 +413,9 @@ export async function recordInvoicePayment(input: {
 }
 
 /**
- * Voiding, not deleting. An issued invoice's charge is reversed with an
- * opposing entry rather than erased, so the ledger still shows that it
- * happened and was undone.
+ * Voiding, not deleting — the invoice stays on the record with its reason.
+ * A collected invoice cannot be voided: money changed hands, and that is a
+ * refund, not an erasure.
  */
 export async function voidInvoice(input: {
   id: string;
@@ -404,22 +442,8 @@ export async function voidInvoice(input: {
     }
     if (inv.status === "void") return { ok: false, error: "This invoice is already void." };
 
-    // Only an issued invoice put a charge on the books to reverse.
-    if (inv.status === "sent" && inv.total_cents > 0) {
-      const { error: txErr } = await db.from("finance_transactions").insert({
-        occurred_on: new Date().toISOString().slice(0, 10),
-        kind: "income",
-        category: "HOA fees",
-        description: `${inv.invoice_number} voided — ${reason}`,
-        amount_cents: inv.total_cents,
-        source: "manual",
-        lot_id: inv.lot_id,
-        owner_entry: "payment",
-        entered_by_user_id: actorId,
-        entered_by_name: actorName,
-      });
-      if (txErr) throw new Error(`The reversal could not be posted: ${txErr.message}`);
-    }
+    /* Nothing to reverse: issuing never wrote to the ledger, so voiding is
+       simply the invoice standing down. */
 
     const { error: upErr } = await db
       .from("invoices")

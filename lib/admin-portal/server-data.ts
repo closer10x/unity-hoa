@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase/server";
-import { loadInvoices } from "./invoice-actions";
+import { loadInvoiceMemos, loadInvoices } from "./invoice-actions";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -58,6 +58,8 @@ export type PortalData = {
   ledger: LedgerEntry[];
   bankAccounts: BankAccount[];
   invoices: Invoice[];
+  /** Memos already used, offered back as quick-picks. */
+  invoiceMemos: string[];
   audit: AuditEntry[];
   fees: Fee[];
   violations: Violation[];
@@ -99,6 +101,7 @@ const EMPTY: PortalData = {
   ledger: [],
   bankAccounts: [],
   invoices: [],
+  invoiceMemos: [],
   audit: [],
   fees: [],
   metrics: [],
@@ -835,12 +838,13 @@ export async function loadPortalData(): Promise<PortalData> {
 
   /* These four are independent of one another and of everything computed
      below, so they go out together rather than in series. */
-  const [staff, rest, signIns, residentThreads, invoices] = await Promise.all([
+  const [staff, rest, signIns, residentThreads, invoices, invoiceMemos] = await Promise.all([
     loadStaff(db, { employees: empRes.data ?? undefined, profiles: profiles }),
     loadRemainingDomains(db),
     loadSignIns(db),
     loadResidentThreads(db, profiles),
     loadInvoices(db),
+    loadInvoiceMemos(db),
   ]);
 
   const calendar: CalEvent[] = (eventsRes.data ?? []).map((e) => ({
@@ -983,6 +987,7 @@ export async function loadPortalData(): Promise<PortalData> {
     communities,
     ...rest,
     invoices,
+    invoiceMemos,
     signIns,
     addressBook,
     ledger: accounting.ledger,
