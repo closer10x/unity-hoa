@@ -79,6 +79,22 @@ export function canManageStaff(staffRole: string | null | undefined): boolean {
   );
 }
 
+/**
+ * Who may change the crew schedule. Everyone who reaches the Schedule section
+ * manages it, except the two field roles — a Maintenance tech or Inspector
+ * sees it read-only unless granted the per-person override. The override is
+ * meaningless for any other role, so it is only consulted for those two.
+ */
+export function canEditSchedule(
+  staffRole: string | null | undefined,
+  override: boolean | null | undefined,
+): boolean {
+  if (staffRole === "Maintenance tech" || staffRole === "Inspector") {
+    return Boolean(override);
+  }
+  return true;
+}
+
 const STAFF_ROLES = [
   "Owner", "Administrator", "Community manager", "Assistant manager",
   "Maintenance tech", "Inspector", "Accounting", "Front desk",

@@ -12,6 +12,8 @@ export type AdminProfile = {
   avatar_path: string | null;
   /** Per-account section override; null = derive from staff_role. */
   section_access: string[] | null;
+  /** Per-person grant letting a field role change the crew schedule. */
+  can_edit_schedule: boolean;
 };
 
 export type AdminSession = {
@@ -40,6 +42,7 @@ const DEV_SESSION: AdminSession = {
     display_name: "Local dev",
     avatar_path: null,
     section_access: null,
+    can_edit_schedule: true,
   },
   // No client exists without configuration; nothing on this path queries it.
   supabase: null as unknown as AdminSession["supabase"],
@@ -87,6 +90,7 @@ export const requireAdminUser = cache(async (): Promise<AdminSession> => {
     display_name?: string | null;
     avatar_path?: string | null;
     section_access?: string[] | null;
+    can_edit_schedule?: boolean | null;
   };
 
   return {
@@ -97,6 +101,7 @@ export const requireAdminUser = cache(async (): Promise<AdminSession> => {
       display_name: row.display_name ?? null,
       avatar_path: row.avatar_path ?? null,
       section_access: row.section_access ?? null,
+      can_edit_schedule: Boolean(row.can_edit_schedule),
     },
     supabase,
   };

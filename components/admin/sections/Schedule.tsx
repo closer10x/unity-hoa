@@ -3,11 +3,11 @@
 import React, { useMemo, useState } from "react";
 
 import { useStore } from "@/lib/admin-portal/store";
-import { color, font, radius } from "@/lib/admin-portal/tokens";
+import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
 import type { WorkOrder } from "@/lib/admin-portal/types";
 import { assignWorkOrder } from "@/lib/admin-portal/work-actions";
 import {
-  AddDrawer, Card, CardHead, Chip, DateInput, Field, FieldGrid, PageTitle, Pill,
+  AddDrawer, Card, CardHead, Chip, DateInput, Field, FieldGrid, Mono, PageTitle, Pill,
   Primary, Select,
 } from "../ui";
 
@@ -148,6 +148,7 @@ export default function Schedule() {
       />
 
       <Card>
+        {s.canEditSchedule ? (
         <AddDrawer
           open={open}
           onOpen={() => setOpen(true)}
@@ -188,6 +189,16 @@ export default function Schedule() {
           ) : null}
           <Primary onClick={schedule}>{saving ? "Saving…" : "Add to schedule"}</Primary>
         </AddDrawer>
+        ) : (
+          <div style={{ padding: pad.card, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", gap: 10, alignItems: "baseline", flexWrap: "wrap" }}>
+            <span style={{ fontSize: 14, color: color.inkTertiary }}>
+              You have view-only access to the schedule.
+            </span>
+            <Mono size={12} style={{ color: color.inkQuaternary }}>
+              An office manager can grant editing in Team.
+            </Mono>
+          </div>
+        )}
         <CardHead
           title={weekLabel}
           meta={`${scheduled.length} scheduled · ${unscheduled.length} unscheduled`}

@@ -217,6 +217,7 @@ export default function Team() {
   const [ef, setEf] = useState({
     name: "", email: "", role: "Community manager" as StaffRole,
     comms: [] as string[], sections: [] as string[], password: "",
+    canEditSchedule: false,
   });
   const [editErr, setEditErr] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
@@ -232,6 +233,7 @@ export default function Team() {
       comms: [...p.communities],
       sections: [...(p.sections ?? SECTION_ACCESS[p.role])],
       password: "",
+      canEditSchedule: p.canEditSchedule,
     });
   }
 
@@ -248,6 +250,7 @@ export default function Team() {
       role: ef.role,
       communities: ef.comms,
       sections: ef.sections,
+      canEditSchedule: ef.canEditSchedule,
       newPassword: ef.password || undefined,
     });
     setSavingEdit(false);
@@ -307,8 +310,9 @@ export default function Team() {
         id: s.uid("s"), name: name.trim(), email: email.trim(),
         role, communities: [...comms], active: true, load: 0,
         /* The server created the rows; this optimistic entry is replaced on
-           the next load, so it carries no ids and the role default applies. */
-        employeeId: null, profileId: null, sections: null, photoUrl: null,
+           the next load, so it carries no ids and the role default applies.
+           New field staff start view-only; grant scheduling in their edit. */
+        employeeId: null, profileId: null, sections: null, canEditSchedule: false, photoUrl: null,
       };
       s.setStaff((prev) => [...prev, p]);
       const delivery = data.emailError
@@ -576,6 +580,18 @@ export default function Team() {
                     ))}
                   </div>
                 </div>
+                {ef.role === "Maintenance tech" || ef.role === "Inspector" ? (
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <span style={{ fontSize: 14, color: color.inkSecondary }}>Privileges</span>
+                    <Chip on={ef.canEditSchedule}
+                      onClick={() => setEf({ ...ef, canEditSchedule: !ef.canEditSchedule })}>
+                      Can change the schedule
+                    </Chip>
+                    <span style={{ fontSize: 13, color: color.inkQuaternary }}>
+                      Off by default — a {ef.role.toLowerCase()} sees the schedule but can’t change it unless this is on.
+                    </span>
+                  </div>
+                ) : null}
                 {editErr ? <ErrorLine>{editErr}</ErrorLine> : null}
                 <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
                   <Primary onClick={() => saveEdit(p)}

@@ -117,6 +117,8 @@ interface Store {
 
   /** Section ids this account may open; resolved server-side from staff_role. */
   allowedSections: string[];
+  /** Whether this account may change the crew schedule; Schedule is read-only if not. */
+  canEditSchedule: boolean;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -127,6 +129,7 @@ export function StoreProvider({
   currentUser,
   currentUserId = null,
   currentRole = null,
+  canEditSchedule = true,
   initialData,
 }: {
   children: React.ReactNode;
@@ -139,6 +142,9 @@ export function StoreProvider({
   currentUserId?: string | null;
   /** staff_role from the session; gates destructive actions. */
   currentRole?: StaffRole | null;
+  /** Whether this account may change the crew schedule (view-only if not).
+      Defaults true for the sessionless dev fallback. */
+  canEditSchedule?: boolean;
   /**
    * Collections read from the database on the server. Sections whose tables
    * do not exist yet are simply absent here and stay empty — the fixtures are
@@ -271,6 +277,7 @@ export function StoreProvider({
     fees, setFees, entities: initialData?.entities ?? [], focusOwnerId, setFocusOwnerId,
     auditLog, audit, stamp, uid, currentUser: actor, currentUserId, currentRole, isAdministrator, metrics, addressBook, signIns,
     allowedSections: allowed,
+    canEditSchedule,
   };
 
   // setPayments is used by the payment flow via the exported hook below

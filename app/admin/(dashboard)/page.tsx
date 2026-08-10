@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import Shell from "@/components/admin/Shell";
-import { asStaffRole, resolveSections } from "@/lib/admin-portal/permissions";
+import { asStaffRole, canEditSchedule, resolveSections } from "@/lib/admin-portal/permissions";
 import { loadPortalData } from "@/lib/admin-portal/server-data";
 import { StoreProvider } from "@/lib/admin-portal/store";
 import { requireAdminUser } from "@/lib/auth/require-admin";
@@ -33,6 +33,7 @@ export default async function AdminPortalPage() {
       currentUser={actor}
       currentUserId={session.user.id}
       currentRole={role}
+      canEditSchedule={canEditSchedule(staffRole, session.profile.can_edit_schedule)}
       initialData={data}
     >
       <Shell />

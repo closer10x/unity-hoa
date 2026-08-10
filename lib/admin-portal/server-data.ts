@@ -182,6 +182,7 @@ type StaffProfileRow = {
   communities: string[] | null;
   disabled: boolean | null;
   avatar_path: string | null;
+  can_edit_schedule: boolean | null;
 };
 
 /**
@@ -250,6 +251,7 @@ export async function loadStaff(
       employeeId: e.id,
       profileId: linked?.id ?? null,
       sections: linked?.section_access ?? null,
+      canEditSchedule: Boolean(linked?.can_edit_schedule),
       photoUrl: null,
     };
   });
@@ -268,6 +270,7 @@ export async function loadStaff(
       employeeId: null,
       profileId: p.id,
       sections: p.section_access ?? null,
+      canEditSchedule: Boolean(p.can_edit_schedule),
       photoUrl: null,
     });
   }

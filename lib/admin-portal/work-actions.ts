@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireAdminUser } from "@/lib/auth/require-admin";
 import { requireServiceSupabase } from "@/lib/supabase/service";
+import { canEditSchedule } from "./permissions";
 
 import type { WorkOrder, WorkStatus } from "./types";
 
@@ -26,7 +27,11 @@ async function officeContext() {
   const actorName =
     session.profile.display_name?.trim() || session.user.email || "Staff";
   const actorId = UUID_RE.test(session.user.id) ? session.user.id : null;
-  return { db, actorName, actorId };
+  const mayEditSchedule = canEditSchedule(
+    session.profile.staff_role,
+    session.profile.can_edit_schedule,
+  );
+  return { db, actorName, actorId, mayEditSchedule };
 }
 
 async function audit(
@@ -234,7 +239,12 @@ export async function assignWorkOrder(input: {
   dueAt?: string;
 }): Promise<{ ok: true; work: WorkOrder } | Fail> {
   try {
-    const { db, actorName, actorId } = await officeContext();
+    const { db, actorName, actorId, mayEditSchedule } = await officeContext();
+    // Assigning a job and its day is a schedule change; a view-only field
+    // account is stopped here, not only in the UI.
+    if (!mayEditSchedule) {
+      return { ok: false, error: "You can view the schedule but not change it. Ask an office manager to adjust assignments." };
+    }
     if (!input.assigneeName.trim()) return { ok: false, error: "Pick who is doing the work." };
 
     const { data: existing, error: getErr } = await db

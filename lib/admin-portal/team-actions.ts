@@ -192,6 +192,8 @@ export async function updateStaffAccount(input: {
   communities: string[];
   /** Checked sections; null means "use the role's default". */
   sections: string[] | null;
+  /** Per-person grant letting a field role change the crew schedule. */
+  canEditSchedule?: boolean;
   /** Optional password reset; never logged. */
   newPassword?: string;
 }): Promise<Ok | Fail> {
@@ -308,6 +310,7 @@ export async function updateStaffAccount(input: {
         display_name: name,
         section_access: sectionAccess,
         communities,
+        can_edit_schedule: Boolean(input.canEditSchedule),
       });
       if (profErr) throw new Error(`Profile update failed: ${profErr.message}`);
     } else if (password) {
