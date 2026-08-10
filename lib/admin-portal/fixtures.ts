@@ -34,38 +34,6 @@ export const NAV: ReadonlyArray<{
 /** Sidebar group order — People right below Today, per the office's preference. */
 export const NAV_GROUPS = ["Today", "People", "Money", "Property", "Office"] as const;
 
-
-
-
-
-
-export const AGING = [
-  { label: "Current", amount: "$0" },
-  { label: "1–30 days", amount: "$0" },
-  { label: "31–60 days", amount: "$0" },
-  { label: "61–90 days", amount: "$0" },
-  { label: "90+ days", amount: "$0" },
-];
-
-export const BUDGET: { label: string; budget: string; actual: string; note: string }[] = [];
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-export const QUEUE: { id: string; label: string; detail: string; target: string }[] = [];
-
-
 export const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
