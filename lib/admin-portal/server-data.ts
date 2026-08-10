@@ -762,6 +762,7 @@ export async function loadSignIns(db: SupabaseClient): Promise<SignInEvent[]> {
   return ((res.data ?? []) as {
     id: string; event: string; email: string | null; succeeded: boolean;
     failure_reason: string | null; ip: string | null; user_agent: string | null;
+    geo_city: string | null; geo_region: string | null; geo_country: string | null;
     created_at: string;
   }[]).map((e) => ({
     id: e.id,
@@ -772,6 +773,8 @@ export async function loadSignIns(db: SupabaseClient): Promise<SignInEvent[]> {
     succeeded: e.succeeded,
     reason: e.failure_reason,
     ip: e.ip ?? "No IP recorded",
+    location:
+      [e.geo_city, e.geo_region, e.geo_country].filter(Boolean).join(", ") || null,
     device: shortDevice(e.user_agent),
     at: stampTime(e.created_at),
   }));

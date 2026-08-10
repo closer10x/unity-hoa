@@ -695,7 +695,15 @@ export default function Team() {
                 <Status tone={e.succeeded ? "positive" : "critical"}>
                   {e.succeeded ? "Success" : "Failed"}
                 </Status>
-                <Mono size={12} style={{ color: color.neutral }}>{e.ip}</Mono>
+                {/* Location over IP in one cell: the office reads "where", the
+                    IP stays underneath for a security check, and the row keeps
+                    its five-cell budget. */}
+                <span style={{ display: "grid", gap: 1 }}>
+                  <span style={{ fontSize: 14, color: color.inkTertiary }}>
+                    {e.location ?? "Location unknown"}
+                  </span>
+                  <Mono size={12} style={{ color: color.inkQuaternary }}>{e.ip}</Mono>
+                </span>
                 <span style={{ fontSize: 14, color: color.inkTertiary }}>{e.device}</span>
                 <Mono size={12} style={{ color: color.inkQuaternary }}>{e.at}</Mono>
               </Row>

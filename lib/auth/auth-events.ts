@@ -3,6 +3,7 @@ import "server-only";
 import { headers } from "next/headers";
 
 import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { lookupIpLocation } from "@/lib/geo/ip-location";
 
 /**
  * Records sign-in attempts — successful and failed — so the office can see who
@@ -53,6 +54,9 @@ export async function recordAuthEvent(input: {
   if (!isSupabaseConfigured()) return;
   try {
     const { ip, agent } = await requestOrigin();
+    // Resolve the location once, now, so the log stores a place rather than
+    // re-resolving every page load. Best-effort: a null just means no location.
+    const loc = await lookupIpLocation(ip);
     await createServiceClient().from("auth_events").insert({
       event: input.event,
       email: input.email?.trim().toLowerCase() || null,
@@ -61,6 +65,9 @@ export async function recordAuthEvent(input: {
       failure_reason: input.failureReason ?? null,
       ip,
       user_agent: agent?.slice(0, 400) ?? null,
+      geo_city: loc?.city ?? null,
+      geo_region: loc?.region ?? null,
+      geo_country: loc?.country ?? null,
     });
   } catch (err) {
     console.error("auth event not recorded", err);

@@ -328,6 +328,8 @@ export interface SignInEvent {
   succeeded: boolean;
   reason: string | null;
   ip: string;
+  /** "City, State, Country" resolved from the IP; null when unknown. */
+  location: string | null;
   device: string;
   at: string;
 }
