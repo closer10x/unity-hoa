@@ -263,7 +263,26 @@ export interface AddressSuggestion {
 
 /* ─── Financial reports ─────────────────────────────────────────────── */
 
-export type ReportType = "income-statement" | "general-ledger" | "cash-bank" | "owner-charges";
+/**
+ * The monthly package a managing agent is expected to hand a board, plus the
+ * two this business needs on top of it.
+ *
+ * Missing on purpose, because the data behind them does not exist yet rather
+ * than because they don't matter: budget-vs-actual needs an approved budget,
+ * and aged payables needs vendor bills. Both would have to be invented, and
+ * an invented number in a financial statement is worse than an absent one.
+ */
+export type ReportType =
+  | "balance-sheet"
+  | "income-statement"
+  | "ar-aging"
+  | "owner-balances"
+  | "receipts"
+  | "disbursements"
+  | "revenue-by-entity"
+  | "general-ledger"
+  | "cash-bank"
+  | "owner-charges";
 
 export interface ReportSection {
   title: string;
@@ -286,6 +305,12 @@ export interface ReportData {
   sections: ReportSection[];
   /** Honest empty-period note instead of invented rows. */
   note?: string;
+  /**
+   * What this report does NOT cover, stated on the report itself. A balance
+   * sheet with no liabilities section is wrong unless it says so, and whoever
+   * reads it later will not have this conversation to refer to.
+   */
+  caveats?: string[];
 }
 
 /** One sign-in, sign-out or reset attempt, shown in Team. */

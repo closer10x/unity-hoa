@@ -963,7 +963,25 @@ export async function loadPortalData(): Promise<PortalData> {
   const outstanding = m?.outstanding_dues_cents ?? 0;
   const linkedOwners = owners.filter((o) => o.flag === "current").length;
   const completedWork = work.length - openWork;
+  /* Invoices actually issued and not yet collected. Distinct from the HOA
+     fee figure above, which is what the dues roll says is owed community-wide
+     — this is what the office has billed and is waiting on. */
+  const owedInvoices = invoices.filter((i) => i.status === "sent");
+  const owedInvoiceCents = owedInvoices.reduce((t, i) => t + i.totalCents, 0);
+  const overdueInvoices = owedInvoices.filter((i) => i.overdue).length;
+
   const metrics = [
+    {
+      label: "Outstanding invoices",
+      value: usd(owedInvoiceCents),
+      note: owedInvoices.length
+        ? overdueInvoices
+          ? `${owedInvoices.length} issued and unpaid \u2014 ${overdueInvoices} past due`
+          : `${owedInvoices.length} issued and unpaid, none past due yet`
+        : invoices.length
+          ? "Every invoice raised has been collected"
+          : "Nothing billed yet",
+    },
     {
       label: "Outstanding HOA fees",
       value: usd(outstanding),

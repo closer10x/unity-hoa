@@ -1425,12 +1425,28 @@ function LedgerCard() {
 
 /* ═══ Financial reports ════════════════════════════════════════════════ */
 
-const REPORT_TYPES: { id: ReportType; label: string; blurb: string }[] = [
-  { id: "income-statement", label: "Income statement", blurb: "Income and expenses by category, with the net." },
-  { id: "general-ledger", label: "General ledger", blurb: "Every transaction in the period, oldest first." },
-  { id: "cash-bank", label: "Cash & bank", blurb: "Linked accounts, balances and imported activity." },
-  { id: "owner-charges", label: "Owner charges", blurb: "What was collected from each resident." },
+/**
+ * Ordered the way a monthly board package is assembled: the two statements
+ * first, then what is owed, then the money that actually moved, then the
+ * detail nobody reads until there is a question.
+ */
+const REPORT_TYPES: { id: ReportType; label: string; blurb: string; group: string }[] = [
+  { id: "balance-sheet", label: "Balance sheet", blurb: "Assets, liabilities and equity as they stand — cash plus what is owed to the association.", group: "Statements" },
+  { id: "income-statement", label: "Income statement", blurb: "Income and expenses by category, with the net. Also called the profit & loss.", group: "Statements" },
+  { id: "revenue-by-entity", label: "Revenue by company", blurb: "Income, expenses and receivables split between the two companies — each files its own return.", group: "Statements" },
+
+  { id: "ar-aging", label: "Aged receivables", blurb: "What is unpaid and how long it has been unpaid: current, 1–30, 31–60, 61–90, over 90.", group: "What is owed" },
+  { id: "owner-balances", label: "Owner balances", blurb: "Every household with a balance, largest first, with their oldest open item.", group: "What is owed" },
+
+  { id: "receipts", label: "Receipts", blurb: "Money that arrived in the period, by payment method, and what is not yet deposited.", group: "Money that moved" },
+  { id: "disbursements", label: "Disbursements", blurb: "Money that left the account, by category and in date order — the check register.", group: "Money that moved" },
+  { id: "cash-bank", label: "Cash & bank", blurb: "Linked accounts, balances and imported activity.", group: "Money that moved" },
+
+  { id: "general-ledger", label: "General ledger", blurb: "Every transaction in the period, oldest first.", group: "Detail" },
+  { id: "owner-charges", label: "Owner charges", blurb: "What was charged to and collected from each resident.", group: "Detail" },
 ];
+
+const REPORT_GROUPS = [...new Set(REPORT_TYPES.map((r) => r.group))];
 
 const PERIODS = [
   { id: "30", label: "Last 30 days" },
@@ -1571,9 +1587,26 @@ function ReportsCard() {
         meta="Statement-quality output — print to PDF or export for Excel" />
 
       <div style={{ padding: "18px 24px", borderBottom: `1px solid ${color.hairlineSoft}`, display: "grid", gap: 14 }}>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {REPORT_TYPES.map((t) => (
-            <Chip key={t.id} on={type === t.id} onClick={() => { setType(t.id); setError(""); }}>{t.label}</Chip>
+        {/* Grouped, because ten flat chips is a wall. The headings are the
+            order a board package is assembled in, so the list reads as a
+            table of contents rather than an inventory. */}
+        <div style={{ display: "grid", gap: 12 }}>
+          {REPORT_GROUPS.map((g) => (
+            <div key={g} style={{ display: "grid", gap: 8 }}>
+              <span style={{
+                fontFamily: font.mono, fontSize: 10.5, letterSpacing: "0.12em",
+                textTransform: "uppercase", color: color.inkQuaternary,
+              }}>
+                {g}
+              </span>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {REPORT_TYPES.filter((t) => t.group === g).map((t) => (
+                  <Chip key={t.id} on={type === t.id} onClick={() => { setType(t.id); setError(""); }}>
+                    {t.label}
+                  </Chip>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
         <span style={{ fontSize: 14, color: color.inkTertiary }}>{blurb}</span>
@@ -1629,6 +1662,31 @@ function ReportsCard() {
           </div>
 
           {report.note ? <p style={{ margin: 0, fontSize: 15, color: color.inkTertiary }}>{report.note}</p> : null}
+
+          {/* On the report, not in a tooltip: a balance sheet with no
+              liabilities section is wrong unless it says so, and whoever
+              reads the printed copy will not have this screen in front of
+              them. Prints with everything else. */}
+          {report.caveats?.length ? (
+            <div style={{
+              display: "grid", gap: 6,
+              background: "oklch(0.975 0.02 85)",
+              border: "1px solid oklch(0.88 0.05 85)",
+              borderRadius: radius.lg, padding: "14px 16px",
+            }}>
+              <span style={{
+                fontFamily: font.mono, fontSize: 10.5, letterSpacing: "0.12em",
+                textTransform: "uppercase", color: "oklch(0.48 0.09 70)",
+              }}>
+                What this report does not cover
+              </span>
+              {report.caveats.map((c, i) => (
+                <span key={i} style={{ fontSize: 13.5, lineHeight: 1.55, color: "oklch(0.38 0.05 70)" }}>
+                  {c}
+                </span>
+              ))}
+            </div>
+          ) : null}
 
           {report.sections.filter((sec) => sec.rows.length || sec.total).map((sec) => (
             <div key={sec.title} style={{ display: "grid", gap: 8 }}>

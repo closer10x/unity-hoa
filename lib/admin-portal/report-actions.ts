@@ -41,11 +41,57 @@ function stampNow(): string {
 }
 
 const TITLES: Record<ReportType, string> = {
+  "balance-sheet": "Balance sheet",
   "income-statement": "Income & expense statement",
+  "ar-aging": "Aged receivables",
+  "owner-balances": "Owner balances",
+  receipts: "Receipts — money received",
+  disbursements: "Disbursements — money paid out",
+  "revenue-by-entity": "Revenue by company",
   "general-ledger": "General ledger detail",
   "cash-bank": "Cash & bank activity",
   "owner-charges": "Owner charges & collections",
 };
+
+/**
+ * An invoice as the receivables reports need it: what is still owed, and for
+ * how long it has been owed.
+ */
+type InvoiceRow = {
+  id: string;
+  invoice_number: string;
+  lot_id: string | null;
+  bill_to_name: string | null;
+  issued_on: string;
+  due_on: string | null;
+  status: string;
+  total_cents: number;
+  paid_on: string | null;
+  entity_key: string | null;
+  payment_method: string | null;
+  payment_reference: string | null;
+  payment_bank: string | null;
+  payment_deposited: boolean | null;
+};
+
+/** Days past due as of `asOf`, floored at zero. Undated invoices are current. */
+function daysPastDue(due: string | null, asOf: string): number {
+  if (!due) return 0;
+  const ms = Date.parse(`${asOf}T00:00:00Z`) - Date.parse(`${due}T00:00:00Z`);
+  return Math.max(0, Math.floor(ms / 86_400_000));
+}
+
+/* The buckets every managing agent's aging report uses, so a board reading
+   this next to one from another agent is comparing like with like. */
+const AGING_BUCKETS = ["Current", "1–30", "31–60", "61–90", "Over 90"] as const;
+
+function agingBucket(days: number): (typeof AGING_BUCKETS)[number] {
+  if (days <= 0) return "Current";
+  if (days <= 30) return "1–30";
+  if (days <= 60) return "31–60";
+  if (days <= 90) return "61–90";
+  return "Over 90";
+}
 
 type CategoryBucket = { count: number; cents: number };
 
@@ -93,7 +139,10 @@ export async function buildReport(input: {
     }
 
     const db = createServiceClient();
-    const [ftRes, baRes, ownerNames] = await Promise.all([
+    /* Invoices are read in full rather than by period: a receivable is owed
+       today regardless of which month it was raised in, and an aging report
+       that only saw the last 30 days would show a clean book. */
+    const [ftRes, baRes, ownerNames, invRes, entRes] = await Promise.all([
       db
         .from("finance_transactions")
         .select("*")
@@ -104,8 +153,20 @@ export async function buildReport(input: {
         .limit(5000),
       db.from("bank_accounts").select("*").order("created_at", { ascending: true }),
       loadOwnerNames(db),
+      db.from("invoices").select("*").order("issued_on", { ascending: true }).limit(5000),
+      db.from("billing_entities").select("key, name, legal_name").order("sort"),
     ]);
     if (ftRes.error) throw new Error(ftRes.error.message);
+
+    const invoices = (invRes.data ?? []) as InvoiceRow[];
+    const entities = (entRes.data ?? []) as { key: string; name: string; legal_name: string }[];
+    const entityName = (key: string | null) =>
+      key ? entities.find((e) => e.key === key)?.legal_name ?? key : "Unassigned";
+
+    /** Everything issued and not yet collected, as of the report's end date. */
+    const owed = invoices.filter((i) => i.status === "sent");
+    const owedFor = (i: InvoiceRow) =>
+      (i.lot_id && ownerNames.get(i.lot_id)) || i.bill_to_name || "Unassigned lot";
 
     const rows = (ftRes.data ?? []) as FinanceRow[];
     const income = rows.filter((r) => r.kind === "income");
@@ -142,6 +203,297 @@ export async function buildReport(input: {
       summary: [],
       sections: [],
     };
+
+    if (input.type === "balance-sheet") {
+      const active = banks.filter((b) => b.status === "active");
+      const cashCents = active.reduce((s, b) => s + (b.current_balance_cents ?? 0), 0);
+      const arCents = owed.reduce((s, i) => s + (i.total_cents ?? 0), 0);
+      const assetsCents = cashCents + arCents;
+
+      report.summary = [
+        { label: "Cash", value: usd(cashCents), note: `${active.length} linked account${active.length === 1 ? "" : "s"}` },
+        { label: "Receivables", value: usd(arCents), note: `${owed.length} invoice${owed.length === 1 ? "" : "s"} unpaid` },
+        { label: "Total assets", value: usd(assetsCents) },
+      ];
+      report.sections = [
+        {
+          title: "Assets",
+          columns: ["Line", "Detail", "Amount"],
+          rows: [
+            ...active.map((b) => [
+              "Cash — operating",
+              bankLabel(b),
+              b.current_balance_cents == null ? "not reported" : usd(b.current_balance_cents),
+            ]),
+            ...(active.length ? [] : [["Cash", "No bank account linked", usd(0)]]),
+            ["Accounts receivable", `${owed.length} invoice${owed.length === 1 ? "" : "s"} issued and unpaid`, usd(arCents)],
+          ],
+          total: ["Total assets", "", usd(assetsCents)],
+        },
+        {
+          title: "Liabilities",
+          columns: ["Line", "Detail", "Amount"],
+          rows: [["Accounts payable", "Vendor bills are not tracked in this portal yet", "—"]],
+        },
+        {
+          title: "Equity",
+          columns: ["Line", "Detail", "Amount"],
+          /* Assets minus the liabilities we actually know about. Named
+             "members' equity" the way an association's statements do. */
+          rows: [["Members' equity", "Assets less recorded liabilities", usd(assetsCents)]],
+          total: ["Total liabilities & equity", "", usd(assetsCents)],
+        },
+      ];
+      report.caveats = [
+        "Accounts payable is not tracked yet, so liabilities are understated and equity is overstated by whatever is owed to vendors.",
+        "Reserve and operating funds are not separated — every linked account is shown as operating cash.",
+        "Prepaid assessments are counted as collected income rather than a liability.",
+      ];
+      if (!active.length && !owed.length) {
+        report.note = "No linked bank account and no unpaid invoices — there is nothing on the balance sheet yet.";
+      }
+    }
+
+    if (input.type === "ar-aging") {
+      const asOf = input.end;
+      const byBucket = new Map<string, { count: number; cents: number }>();
+      for (const b of AGING_BUCKETS) byBucket.set(b, { count: 0, cents: 0 });
+      for (const i of owed) {
+        const b = byBucket.get(agingBucket(daysPastDue(i.due_on, asOf)))!;
+        b.count += 1;
+        b.cents += i.total_cents ?? 0;
+      }
+      const totalCents = owed.reduce((s, i) => s + (i.total_cents ?? 0), 0);
+      const pastDueCents = owed
+        .filter((i) => daysPastDue(i.due_on, asOf) > 0)
+        .reduce((s, i) => s + (i.total_cents ?? 0), 0);
+
+      report.summary = [
+        { label: "Total receivable", value: usd(totalCents), note: `${owed.length} unpaid invoice${owed.length === 1 ? "" : "s"}` },
+        { label: "Past due", value: usd(pastDueCents), note: totalCents ? `${Math.round((pastDueCents / totalCents) * 100)}% of the book` : "Nothing outstanding" },
+        { label: "Over 90 days", value: usd(byBucket.get("Over 90")!.cents), note: "Collections territory" },
+      ];
+      report.sections = [
+        {
+          title: `Aging summary as of ${prettyDate(asOf)}`,
+          columns: ["Days past due", "Invoices", "Amount", "Share"],
+          rows: AGING_BUCKETS.map((b) => {
+            const v = byBucket.get(b)!;
+            return [
+              b,
+              String(v.count),
+              usd(v.cents),
+              totalCents ? `${Math.round((v.cents / totalCents) * 100)}%` : "—",
+            ];
+          }),
+          total: ["Total", String(owed.length), usd(totalCents), totalCents ? "100%" : "—"],
+        },
+        {
+          title: "Every unpaid invoice, oldest first",
+          columns: ["Invoice", "Owner", "Company", "Due", "Days past due", "Amount"],
+          rows: [...owed]
+            .sort((a, b) => daysPastDue(b.due_on, asOf) - daysPastDue(a.due_on, asOf))
+            .map((i) => {
+              const d = daysPastDue(i.due_on, asOf);
+              return [
+                i.invoice_number,
+                owedFor(i),
+                entityName(i.entity_key),
+                i.due_on ? prettyDate(i.due_on) : "No due date",
+                d > 0 ? String(d) : "Current",
+                usd(i.total_cents ?? 0),
+              ];
+            }),
+          total: ["Total receivable", "", "", "", "", usd(totalCents)],
+        },
+      ];
+      if (!owed.length) report.note = "Nothing is outstanding — every invoice raised has been collected.";
+    }
+
+    if (input.type === "owner-balances") {
+      const asOf = input.end;
+      const perOwner = new Map<string, { count: number; cents: number; oldest: number }>();
+      for (const i of owed) {
+        const key = owedFor(i);
+        const v = perOwner.get(key) ?? { count: 0, cents: 0, oldest: 0 };
+        v.count += 1;
+        v.cents += i.total_cents ?? 0;
+        v.oldest = Math.max(v.oldest, daysPastDue(i.due_on, asOf));
+        perOwner.set(key, v);
+      }
+      const paid = invoices.filter((i) => i.status === "paid");
+      const collectedCents = paid.reduce((s, i) => s + (i.total_cents ?? 0), 0);
+      const totalCents = [...perOwner.values()].reduce((s, v) => s + v.cents, 0);
+
+      report.summary = [
+        { label: "Owners with a balance", value: String(perOwner.size) },
+        { label: "Total owed", value: usd(totalCents) },
+        { label: "Collected to date", value: usd(collectedCents), note: `${paid.length} invoice${paid.length === 1 ? "" : "s"} settled` },
+      ];
+      report.sections = [
+        {
+          title: "Owners owing money, largest first",
+          columns: ["Owner", "Unpaid invoices", "Balance", "Oldest item"],
+          rows: [...perOwner.entries()]
+            .sort((a, b) => b[1].cents - a[1].cents)
+            .map(([owner, v]) => [
+              owner,
+              String(v.count),
+              usd(v.cents),
+              v.oldest > 0 ? `${v.oldest} days past due` : "Current",
+            ]),
+          total: ["Total", String(owed.length), usd(totalCents), ""],
+        },
+      ];
+      report.caveats = [
+        "Balances come from issued invoices only. A household that has never been invoiced shows no balance even if dues are owed.",
+      ];
+      if (!perOwner.size) report.note = "No owner has an unpaid invoice.";
+    }
+
+    if (input.type === "receipts") {
+      /* What actually arrived, from the ledger rather than the invoices —
+         the ledger is where money is recorded, and a receipt that came in
+         without an invoice behind it still has to appear. */
+      const received = income;
+      const byMethod = new Map<string, { count: number; cents: number }>();
+      const paidInPeriod = invoices.filter(
+        (i) => i.paid_on && i.paid_on >= input.start && i.paid_on <= input.end,
+      );
+      for (const i of paidInPeriod) {
+        const key = i.payment_method?.trim() || "Not recorded";
+        const v = byMethod.get(key) ?? { count: 0, cents: 0 };
+        v.count += 1;
+        v.cents += i.total_cents ?? 0;
+        byMethod.set(key, v);
+      }
+      const undeposited = paidInPeriod.filter((i) => i.payment_deposited === false);
+
+      report.summary = [
+        { label: "Received", value: usd(incomeCents), note: `${received.length} ledger entr${received.length === 1 ? "y" : "ies"}` },
+        { label: "Against invoices", value: usd(paidInPeriod.reduce((s, i) => s + (i.total_cents ?? 0), 0)), note: `${paidInPeriod.length} collected` },
+        { label: "Not yet deposited", value: usd(undeposited.reduce((s, i) => s + (i.total_cents ?? 0), 0)), note: `${undeposited.length} awaiting the bank` },
+      ];
+      report.sections = [
+        {
+          title: "By payment method",
+          columns: ["Method", "Payments", "Amount"],
+          rows: [...byMethod.entries()]
+            .sort((a, b) => b[1].cents - a[1].cents)
+            .map(([m, v]) => [m, String(v.count), usd(v.cents)]),
+          total: ["Total against invoices", String(paidInPeriod.length), usd(paidInPeriod.reduce((s, i) => s + (i.total_cents ?? 0), 0))],
+        },
+        {
+          title: "Every receipt in the period",
+          columns: ["Date", "From", "Description", "Category", "Amount"],
+          rows: received.map((r) => [
+            prettyDate(r.occurred_on ?? r.created_at.slice(0, 10)),
+            (r.lot_id && ownerNames.get(r.lot_id)) || "—",
+            r.description || "(no description)",
+            r.category || "Other",
+            usd(r.amount_cents ?? 0),
+          ]),
+          total: ["Total received", "", "", "", usd(incomeCents)],
+        },
+      ];
+      if (!received.length) report.note = "No money was received in this period.";
+    }
+
+    if (input.type === "disbursements") {
+      /* The check register: what left the account, in date order, with
+         whatever identifies it on a statement. */
+      report.summary = [
+        { label: "Paid out", value: usd(expenseCents), note: `${expense.length} payment${expense.length === 1 ? "" : "s"}` },
+        { label: "Categories", value: String(byCategory(expense).size) },
+        { label: "Largest single payment", value: expense.length ? usd(Math.max(...expense.map((r) => r.amount_cents ?? 0))) : "—" },
+      ];
+      report.sections = [
+        categorySection("Spending by category", expense, "Total paid out"),
+        {
+          title: "Every payment in the period",
+          columns: ["Date", "Paid to / for", "Category", "Source", "Amount"],
+          rows: expense.map((r) => [
+            prettyDate(r.occurred_on ?? r.created_at.slice(0, 10)),
+            r.description || "(no description)",
+            r.category || "Other",
+            r.source === "bank" ? "Bank import" : "Manual",
+            usd(r.amount_cents ?? 0),
+          ]),
+          total: ["Total paid out", "", "", "", usd(expenseCents)],
+        },
+      ];
+      report.caveats = [
+        "Vendor bills are not tracked, so this shows money that has left the account — not what is owed and unpaid.",
+      ];
+      if (!expense.length) report.note = "Nothing was paid out in this period.";
+    }
+
+    if (input.type === "revenue-by-entity") {
+      /* The reason the two companies exist as separate rows in the first
+         place: each files its own return, so each needs its own income and
+         its own receivable. */
+      const keys = [...entities.map((e) => e.key), null];
+      const rowsFor = (key: string | null) => ({
+        income: income.filter((r) => (r.entity_key ?? null) === key),
+        expense: expense.filter((r) => (r.entity_key ?? null) === key),
+        owed: owed.filter((i) => (i.entity_key ?? null) === key),
+      });
+
+      const unassignedIncome = income.filter((r) => !r.entity_key);
+      report.summary = [
+        ...entities.map((e) => {
+          const v = rowsFor(e.key);
+          return {
+            label: e.name,
+            value: usd(v.income.reduce((s, r) => s + (r.amount_cents ?? 0), 0)),
+            note: `${usd(v.owed.reduce((s, i) => s + (i.total_cents ?? 0), 0))} still receivable`,
+          };
+        }),
+        {
+          label: "Unassigned",
+          value: usd(unassignedIncome.reduce((s, r) => s + (r.amount_cents ?? 0), 0)),
+          note: unassignedIncome.length ? "In neither company's books" : "Nothing unassigned",
+        },
+      ];
+      report.sections = [
+        {
+          title: "Income and expense by company",
+          columns: ["Company", "Income", "Expenses", "Net", "Receivable"],
+          rows: keys.map((key) => {
+            const v = rowsFor(key);
+            const inC = v.income.reduce((s, r) => s + (r.amount_cents ?? 0), 0);
+            const outC = v.expense.reduce((s, r) => s + (r.amount_cents ?? 0), 0);
+            const n = inC - outC;
+            return [
+              entityName(key),
+              usd(inC),
+              usd(outC),
+              `${n < 0 ? "−" : ""}${usd(Math.abs(n))}`,
+              usd(v.owed.reduce((s, i) => s + (i.total_cents ?? 0), 0)),
+            ];
+          }),
+          total: ["All companies", usd(incomeCents), usd(expenseCents), netLabel, usd(owed.reduce((s, i) => s + (i.total_cents ?? 0), 0))],
+        },
+        {
+          title: "Income detail by company",
+          columns: ["Date", "Company", "Description", "Category", "Amount"],
+          rows: income.map((r) => [
+            prettyDate(r.occurred_on ?? r.created_at.slice(0, 10)),
+            entityName(r.entity_key ?? null),
+            r.description || "(no description)",
+            r.category || "Other",
+            usd(r.amount_cents ?? 0),
+          ]),
+          total: ["Total income", "", "", "", usd(incomeCents)],
+        },
+      ];
+      if (unassignedIncome.length) {
+        report.caveats = [
+          `${unassignedIncome.length} income entr${unassignedIncome.length === 1 ? "y is" : "ies are"} assigned to no company and appear in neither return. Assign the fee behind them on the fee schedule.`,
+        ];
+      }
+      if (!income.length && !expense.length) report.note = "No ledger activity in this period.";
+    }
 
     if (input.type === "income-statement") {
       report.summary = [
