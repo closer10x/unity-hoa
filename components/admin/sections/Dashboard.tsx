@@ -161,12 +161,15 @@ export default function Dashboard() {
     <>
       <PageTitle title="Dashboard" lede={`What needs attention across ${s.scopeLabel}.`} />
 
-      {/* 180, the bottom of the handoff's range for summary tiles, rather
-          than 220: five metrics against a 220px floor made four columns and
-          left the fifth stranded alone on a second row with three empty
-          tracks beside it. */}
-      <Tiles min={180}>
-        {s.metrics.map((m) => <Tile key={m.label} label={m.label} value={m.value} note={m.note} />)}
+      {/* 170 rather than the handoff's 180 floor by a deliberate hair: at
+          typical widths that is the difference between five even tiles and
+          four plus one running the full width as a banner. They still render
+          around 178px, and Tiles fills the last row whatever the count, so
+          nothing is ever stranded. */}
+      <Tiles min={170}>
+        {s.metrics.map((m) => (
+          <Tile key={m.label} label={m.label} value={m.value} note={m.note} tone={m.tone} />
+        ))}
       </Tiles>
 
       <Card>

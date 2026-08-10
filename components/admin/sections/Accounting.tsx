@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { AGING, BUDGET } from "@/lib/admin-portal/fixtures";
 import {
   addFee, addLedgerEntry, connectBankAccount, deleteLedgerEntry,
   disconnectBankAccount, getBankLinkToken, setFeeActive, syncBankNow, updateFee,
@@ -36,6 +35,25 @@ const usd = (cents: number) =>
 function todayISO(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/* The same buckets the aged-receivables report uses, so the tiles at the
+   top of Accounting and the report a board is handed cannot disagree. */
+const AGING_BUCKETS = ["Current", "1\u201330 days", "31\u201360 days", "61\u201390 days", "90+ days"] as const;
+
+function agingBucket(days: number): (typeof AGING_BUCKETS)[number] {
+  if (days <= 0) return "Current";
+  if (days <= 30) return "1\u201330 days";
+  if (days <= 60) return "31\u201360 days";
+  if (days <= 90) return "61\u201390 days";
+  return "90+ days";
+}
+
+/** Days past an invoice's due date, floored at zero. Undated is current. */
+function daysPastDue(due: string | null): number {
+  if (!due) return 0;
+  const ms = Date.now() - Date.parse(`${due}T23:59:59Z`);
+  return Math.max(0, Math.floor(ms / 86_400_000));
 }
 
 /**
@@ -191,6 +209,26 @@ export default function Accounting() {
 
   /* ----- delinquency ladder ----- */
   const [pending, setPending] = useState<PendingConfirm | null>(null);
+
+  /* Receivables by age, from the invoices that are actually unpaid. */
+  const agingTiles = React.useMemo(() => {
+    const owed = s.invoices.filter((i) => i.status === "sent");
+    const buckets = new Map<string, { cents: number; count: number }>();
+    for (const b of AGING_BUCKETS) buckets.set(b, { cents: 0, count: 0 });
+    for (const i of owed) {
+      const b = buckets.get(agingBucket(daysPastDue(i.dueOn)))!;
+      b.cents += i.totalCents;
+      b.count += 1;
+    }
+    return AGING_BUCKETS.map((label) => {
+      const v = buckets.get(label)!;
+      return {
+        label,
+        amount: usd(v.cents),
+        note: v.count ? `${v.count} invoice${v.count === 1 ? "" : "s"}` : undefined,
+      };
+    });
+  }, [s.invoices]);
 
   /* ----- sub-navigation ----- */
   const [tab, setTab] = useState<AccountingTab>("overview");
@@ -437,8 +475,13 @@ export default function Accounting() {
         </div>
       </Card>
 
+      {/* Computed from the invoices actually outstanding. These read $0
+          across the board from a hard-coded constant before — five made-up
+          zeros presented as the association's receivables position. */}
       <Tiles min={180}>
-        {AGING.map((a) => <Tile key={a.label} label={a.label} value={a.amount} />)}
+        {agingTiles.map((a) => (
+          <Tile key={a.label} label={a.label} value={a.amount} note={a.note} />
+        ))}
       </Tiles>
 
       <Card>
@@ -484,19 +527,10 @@ export default function Accounting() {
         ))}
       </Card>
 
-      {BUDGET.length > 0 ? (
-        <Card>
-          <CardHead title="Budget vs actual · YTD" />
-          {BUDGET.map((b) => (
-            <Row key={b.label}>
-              <span style={{ fontSize: 15, fontWeight: 500 }}>{b.label}</span>
-              <Mono size={14} style={{ color: color.inkTertiary }}>{b.budget}</Mono>
-              <Mono size={14}>{b.actual}</Mono>
-              <span style={{ fontSize: 14, color: color.inkTertiary }}>{b.note}</span>
-            </Row>
-          ))}
-        </Card>
-      ) : null}
+      {/* Budget vs actual lived here behind a `length > 0` guard on an empty
+          constant, so it could never render. It needs an approved budget to
+          compare against, and there is no table for one — it comes back when
+          budgets do, rather than sitting here as a card that cannot appear. */}
       </>
       ) : null}
 

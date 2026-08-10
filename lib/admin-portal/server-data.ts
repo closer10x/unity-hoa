@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
   BillingEntity,
+  MetricTone,
   AddressSuggestion,
   SignInEvent,
   ArcApp,
@@ -78,7 +79,7 @@ export type PortalData = {
   /** Known addresses from the lots roster, for add-form autofill. */
   addressBook: AddressSuggestion[];
   /** Dashboard tiles, computed from the same reads. */
-  metrics: { label: string; value: string; note: string }[];
+  metrics: { label: string; value: string; note: string; tone?: MetricTone }[];
   /** Resident conversations, answered from Communications. */
   residentThreads: ResidentThread[];
 };
@@ -970,7 +971,7 @@ export async function loadPortalData(): Promise<PortalData> {
   const owedInvoiceCents = owedInvoices.reduce((t, i) => t + i.totalCents, 0);
   const overdueInvoices = owedInvoices.filter((i) => i.overdue).length;
 
-  const metrics = [
+  const metrics: PortalData["metrics"] = [
     {
       label: "Outstanding invoices",
       value: usd(owedInvoiceCents),
@@ -981,6 +982,7 @@ export async function loadPortalData(): Promise<PortalData> {
         : invoices.length
           ? "Every invoice raised has been collected"
           : "Nothing billed yet",
+      tone: overdueInvoices ? "critical" : owedInvoiceCents ? "attention" : "neutral",
     },
     {
       label: "Outstanding HOA fees",
@@ -991,6 +993,7 @@ export async function loadPortalData(): Promise<PortalData> {
           : payments.length
             ? "Every account is paid up"
             : "Billing hasn't started yet",
+      tone: outstanding > 0 ? "attention" : payments.length ? "positive" : "neutral",
     },
     {
       label: "Open work orders",
@@ -1002,6 +1005,7 @@ export async function loadPortalData(): Promise<PortalData> {
         : work.length
           ? "All caught up — every order is closed"
           : "No work orders filed yet",
+      tone: openWork > 7 ? "critical" : openWork ? "attention" : work.length ? "positive" : "neutral",
     },
     {
       label: "Homes on the roster",
@@ -1019,6 +1023,14 @@ export async function loadPortalData(): Promise<PortalData> {
         doors > 0 && overdue > 0
           ? `${overdue} of ${doors} homes behind on HOA fees`
           : "No owners behind on their HOA fees",
+      /* Five per cent is the line most agents treat as healthy; past ten it
+         is a collections problem rather than a few late payers. */
+      tone:
+        doors > 0 && overdue / doors > 0.1
+          ? "critical"
+          : doors > 0 && overdue > 0
+            ? "attention"
+            : "neutral",
     },
   ];
 

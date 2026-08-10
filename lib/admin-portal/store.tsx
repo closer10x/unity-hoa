@@ -6,6 +6,7 @@ import { ALL_SECTIONS } from "./permissions";
 import { MOBILE_BREAKPOINT } from "./tokens";
 import type {
   BillingEntity,
+  MetricTone,
   AddressSuggestion, ArcApp, AuditEntry, BankAccount, Booking, CalEvent, Community, Delinquent, Director, Doc, Fee, Invoice, LedgerEntry, LegalCase, Meeting, Owner, Payment, PendingConfirm, Portfolio, ResidentThread, SignInEvent, Staff, StaffRole, Vendor, Violation, WorkOrder,
 } from "./types";
 
@@ -112,7 +113,7 @@ interface Store {
   /** Recent sign-in activity, shown in Team. */
   signIns: SignInEvent[];
   /** Dashboard tiles computed server-side from live reads. */
-  metrics: { label: string; value: string; note: string }[];
+  metrics: { label: string; value: string; note: string; tone?: MetricTone }[];
 
   /** Section ids this account may open; resolved server-side from staff_role. */
   allowedSections: string[];
@@ -160,7 +161,7 @@ export function StoreProvider({
     entities: BillingEntity[];
     /** Server-written audit trail (admin_audit_log), newest first. */
     audit: AuditEntry[];
-    metrics: { label: string; value: string; note: string }[];
+    metrics: { label: string; value: string; note: string; tone?: MetricTone }[];
     addressBook: AddressSuggestion[];
     signIns: SignInEvent[];
     violations: Violation[];

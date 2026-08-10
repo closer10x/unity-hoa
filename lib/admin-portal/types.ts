@@ -261,6 +261,9 @@ export interface AddressSuggestion {
   taken: boolean;
 }
 
+/** How a dashboard number feels: quiet unless it wants somebody to act. */
+export type MetricTone = "neutral" | "positive" | "attention" | "critical";
+
 /* ─── Financial reports ─────────────────────────────────────────────── */
 
 /**

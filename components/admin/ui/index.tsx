@@ -78,16 +78,83 @@ export function Empty({ children }: { children: React.ReactNode }) {
   return <div style={{ padding: `28px ${pad.card}`, fontSize: 15, color: color.inkTertiary }}>{children}</div>;
 }
 
+/**
+ * Summary tiles. `min` is the floor a tile may shrink to, same as the grid
+ * rule it replaces — but laid out with flex-wrap rather than auto-fit so the
+ * last row fills.
+ *
+ * auto-fit computes a fixed column count from the container, and any tile
+ * that does not divide into it is stranded at one column wide with the rest
+ * of the row empty beside it: five metrics in 942px made four columns and
+ * left the fifth alone. flex-wrap grows whatever landed on the final row to
+ * fill it, at any count and any width, which is the behaviour the fixed
+ * floor was reaching for. Still intrinsic, still no media queries.
+ */
 export function Tiles({ children, min = 200 }: { children: React.ReactNode; min?: number }) {
-  return <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fit, minmax(${min}px, 1fr))`, gap: 12 }}>{children}</div>;
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+      {React.Children.map(children, (child) =>
+        child == null ? null : (
+          <div style={{ flex: `1 1 ${min}px`, minWidth: 0 }}>{child}</div>
+        ),
+      )}
+    </div>
+  );
 }
 
-export function Tile({ label, value, note }: { label: string; value: string; note?: string }) {
+/**
+ * A summary tile. `tone` is how the number feels, not what it is: a figure
+ * that wants somebody to do something is drawn in that colour and carries a
+ * hairline down its leading edge, so a row of tiles reads as a shape before
+ * it reads as five numbers. Neutral is the default and stays quiet — if
+ * everything is coloured, nothing is.
+ */
+export function Tile({
+  label, value, note, tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  note?: string;
+  tone?: "neutral" | "positive" | "attention" | "critical";
+}) {
+  const accent = {
+    neutral: null,
+    positive: "oklch(0.62 0.09 155)",
+    attention: "oklch(0.72 0.13 75)",
+    critical: "oklch(0.6 0.19 25)",
+  }[tone];
+
   return (
-    <div style={{ background: color.surface, border: `1px solid ${color.hairline}`, borderRadius: radius.xl, padding: 22 }}>
+    <div
+      style={{
+        position: "relative", overflow: "hidden", height: "100%",
+        background: color.surface,
+        border: `1px solid ${color.hairline}`,
+        borderRadius: radius.xl,
+        padding: "22px 22px 22px 24px",
+      }}
+    >
+      {accent ? (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute", left: 0, top: 0, bottom: 0, width: 3,
+            background: accent,
+          }}
+        />
+      ) : null}
       <p style={{ margin: "0 0 10px" }}><Eyebrow>{label}</Eyebrow></p>
-      <p style={{ margin: "0 0 4px", fontSize: 28, fontWeight: 600, letterSpacing: "-0.02em" }}>{value}</p>
-      {note ? <p style={{ margin: 0, fontSize: 14, color: color.inkTertiary }}>{note}</p> : null}
+      <p style={{
+        margin: "0 0 4px", fontSize: 30, fontWeight: 600,
+        letterSpacing: "-0.025em", lineHeight: 1.05,
+        color: accent && tone !== "positive" ? accent : color.ink,
+        fontVariantNumeric: "tabular-nums",
+      }}>
+        {value}
+      </p>
+      {note ? (
+        <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5, color: color.inkTertiary }}>{note}</p>
+      ) : null}
     </div>
   );
 }
