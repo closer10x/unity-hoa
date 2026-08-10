@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireAdminUser } from "@/lib/auth/require-admin";
 import { sendWelcomeEmailViaResend } from "@/lib/email/send-welcome-email";
+import { mintSetPasswordUrl } from "@/lib/email/set-password-link";
 import { requireServiceSupabase } from "@/lib/supabase/service";
 import type { Owner } from "./types";
 
@@ -131,17 +132,22 @@ export async function addHomeowner(input: {
     let note = `${fullName} added to the roster.`;
     if (email && tempPassword && input.sendWelcome) {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3001";
-      const sent = await sendWelcomeEmailViaResend({
-        name: fullName,
-        email,
-        role: "Resident",
-        tempPassword,
-        loginUrl: `${siteUrl}/portal/login`,
-      });
+      /* The account was created with a password only this server has seen;
+         the email carries a link to replace it, never the password itself. */
+      const setPasswordUrl = await mintSetPasswordUrl(db, email, "portal");
+      const sent = setPasswordUrl
+        ? await sendWelcomeEmailViaResend({
+            name: fullName,
+            email,
+            role: "Resident",
+            setPasswordUrl,
+            loginUrl: `${siteUrl}/portal/login`,
+          })
+        : { error: "the sign-in link could not be created" };
       note +=
         "error" in sent
-          ? ` The welcome email could not be sent: ${sent.error}. Share their sign-in details another way, or have them use "Forgot password".`
-          : " Welcome email sent with a temporary password.";
+          ? ` The welcome email could not be sent: ${sent.error}. Have them use "Forgot password" on the sign-in page.`
+          : " Welcome email sent with a link to choose a password.";
     } else if (email && !tempPassword) {
       note += " That email already had an account, so it was linked instead of created.";
     }

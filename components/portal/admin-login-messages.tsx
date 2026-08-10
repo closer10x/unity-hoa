@@ -20,6 +20,8 @@ const ERROR_COPY: Record<string, string> = {
   missing: "Enter your email and password.",
   missing_email: "Enter the email address for password reset.",
   auth: "Sign-in link expired or is invalid. Try again.",
+  link_expired:
+    "That invitation link has already been used or has expired. Ask the office to resend your invitation.",
 };
 
 const NOTICE_COPY: Record<string, string> = {

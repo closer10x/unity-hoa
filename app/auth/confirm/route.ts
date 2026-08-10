@@ -59,12 +59,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}${loginPath}?error=auth`);
   }
 
-  // An invited resident has no password yet — the link is the only way in.
-  // Send them to choose one before the portal, carrying the cookies the
-  // exchange just set so the page finds their session.
-  if (isPortal && (type === "invite" || type === "signup")) {
+  /* An invited account has no password yet — the link is the only way in —
+     and a staff resend mints a recovery token for exactly the same purpose.
+     Either way, send them to choose a password before the destination,
+     carrying the cookies the exchange just set so the page finds the session.
+
+     Resident recovery is not listed: those links come through /auth/callback
+     and land on the account screen, and rerouting them here would change a
+     flow that already works. */
+  const needsPassword =
+    type === "invite" || type === "signup" || (!isPortal && type === "recovery");
+  if (needsPassword) {
+    const setPasswordPath = isPortal
+      ? "/portal/set-password"
+      : "/admin/set-password";
     const setPassword = NextResponse.redirect(
-      `${origin}/portal/set-password?next=${encodeURIComponent(redirectTarget)}`,
+      `${origin}${setPasswordPath}?next=${encodeURIComponent(redirectTarget)}`,
     );
     response.cookies.getAll().forEach((c) => setPassword.cookies.set(c));
     return setPassword;

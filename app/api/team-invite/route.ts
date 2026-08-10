@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import {
@@ -9,6 +8,8 @@ import {
 } from "@/lib/admin-portal/permissions";
 import { ensureCrewLink, isFieldRole } from "@/lib/crew/links";
 import { getEmailBaseUrl } from "@/lib/email/link-base-url";
+import { buildConfirmUrl, mintSetPasswordUrl } from "@/lib/email/set-password-link";
+import { sendStaffAccessEmail } from "@/lib/email/send-staff-access-email";
 import { sendWelcomeEmailViaResend } from "@/lib/email/send-welcome-email";
 import { sendSms } from "@/lib/sms/send-sms";
 import { isSupabaseAuthConfigured } from "@/lib/supabase/keys";
@@ -16,18 +17,12 @@ import { requireServiceSupabase } from "@/lib/supabase/service";
 import { createSupabaseServerClient } from "@/lib/supabase/server-user";
 
 /**
- * Invite a team member: create their auth account with an auto-generated
- * temporary password, grant portal access, record them as an employee, and
- * email them their credentials. Admin-only.
+ * Invite a team member: create their auth account, grant portal access,
+ * record them as an employee, and email them a one-time link that lands on
+ * "choose your password". Admin-only.
  */
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function generateTempPassword(): string {
-  // 12 chars, URL-safe alphabet — comfortably above GoTrue's minimum and
-  // meant to be replaced at first sign-in.
-  return randomBytes(9).toString("base64url");
-}
 
 async function callerMayInvite(): Promise<boolean> {
   if (!isSupabaseAuthConfigured()) return false;
@@ -100,20 +95,52 @@ export async function POST(req: Request) {
   );
 
   const service = requireServiceSupabase();
-  const tempPassword = generateTempPassword();
 
-  const { data: created, error: createErr } =
-    await service.auth.admin.createUser({
+  /* The address may already have an account — a resident, or someone on a
+     household — and being given office access should promote that account,
+     not collide with it.
+
+     A genuinely new account is created by the invite link itself, so the new
+     hire never receives a password somebody else generated: they follow the
+     link and choose one in the browser. */
+  let userId: string | null = null;
+  let setPasswordUrl: string | null = null;
+
+  const { data: invited, error: inviteErr } =
+    await service.auth.admin.generateLink({
+      type: "invite",
       email,
-      password: tempPassword,
-      email_confirm: true,
+      options: { data: { display_name: name, staff_role: role } },
+    });
+
+  const invitedHash = invited?.properties?.hashed_token;
+  if (invited?.user && invitedHash) {
+    userId = invited.user.id;
+    setPasswordUrl = buildConfirmUrl(invitedHash, "invite", "admin");
+  } else {
+    const { data: existing } = await service.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+    const prior = existing?.users.find((u) => u.email?.toLowerCase() === email);
+    userId = prior?.id ?? null;
+    if (!userId) {
+      return NextResponse.json(
+        { error: inviteErr?.message ?? "Could not create the account." },
+        { status: 409 },
+      );
+    }
+    await service.auth.admin.updateUserById(userId, {
       user_metadata: { display_name: name, staff_role: role },
     });
-  if (createErr || !created?.user) {
-    return NextResponse.json(
-      { error: createErr?.message ?? "Could not create the account." },
-      { status: 409 },
-    );
+    /* An account that has never been signed into has no password its owner
+       knows — either a resident invite they never finished, or one minted by
+       the old temporary-password flow. Send them to choose one rather than
+       telling them to use a password they don't have. Someone who has signed
+       in keeps theirs, and hears only what changed. */
+    if (!prior?.last_sign_in_at) {
+      setPasswordUrl = await mintSetPasswordUrl(service, email, "admin");
+    }
   }
 
   // Portal access + display name + staff_role (drives section permissions)
@@ -121,7 +148,7 @@ export async function POST(req: Request) {
   const { error: profileErr } = await service
     .from("profiles")
     .upsert({
-      id: created.user.id,
+      id: userId,
       role: "admin",
       staff_role: role,
       display_name: name,
@@ -136,14 +163,29 @@ export async function POST(req: Request) {
     );
   }
 
-  const { data: employee, error: employeeErr } = await service
+  /* Re-inviting someone already on the roster updates their record rather
+     than adding a second row for the same person. */
+  const { data: priorEmployee } = await service
     .from("employees")
-    .insert({ name, email, role, active: true, communities, ...(phone ? { phone } : {}) })
     .select("id")
-    .single();
+    .eq("email", email)
+    .maybeSingle();
+
+  const { data: employee, error: employeeErr } = priorEmployee
+    ? await service
+        .from("employees")
+        .update({ name, role, active: true, communities, ...(phone ? { phone } : {}) })
+        .eq("id", priorEmployee.id)
+        .select("id")
+        .single()
+    : await service
+        .from("employees")
+        .insert({ name, email, role, active: true, communities, ...(phone ? { phone } : {}) })
+        .select("id")
+        .single();
   if (employeeErr) {
     return NextResponse.json(
-      { error: `Account created but employee record failed: ${employeeErr.message}` },
+      { error: `Account ready but the roster record failed: ${employeeErr.message}` },
       { status: 500 },
     );
   }
@@ -157,17 +199,27 @@ export async function POST(req: Request) {
   // and nobody has to remember a second step.
   let crewUrl: string | undefined;
   if (isFieldRole(role) && employee?.id) {
-    const link = await ensureCrewLink(employee.id as string, created.user.id);
+    const link = await ensureCrewLink(employee.id as string, userId);
     if (link) crewUrl = `${siteUrl}/crew/${link.token}`;
   }
 
-  const emailResult = await sendWelcomeEmailViaResend({
-    name,
-    email,
-    role,
-    tempPassword,
-    loginUrl: `${siteUrl}/admin/login`,
-  });
+  /* Someone who already signs in keeps their password, so the email tells
+     them what changed rather than sending them to reset something that
+     works. Everyone else gets the link that lets them pick one. */
+  const emailResult = setPasswordUrl
+    ? await sendWelcomeEmailViaResend({
+        name,
+        email,
+        role,
+        setPasswordUrl,
+        loginUrl: `${siteUrl}/admin/login`,
+      })
+    : await sendStaffAccessEmail({
+        name,
+        email,
+        role,
+        loginUrl: `${siteUrl}/admin/login`,
+      });
 
   // Heads-up text when a cell was given. Credentials stay email-only; the
   // SMS just points at the inbox. Failures never block the invite.

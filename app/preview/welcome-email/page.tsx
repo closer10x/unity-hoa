@@ -13,7 +13,8 @@ export default function WelcomeEmailPreview() {
     name: "Jordan Rivera",
     email: "jordan@unitygridmanagement.com",
     role: "Community manager",
-    tempPassword: "k3v9-Xw2mQ7ap",
+    setPasswordUrl:
+      "http://localhost:3001/auth/confirm?token_hash=preview-token&type=invite&next=/admin",
     loginUrl: "http://localhost:3001/admin/login",
   });
 

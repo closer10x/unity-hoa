@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireAdminUser } from "@/lib/auth/require-admin";
 import { sendWelcomeEmailViaResend } from "@/lib/email/send-welcome-email";
+import { mintSetPasswordUrl } from "@/lib/email/set-password-link";
 import { requireServiceSupabase } from "@/lib/supabase/service";
 
 import type { Owner } from "./types";
@@ -231,18 +232,23 @@ export async function transferLot(input: {
     let welcomeNote = "no email sent";
     if (tempPassword && input.sendWelcome) {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3001";
-      const result = await sendWelcomeEmailViaResend({
-        name,
-        email,
-        role: "Resident",
-        tempPassword,
-        loginUrl: `${siteUrl}/portal/login`,
-      });
+      /* The account was created with a password only this server has seen;
+         the email carries a link to replace it, never the password itself. */
+      const setPasswordUrl = await mintSetPasswordUrl(db, email, "portal");
+      const result = setPasswordUrl
+        ? await sendWelcomeEmailViaResend({
+            name,
+            email,
+            role: "Resident",
+            setPasswordUrl,
+            loginUrl: `${siteUrl}/portal/login`,
+          })
+        : { error: "the sign-in link could not be created" };
       if ("error" in result) {
-        warning = `The change went through, but the welcome email failed: ${result.error}. Share their sign-in details another way, or have them use "Forgot password".`;
+        warning = `The change went through, but the welcome email failed: ${result.error}. Have them use "Forgot password" on the sign-in page.`;
         welcomeNote = "welcome email failed";
       } else {
-        welcomeNote = "welcome email sent with a temporary password";
+        welcomeNote = "welcome email sent with a link to choose a password";
       }
     } else if (!tempPassword) {
       welcomeNote = "existing sign-in reused — no new credentials issued";

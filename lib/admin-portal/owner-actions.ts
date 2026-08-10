@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireAdminUser } from "@/lib/auth/require-admin";
 import { sendWelcomeEmailViaResend } from "@/lib/email/send-welcome-email";
+import { mintSetPasswordUrl } from "@/lib/email/set-password-link";
 import { requireServiceSupabase } from "@/lib/supabase/service";
 
 import type { Owner } from "./types";
@@ -415,17 +416,22 @@ export async function addHouseholdOwner(input: {
     let note = `${name} added to the household.`;
     if (tempPassword && input.sendWelcome) {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3001";
-      const sent = await sendWelcomeEmailViaResend({
-        name,
-        email,
-        role: "Resident",
-        tempPassword,
-        loginUrl: `${siteUrl}/portal/login`,
-      });
+      /* The account was created with a password only this server has seen;
+         the email carries a link to replace it, never the password itself. */
+      const setPasswordUrl = await mintSetPasswordUrl(db, email, "portal");
+      const sent = setPasswordUrl
+        ? await sendWelcomeEmailViaResend({
+            name,
+            email,
+            role: "Resident",
+            setPasswordUrl,
+            loginUrl: `${siteUrl}/portal/login`,
+          })
+        : { error: "the sign-in link could not be created" };
       note +=
         "error" in sent
           ? ` The welcome email could not be sent: ${sent.error}.`
-          : " Welcome email sent with a temporary password.";
+          : " Welcome email sent with a link to choose a password.";
     } else if (!tempPassword) {
       note += " That email already had an account, so it was linked instead of created.";
     }
@@ -502,36 +508,38 @@ export async function resendWelcomeEmail(input: {
     }
     if (!email) return { ok: false, error: "That account has no email address on file." };
 
-    const tempPassword = randomBytes(9).toString("base64url");
-    const { error: pwErr } = await db.auth.admin.updateUserById(targetId, {
-      password: tempPassword,
-    });
-    if (pwErr) throw new Error(`Could not issue a new password: ${pwErr.message}`);
+    /* Resending used to reset the password on the spot, which locked out
+       anyone who was already signed in fine and only needed the mail again.
+       A one-time link changes nothing until they follow it. */
+    const setPasswordUrl = await mintSetPasswordUrl(db, email, "portal");
+    if (!setPasswordUrl) {
+      return { ok: false, error: `Could not create a sign-in link for ${email}.` };
+    }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3001";
     const sent = await sendWelcomeEmailViaResend({
       name,
       email,
       role: "Resident",
-      tempPassword,
+      setPasswordUrl,
       loginUrl: `${siteUrl}/portal/login`,
     });
     if ("error" in sent) {
       return {
         ok: false,
-        error: `A new password was issued but the email failed: ${sent.error}. Their old password no longer works, so share the new details another way.`,
+        error: `The email failed: ${sent.error}. Their current password still works, so they can also use "Forgot password" themselves.`,
       };
     }
 
     const { error: auditErr } = await db.from("admin_audit_log").insert({
-      action: `Owners: re-sent the welcome email to ${email} with a new temporary password`,
+      action: `Owners: re-sent the welcome email to ${email} with a link to choose a password`,
       actor_name: actorName,
       actor_user_id: actorId,
     });
     if (auditErr) throw new Error(`Audit write failed: ${auditErr.message}`);
 
     revalidatePath("/admin");
-    return { ok: true, note: `Welcome email re-sent to ${email} with a new temporary password.` };
+    return { ok: true, note: `Welcome email re-sent to ${email} with a link to choose a password.` };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
   }

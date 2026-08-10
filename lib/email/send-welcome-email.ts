@@ -4,7 +4,8 @@ export type WelcomeEmailPayload = {
   name: string;
   email: string;
   role: string;
-  tempPassword: string;
+  /** One-time link that signs them in and lands on "choose your password". */
+  setPasswordUrl: string;
   loginUrl: string;
 };
 
@@ -30,7 +31,7 @@ export function buildWelcomeEmailHtml(p: WelcomeEmailPayload): string {
   const name = escapeHtml(p.name.trim());
   const email = escapeHtml(p.email.trim());
   const role = escapeHtml(p.role.trim());
-  const password = escapeHtml(p.tempPassword);
+  const setUrl = escapeHtml(p.setPasswordUrl);
   const url = escapeHtml(p.loginUrl);
 
   const label = `font-family:${MONO};font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:${C.inkMuted}`;
@@ -56,31 +57,36 @@ export function buildWelcomeEmailHtml(p: WelcomeEmailPayload): string {
           <p style="margin:0 0 26px;font-family:${SANS};font-size:15px;line-height:1.65;color:${C.inkMuted}">
             An administrator account has been created for you on the Unity Grid
             portal as <strong style="color:${C.ink};font-weight:600">${role}</strong>.
-            Here is everything you need for your first sign-in.
+            One step is left: choose the password you&rsquo;ll sign in with.
           </p>
 
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.panel};border:1px solid ${C.hairline};border-radius:14px">
             <tr><td style="padding:20px 24px 6px 24px">
-              <p style="margin:0 0 4px;${label}">Sign-in page</p>
-              <p style="margin:0 0 16px;font-family:${SANS};font-size:15px"><a href="${url}" style="color:${C.accent};text-decoration:none">${url}</a></p>
-              <p style="margin:0 0 4px;${label}">Email</p>
-              <p style="margin:0 0 16px;font-family:${SANS};font-size:15px;color:${C.ink}">${email}</p>
-              <p style="margin:0 0 4px;${label}">Temporary password</p>
-              <p style="margin:0 0 20px;font-family:${MONO};font-size:16px;letter-spacing:0.04em;color:${C.ink}">${password}</p>
+              <p style="margin:0 0 4px;${label}">Your account</p>
+              <p style="margin:0 0 16px;font-family:${MONO};font-size:15px;color:${C.ink}">${email}</p>
+              <p style="margin:0 0 4px;${label}">Sign-in page, from now on</p>
+              <p style="margin:0 0 20px;font-family:${SANS};font-size:15px"><a href="${url}" style="color:${C.accent};text-decoration:none">${url}</a></p>
             </td></tr>
           </table>
 
           <table role="presentation" cellpadding="0" cellspacing="0" style="margin:26px 0 8px"><tr>
             <td style="background:${C.accent};border-radius:10px">
-              <a href="${url}" style="display:inline-block;padding:13px 26px;font-family:${SANS};font-size:15px;font-weight:500;color:${C.onAccent};text-decoration:none">
-                Sign in to the portal
+              <a href="${setUrl}" style="display:inline-block;padding:13px 26px;font-family:${SANS};font-size:15px;font-weight:500;color:${C.onAccent};text-decoration:none">
+                Choose your password
               </a>
             </td>
           </tr></table>
 
           <p style="margin:18px 0 0;font-family:${SANS};font-size:14px;line-height:1.6;color:${C.inkMuted}">
-            <strong style="color:${C.ink};font-weight:600">Please change this password after your first sign-in.</strong>
-            It was generated automatically and sent only to you.
+            The button opens the portal in your browser and asks you to set a
+            password &mdash; no temporary one to look up. <strong style="color:${C.ink};font-weight:600">The link
+            works once and expires in 24 hours.</strong> If it has already
+            expired, ask the office to resend your invitation.
+          </p>
+
+          <p style="margin:14px 0 0;font-family:${SANS};font-size:13px;line-height:1.6;color:${C.inkFaint}">
+            If the button doesn&rsquo;t work, paste this into your browser:<br />
+            <a href="${setUrl}" style="color:${C.inkMuted};text-decoration:underline;word-break:break-all">${setUrl}</a>
           </p>
 
           <div style="border-top:1px solid ${C.hairline};margin:28px 0 0"></div>
@@ -118,7 +124,7 @@ export async function sendWelcomeEmailViaResend(
     body: JSON.stringify({
       from,
       to: [p.email.trim()],
-      subject: "Your Unity Grid admin portal account",
+      subject: "Set up your Unity Grid admin portal account",
       html: buildWelcomeEmailHtml(p),
     }),
   });

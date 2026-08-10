@@ -105,10 +105,10 @@ export function Primary({ children, onClick, style }: { children: React.ReactNod
   );
 }
 
-export function Pill({ children, onClick, style }: { children: React.ReactNode; onClick?: () => void; style?: React.CSSProperties }) {
+export function Pill({ children, onClick, style, title }: { children: React.ReactNode; onClick?: () => void; style?: React.CSSProperties; title?: string }) {
   const [hover, setHover] = React.useState(false);
   return (
-    <button type="button" onClick={onClick}
+    <button type="button" onClick={onClick} title={title}
       onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       style={{ font: "inherit", fontSize: 15, fontWeight: 500, background: "none", border: `1px solid ${hover ? "oklch(0.5 0.04 155)" : "oklch(0.8 0.02 150)"}`, borderRadius: radius.pill, padding: "11px 22px", cursor: "pointer", color: "oklch(0.32 0.02 150)", whiteSpace: "nowrap", ...style }}>
       {children}

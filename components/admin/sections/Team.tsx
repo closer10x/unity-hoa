@@ -164,6 +164,8 @@ export default function Team() {
   const [rowError, setRowError] = useState("");
   const [disabling, setDisabling] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState<string | null>(null);
+  const [resending, setResending] = useState<string | null>(null);
+  const [resendNote, setResendNote] = useState("");
 
   async function uploadPhoto(p: Staff, file: File) {
     if (!p.profileId) {
@@ -275,8 +277,8 @@ export default function Team() {
     setSending(true);
     setError("");
     try {
-      // Creates the account with an auto-generated temporary password and
-      // emails the credentials to the new team member.
+      // Creates the account and emails a one-time link that lands the new
+      // team member on "choose your password" — no credential in the mail.
       const res = await fetch("/api/team-invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -300,7 +302,7 @@ export default function Team() {
       s.setStaff((prev) => [...prev, p]);
       const delivery = data.emailError
         ? `the welcome email failed (${data.emailError})`
-        : "welcome email sent with a temporary password" +
+        : "welcome email sent with a link to choose a password" +
           (phone.trim() ? (data.smsError ? "; the text notification failed" : "; text notification sent") : "");
       s.audit(`Invited ${p.name} as ${p.role} — ${delivery}`);
       if (data.emailError || data.smsError) {
@@ -316,6 +318,38 @@ export default function Team() {
       setError("The invite could not be sent. Check the connection and try again.");
     } finally {
       setSending(false);
+    }
+  }
+
+  /* An invitation link is one-time and expires. When it lapses, or the mail
+     never lands, the office needs to be able to send another without
+     rebuilding the account — this mints a fresh one and changes nothing
+     until the recipient follows it. */
+  async function resendInvite(p: Staff) {
+    if (rowBusy) return;
+    setRowBusy(p.id);
+    setRowError("");
+    setResendNote("");
+    try {
+      const res = await fetch("/api/team-invite/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: p.email }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        setRowError(data.error ?? "The invitation could not be resent.");
+        return;
+      }
+      setResendNote(
+        `A fresh invitation is on its way to ${p.email}. The link lets them choose a password, and it expires in 24 hours.`,
+      );
+      s.audit(`Resent the portal invitation to ${p.name} at ${p.email}`);
+    } catch {
+      setRowError("The invitation could not be resent. Check the connection and try again.");
+    } finally {
+      setRowBusy(null);
+      setResending(null);
     }
   }
 
@@ -365,6 +399,11 @@ export default function Team() {
         {rowError ? (
           <div style={{ padding: `12px ${pad.card}` }}><ErrorLine>{rowError}</ErrorLine></div>
         ) : null}
+        {resendNote ? (
+          <div style={{ padding: `12px ${pad.card}`, fontSize: 14, lineHeight: 1.55, color: color.inkSecondary }}>
+            {resendNote}
+          </div>
+        ) : null}
 
         {s.staff.map((p) => (
           /* Tight vertical rhythm: when the action cluster wraps under the
@@ -381,13 +420,28 @@ export default function Team() {
             <Status tone={!p.active ? "neutral" : p.load > 7 ? "attention" : "positive"}>
               {p.active ? `${p.load} open` : "Disabled"}
             </Status>
-            {/* One line, always: the three controls read as a set, and a
-                wrapped "Remove" under the others looks like a separate row. */}
+            {/* One line, always: the controls read as a set, and a wrapped
+                "Remove" under the others looks like a separate row. */}
             <span style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "nowrap", justifySelf: "end" }}>
               <Pill style={{ padding: "10px 12px", fontSize: 12.5 }}
                 onClick={() => (editing === p.id ? setEditing(null) : openEdit(p))}>
                 {editing === p.id ? "Close" : "Edit"}
               </Pill>
+              {/* Administrator-only, like the invite itself — the server says
+                  the same, and a button that only ever 403s is worse than no
+                  button. Without an address there is nowhere to send it. */}
+              {s.isAdministrator && p.email && p.email !== "—" ? (
+                <Pill style={{ padding: "10px 12px", fontSize: 12.5, opacity: rowBusy === p.id ? 0.6 : 1 }}
+                  title="Send them a fresh link to choose a portal password"
+                  onClick={() => {
+                    if (rowBusy) return;
+                    setRowError("");
+                    setResendNote("");
+                    setResending(resending === p.id ? null : p.id);
+                  }}>
+                  Resend
+                </Pill>
+              ) : null}
               <Pill style={{ padding: "10px 12px", fontSize: 12.5, opacity: rowBusy === p.id ? 0.6 : 1 }}
                 onClick={() => {
                   if (rowBusy) return;
@@ -524,6 +578,17 @@ export default function Team() {
                 </div>
               </div>
             </div>
+          ) : null,
+        )}
+        {s.staff.map((p) =>
+          resending === p.id ? (
+            <ConfirmBar
+              key={`resend-${p.id}`}
+              text={`Email ${p.name} a fresh invitation at ${p.email}? They get a one-time link that signs them in and asks them to choose a password. Any earlier link stops working, and nothing about the account changes until they follow this one.`}
+              confirmLabel={rowBusy === p.id ? "Sending…" : "Yes, resend the invitation"}
+              onCancel={() => setResending(null)}
+              onConfirm={() => resendInvite(p)}
+            />
           ) : null,
         )}
         {s.staff.map((p) =>
