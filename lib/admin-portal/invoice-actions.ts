@@ -184,6 +184,8 @@ export async function createInvoice(input: {
   dueOn: string;
   memo: string;
   lines: { description: string; amount: string; quantity: string }[];
+  /** Which company's revenue this is. "" falls back to what the fees say. */
+  entity?: string;
 }): Promise<Ok<{ invoices: Invoice[]; number: string }> | Fail> {
   try {
     const { db, actorName, actorId } = await officeContext();
@@ -246,7 +248,11 @@ export async function createInvoice(input: {
     const entities = new Set(
       matched.map((f) => (f?.entity_key as string | undefined) ?? null).filter(Boolean),
     );
-    const entityKey = entities.size === 1 ? [...entities][0] : null;
+    const fromFees = entities.size === 1 ? [...entities][0] : null;
+    /* The fee schedule is the default, not the verdict. A one-off charge has
+       no fee behind it, and the office sometimes bills something on the other
+       company's behalf, so whoever raises the invoice can say. */
+    const entityKey = input.entity?.trim() || fromFees;
 
     const { data: inv, error } = await db
       .from("invoices")

@@ -35,8 +35,8 @@ create trigger trg_billing_entities_updated_at
 
 insert into public.billing_entities (key, name, legal_name, sort)
 values
-  ('sofilakes',  'SofiLakes',   'SofiLakes Residential Association Inc.', 10),
-  ('unity-grid', 'Unity Grid',  'Unity Grid Management LLC',              20)
+  ('sofilakes',  'Sofi Lakes',  'Sofi Lakes Residential Association Inc.', 10),
+  ('unity-grid', 'Unity Grid',  'Unity Grid Management LLC',               20)
 on conflict (key) do nothing;
 
 /* ── Where each fee's revenue belongs ──────────────────────────────────
