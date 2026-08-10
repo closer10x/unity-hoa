@@ -688,9 +688,15 @@ function InvoicesCard() {
             <Row>
               <Mono size={13} style={{ color: color.neutral }}>{inv.number}</Mono>
               <RowMain label={inv.billTo} detail={inv.address} />
+              {/* Who raised it belongs on the row, not only in the detail:
+                  the first question about an invoice you did not expect is
+                  who billed it. */}
               <span>
                 <span style={{ display: "block", fontSize: 14, color: color.inkSecondary }}>Due {inv.due}</span>
                 <Mono size={11} style={{ color: color.inkQuaternary }}>Issued {inv.issued}</Mono>
+                <span style={{ display: "block", fontSize: 12.5, color: color.inkTertiary, marginTop: 2 }}>
+                  Raised by {inv.createdBy}
+                </span>
               </span>
               <Mono size={15}>{inv.total}</Mono>
               <Status tone={
