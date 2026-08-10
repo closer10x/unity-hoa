@@ -7,7 +7,8 @@ import {
   updateAnnouncement, uploadAnnouncementImage,
 } from "@/lib/admin-portal/announcement-actions";
 import {
-  replyToResidentThread, setResidentThreadStatus,
+  listMessageableResidents, replyToResidentThread, setResidentThreadStatus,
+  startResidentThread,
 } from "@/lib/admin-portal/message-actions";
 import {
   createArcFromMessage, createBookingFromMessage, createViolationFromMessage,
@@ -59,6 +60,47 @@ function ResidentInbox() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
   const [createNote, setCreateNote] = useState<{ text: string; view: string } | null>(null);
+
+  /* Start-a-conversation composer: the office writing to a resident first. */
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [residents, setResidents] = useState<{ id: string; name: string; address: string | null }[]>([]);
+  const [residentQuery, setResidentQuery] = useState("");
+  const [toId, setToId] = useState("");
+  const [newSubject, setNewSubject] = useState("");
+  const [newBody, setNewBody] = useState("");
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState("");
+
+  function toggleCompose() {
+    setStartError("");
+    if (composeOpen) { setComposeOpen(false); return; }
+    setComposeOpen(true);
+    if (residents.length === 0) {
+      listMessageableResidents().then((r) => { if (r.ok) setResidents(r.residents); });
+    }
+  }
+
+  async function startThread() {
+    if (starting) return;
+    if (!toId) return setStartError("Pick a resident to write to.");
+    if (!newSubject.trim()) return setStartError("Give the message a subject.");
+    if (!newBody.trim()) return setStartError("Write the message.");
+    setStarting(true);
+    setStartError("");
+    const res = await startResidentThread({ userId: toId, subject: newSubject, body: newBody });
+    setStarting(false);
+    if (!res.ok) return setStartError(res.error);
+    s.setResidentThreads((prev) => [res.thread, ...prev]);
+    setThreadId(res.thread.id);
+    s.audit(`Messages: started “${newSubject.trim()}” with ${res.thread.resident}`);
+    setComposeOpen(false);
+    setToId(""); setNewSubject(""); setNewBody(""); setResidentQuery("");
+  }
+
+  const rq = residentQuery.trim().toLowerCase();
+  const residentMatches = rq
+    ? residents.filter((r) => r.name.toLowerCase().includes(rq) || (r.address ?? "").toLowerCase().includes(rq))
+    : residents;
 
   const q = query.trim().toLowerCase();
   const visible = s.residentThreads.filter((t) => {
@@ -174,7 +216,71 @@ function ResidentInbox() {
       <CardHead
         title="Resident messages"
         meta={waiting ? `${waiting} awaiting a reply` : "Every conversation answered"}
-      />
+      >
+        <TextButton onClick={toggleCompose}>
+          {composeOpen ? "Close" : "New message"}
+        </TextButton>
+      </CardHead>
+
+      {composeOpen ? (
+        <div style={{ padding: pad.card, borderBottom: `1px solid ${color.hairlineSoft}`, display: "grid", gap: 14, maxWidth: 720 }}>
+          <span style={{ fontSize: 15, fontWeight: 600 }}>Start a conversation</span>
+          <Field label="To" hint="Search residents by name or address.">
+            <input
+              type="text"
+              value={residentQuery}
+              placeholder="Search residents…"
+              onChange={(e) => { setResidentQuery(e.target.value); setToId(""); }}
+              style={{
+                width: "100%", font: "inherit", fontSize: 15, color: color.ink,
+                background: color.surfaceSunken, border: `1px solid ${color.borderInput}`,
+                borderRadius: 10, padding: "11px 14px",
+              }}
+            />
+          </Field>
+          {toId ? (
+            <Mono size={12} style={{ color: color.accent }}>
+              To: {residents.find((r) => r.id === toId)?.name}
+            </Mono>
+          ) : (
+            <div style={{ display: "grid", gap: 2, maxHeight: 200, overflowY: "auto", border: `1px solid ${color.hairlineSoft}`, borderRadius: radius.md }}>
+              {residents.length === 0 ? (
+                <span style={{ padding: 12, fontSize: 13, color: color.inkQuaternary }}>
+                  No resident accounts yet. Residents appear here once their portal accounts are set up.
+                </span>
+              ) : residentMatches.length === 0 ? (
+                <span style={{ padding: 12, fontSize: 13, color: color.inkQuaternary }}>Nothing matches that.</span>
+              ) : residentMatches.slice(0, 30).map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setToId(r.id)}
+                  style={{
+                    display: "flex", justifyContent: "space-between", gap: 12, width: "100%",
+                    textAlign: "left", font: "inherit", border: "none", background: color.surface,
+                    padding: "10px 12px", cursor: "pointer", borderBottom: `1px solid ${color.hairlineSoft}`,
+                  }}
+                >
+                  <span style={{ fontSize: 14 }}>{r.name}</span>
+                  {r.address ? <Mono size={12} style={{ color: color.inkQuaternary }}>{r.address}</Mono> : null}
+                </button>
+              ))}
+            </div>
+          )}
+          <Field label="Subject"><Input value={newSubject} onChange={setNewSubject} placeholder="e.g. Your account is set up" /></Field>
+          <Field label="Message"><Area value={newBody} onChange={setNewBody} rows={3} placeholder="Write to the resident…" /></Field>
+          {startError ? <ErrorLine>{startError}</ErrorLine> : null}
+          <span style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <Primary onClick={startThread} style={{ justifySelf: "start", opacity: starting ? 0.6 : 1 }}>
+              {starting ? "Sending…" : "Send message"}
+            </Primary>
+            <span style={{ fontFamily: font.mono, fontSize: 11, color: color.inkQuaternary }}>
+              It lands in the resident’s portal as an unread conversation.
+            </span>
+          </span>
+        </div>
+      ) : null}
+
       <div style={{ padding: `16px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
         <input
           type="text"
