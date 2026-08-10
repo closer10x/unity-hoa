@@ -437,6 +437,8 @@ function InvoicesCard() {
   const [payMemo, setPayMemo] = useState("");
   const [reference, setReference] = useState("");
   const [bank, setBank] = useState("");
+  const [deposited, setDeposited] = useState(false);
+  const [depositedOn, setDepositedOn] = useState("");
   const [attaching, setAttaching] = useState(false);
   const [attached, setAttached] = useState<string[]>([]);
 
@@ -543,13 +545,14 @@ function InvoicesCard() {
   async function collect(id: string, number: string) {
     setError("");
     const res = await recordInvoicePayment({
-      id, paidOn, method, memo: payMemo, reference, bank,
+      id, paidOn, method, memo: payMemo, reference, bank, deposited, depositedOn,
     });
     if (!res.ok) return setError(res.error);
     setCollecting(null);
     s.setInvoices(res.invoices);
-    s.audit(`Invoices: collected ${number}`);
+    s.audit(`Invoices: collected ${number}${deposited ? "" : " — not yet deposited"}`);
     setPaidOn(""); setPayMemo(""); setReference(""); setBank(""); setAttached([]);
+    setDeposited(false); setDepositedOn("");
   }
 
   async function discard(id: string, number: string) {
@@ -749,7 +752,16 @@ function InvoicesCard() {
                   <Mono size={12} style={{ color: color.inkQuaternary }}>
                     Raised by {inv.createdBy} · issued {inv.issued}
                   </Mono>
-                  {inv.paidOn ? <span style={{ fontSize: 13.5, color: color.positive }}>Collected {inv.paidOn}.</span> : null}
+                  {inv.paidOn ? (
+                    <span style={{ fontSize: 13.5, color: color.positive }}>
+                      Collected {inv.paidOn}.
+                      {inv.deposited === true
+                        ? ` Deposited ${inv.depositedOn ?? "—"}.`
+                        : inv.deposited === false
+                          ? " Not yet deposited."
+                          : ""}
+                    </span>
+                  ) : null}
                   {inv.voidReason ? <span style={{ fontSize: 13.5, color: color.inkTertiary }}>Voided — {inv.voidReason}</span> : null}
                 </div>
               </div>
@@ -858,6 +870,31 @@ function InvoicesCard() {
                         ))}
                       </div>
                     ) : null}
+                  </div>
+
+                  {/* Received and banked are different days. Until it is
+                      deposited the money is on the books but not in the
+                      account, which is where a statement stops matching. */}
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <span style={{ fontSize: 14, color: color.inkSecondary }}>Deposited?</span>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                      <Chip size="sm" on={deposited}
+                        onClick={() => { setDeposited(true); if (!depositedOn) setDepositedOn(paidOn || todayISO()); }}>
+                        Yes
+                      </Chip>
+                      <Chip size="sm" on={!deposited} onClick={() => setDeposited(false)}>
+                        Not yet
+                      </Chip>
+                    </div>
+                    {deposited ? (
+                      <Field label="Date deposited" hint="The day it reached the bank">
+                        <DateInput value={depositedOn} onChange={setDepositedOn} />
+                      </Field>
+                    ) : (
+                      <span style={{ fontSize: 11.5, lineHeight: 1.5, color: color.inkQuaternary }}>
+                        The payment still counts as received today — this only tracks whether it has reached the bank.
+                      </span>
+                    )}
                   </div>
 
                   <div style={{ display: "grid", gap: 6, justifyItems: "start" }}>

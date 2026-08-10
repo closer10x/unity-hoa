@@ -70,6 +70,8 @@ type InvoiceRow = {
   memo: string | null;
   total_cents: number;
   paid_on: string | null;
+  payment_deposited: boolean | null;
+  payment_deposited_on: string | null;
   void_reason: string | null;
   created_by_name: string | null;
 };
@@ -96,6 +98,8 @@ function toInvoice(r: InvoiceRow, address: string, lines: InvoiceLine[]): Invoic
     total: usd(r.total_cents ?? 0),
     totalCents: r.total_cents ?? 0,
     paidOn: r.paid_on ? dateLabel(r.paid_on) : null,
+    deposited: r.payment_deposited ?? null,
+    depositedOn: r.payment_deposited_on ? dateLabel(r.payment_deposited_on) : null,
     voidReason: r.void_reason ?? null,
     createdBy: r.created_by_name?.trim() || "the office",
     lines,
@@ -328,6 +332,10 @@ export async function recordInvoicePayment(input: {
   reference: string;
   /** Bank the check was drawn on. */
   bank: string;
+  /** Whether it has reached the bank yet. */
+  deposited: boolean;
+  /** The day it was deposited — ignored unless `deposited`. */
+  depositedOn: string;
 }): Promise<Ok<{ invoices: Invoice[] }> | Fail> {
   try {
     const { db, actorName, actorId } = await officeContext();
@@ -359,10 +367,21 @@ export async function recordInvoicePayment(input: {
       return { ok: false, error: "Add the check number — it is what ties this payment to a statement." };
     }
 
+    /* Deposited is its own day: a check handed over at the office sits in a
+       drawer until someone banks it, and until then the money is recorded
+       but not yet in the account. */
+    const depositedOn =
+      input.deposited && /^\d{4}-\d{2}-\d{2}$/.test(input.depositedOn)
+        ? input.depositedOn
+        : input.deposited
+          ? paidOn
+          : null;
+
     const detail = [
       method,
       reference ? (method === "Check" ? `check ${reference}` : `ref ${reference}`) : "",
       bank,
+      input.deposited ? `deposited ${depositedOn}` : "not yet deposited",
       memo,
     ].filter(Boolean).join(" · ");
 
@@ -394,6 +413,8 @@ export async function recordInvoicePayment(input: {
         payment_memo: memo || null,
         payment_reference: reference || null,
         payment_bank: bank || null,
+        payment_deposited: input.deposited,
+        payment_deposited_on: depositedOn,
         updated_at: new Date().toISOString(),
       })
       .eq("id", input.id);

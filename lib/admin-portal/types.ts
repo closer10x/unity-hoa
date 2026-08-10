@@ -198,6 +198,9 @@ export interface Invoice {
   total: string;
   totalCents: number;
   paidOn: string | null;
+  /** Whether the payment reached the bank. Null when it was never asked. */
+  deposited: boolean | null;
+  depositedOn: string | null;
   voidReason: string | null;
   /** The account that raised it, so anyone reading the row knows who to ask. */
   createdBy: string;
