@@ -1,6 +1,5 @@
 import "server-only";
 
-import { communityPrefix, formatAccountNumber } from "@/lib/accounts/account-number";
 import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -141,6 +140,7 @@ function toStaffRole(s: string | null): StaffRole {
 type LotRow = {
   id: string;
   community: string | null;
+  account_number: string | null;
   lot_number: string | null;
   block: string | null;
   street_number: string | null;
@@ -774,11 +774,11 @@ export async function loadPortalData(): Promise<PortalData> {
     const cityLine = [l.city, [l.state, l.zip].filter(Boolean).join(" ")]
       .filter(Boolean)
       .join(", ");
-    // Community-prefixed account number, e.g. SL-000001. The lot number
-    // isn't globally unique (Lot 1 repeats across blocks), so the sequence
-    // seeds off the ordered position to keep every account distinct.
-    const prefix = communityPrefix(l.community ?? "") ?? "SL";
-    const account = formatAccountNumber(prefix, i + 1);
+    /* Stored on the lot, not derived: this is the number on a resident's
+       statement and the one the public dues lookup matches, so it has to mean
+       the same home permanently. Lot numbers repeat across blocks and cannot
+       do that job. */
+    const account = l.account_number ?? (l.lot_number ? `Lot ${l.lot_number}` : l.id.slice(0, 8));
     return {
       id: l.id,
       name: p?.display_name?.trim() || "Unassigned lot",

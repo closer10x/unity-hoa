@@ -38,6 +38,7 @@ async function officeContext() {
 type LotRow = {
   id: string;
   community: string | null;
+  account_number: string | null;
   lot_number: string | null;
   street_number: string | null;
   street_name: string | null;
@@ -64,7 +65,7 @@ function toOwnerRow(
     status: p ? "Owner on file" : "No owner linked",
     scope: l.community ?? "all",
     flag: p ? "current" : "tenant",
-    account: l.lot_number ? `Lot ${l.lot_number}` : l.id.slice(0, 8),
+    account: l.account_number ?? (l.lot_number ? `Lot ${l.lot_number}` : l.id.slice(0, 8)),
   };
 }
 

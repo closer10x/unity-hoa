@@ -174,7 +174,7 @@ export async function addHomeowner(input: {
         status: ownerProfileId ? "Owner on file" : "No owner linked",
         scope: (lot.community as string) ?? "all",
         flag: ownerProfileId ? "current" : "tenant",
-        account: lot.lot_number ? `Lot ${lot.lot_number}` : (lot.id as string).slice(0, 8),
+        account: (lot.account_number as string | null) ?? (lot.lot_number ? `Lot ${lot.lot_number}` : (lot.id as string).slice(0, 8)),
       },
     };
   } catch (e) {

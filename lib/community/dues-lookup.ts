@@ -22,6 +22,8 @@ export type DuesLine = {
 export type DuesLookupResult =
   | {
       found: true;
+      /** The account number as it is printed, whatever shorthand was typed. */
+      accountNumber: string;
       /** Positive when money is owed, negative when the account is ahead. */
       balanceCents: number;
       balance: string;
@@ -47,9 +49,19 @@ const dateLabel = (iso: string | null) =>
       })
     : "—";
 
-/** Digits only: people type "Lot 42", "#42" and "42" for the same thing. */
+/** Digits only, for the street number. */
 function digits(v: string): string {
   return v.replace(/[^0-9]/g, "");
+}
+
+/**
+ * Account numbers are printed as SL-000042, but people type them however they
+ * remember: with or without the prefix, with or without the dash, and rarely
+ * with the leading zeros. All of those are the same account.
+ */
+function accountKey(v: string): string {
+  const serial = v.trim().toUpperCase().replace(/[^0-9]/g, "").replace(/^0+/, "");
+  return serial;
 }
 
 const NO_MATCH =
@@ -64,7 +76,7 @@ export async function lookupDues(input: {
     if (!isSupabaseConfigured()) {
       return { found: false, reason: NO_MATCH };
     }
-    const account = digits(input.accountNumber);
+    const account = accountKey(input.accountNumber);
     const street = digits(input.streetNumber);
     if (!account || !street) return { found: false, reason: NO_MATCH };
 
@@ -72,14 +84,14 @@ export async function lookupDues(input: {
 
     const { data: lots, error } = await db
       .from("lots")
-      .select("id, lot_number, street_number, community")
+      .select("id, account_number, street_number, community")
       .eq("community", input.community)
       .limit(2000);
     if (error) throw new Error(error.message);
 
     const lot = (lots ?? []).find(
       (l) =>
-        digits(String(l.lot_number ?? "")) === account &&
+        accountKey(String(l.account_number ?? "")) === account &&
         digits(String(l.street_number ?? "")) === street,
     );
     // Same answer whether the lot is unknown or the street number is wrong.
@@ -119,6 +131,7 @@ export async function lookupDues(input: {
 
     return {
       found: true,
+      accountNumber: (lot.account_number as string | null) ?? "",
       balanceCents,
       balance: usd(balanceCents),
       charges,

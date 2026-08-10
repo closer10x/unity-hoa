@@ -97,8 +97,8 @@ export function DuesLookupCard({
         <div>
           <p className={`${EYEBROW} mb-2.5`}>Look up your dues</p>
           <p className="mb-6 text-base leading-relaxed text-on-surface-variant">
-            Pick your community, then enter your account number and street
-            number to see what&apos;s owed.
+            Pick your community, then enter the account number from your
+            statement and your house number to see what&apos;s owed.
           </p>
 
           <form className="grid gap-4" onSubmit={submit}>
@@ -123,7 +123,7 @@ export function DuesLookupCard({
               <input
                 className={FIELD}
                 inputMode="numeric"
-                placeholder="e.g. 40218"
+                placeholder="e.g. SL-000042"
                 value={account}
                 onChange={(e) => setAccount(e.target.value)}
               />
@@ -134,7 +134,7 @@ export function DuesLookupCard({
               <input
                 className={FIELD}
                 inputMode="numeric"
-                placeholder="e.g. 7880"
+                placeholder="e.g. 2177"
                 value={street}
                 onChange={(e) => setStreet(e.target.value)}
               />
@@ -152,8 +152,8 @@ export function DuesLookupCard({
           </form>
 
           <p className="mt-[18px] text-sm leading-relaxed text-on-surface-variant">
-            Your account number is printed on your statement. Registered
-            residents can{" "}
+            Your account number is printed on your statement — it looks like
+            SL-000042. Registered residents can{" "}
             <Link href="/admin/login" className="text-secondary hover:underline">
               sign in
             </Link>{" "}
@@ -177,7 +177,8 @@ export function DuesLookupCard({
                   {communityLabel(community) ?? "Your community"}
                 </p>
                 <p className="mt-1 text-sm text-on-surface-variant">
-                  Account {account.trim()} &middot; {street.trim()}
+                  Account {result.accountNumber || account.trim()} &middot;{" "}
+                  {street.trim()}
                 </p>
               </div>
               <button
