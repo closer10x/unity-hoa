@@ -5,12 +5,7 @@ import * as fx from "./fixtures";
 import { ALL_SECTIONS } from "./permissions";
 import { MOBILE_BREAKPOINT } from "./tokens";
 import type {
-  AddressSuggestion,
-  SignInEvent,
-  StaffRole,
-  ArcApp, AuditEntry, BankAccount, Booking, CalEvent, Community, Delinquent,
-  Director, Doc, Fee, LedgerEntry, LegalCase, Meeting, Owner, Payment,
-  PendingConfirm, Portfolio, ResidentThread, Staff, Vendor, Violation, WorkOrder,
+  AddressSuggestion, ArcApp, AuditEntry, BankAccount, Booking, CalEvent, Community, Delinquent, Director, Doc, Fee, Invoice, LedgerEntry, LegalCase, Meeting, Owner, Payment, PendingConfirm, Portfolio, ResidentThread, SignInEvent, Staff, StaffRole, Vendor, Violation, WorkOrder,
 } from "./types";
 
 /**
@@ -88,6 +83,8 @@ interface Store {
   setLedger: React.Dispatch<React.SetStateAction<LedgerEntry[]>>;
   bankAccounts: BankAccount[];
   setBankAccounts: React.Dispatch<React.SetStateAction<BankAccount[]>>;
+  invoices: Invoice[];
+  setInvoices: React.Dispatch<React.SetStateAction<Invoice[]>>;
   fees: Fee[];
   setFees: React.Dispatch<React.SetStateAction<Fee[]>>;
   /** Set before jumping to Owners to open that owner in focus (search prefilled). */
@@ -148,6 +145,7 @@ export function StoreProvider({
     communities: Community[];
     ledger: LedgerEntry[];
     bankAccounts: BankAccount[];
+    invoices: Invoice[];
     fees: Fee[];
     /** Server-written audit trail (admin_audit_log), newest first. */
     audit: AuditEntry[];
@@ -204,6 +202,7 @@ export function StoreProvider({
   const [customEvents, setCustomEvents] = useState<CalEvent[]>(initialData?.calendar ?? []);
   const [ledger, setLedger] = useState<LedgerEntry[]>(initialData?.ledger ?? []);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(initialData?.bankAccounts ?? []);
+  const [invoices, setInvoices] = useState<Invoice[]>(initialData?.invoices ?? []);
   const [fees, setFees] = useState<Fee[]>(initialData?.fees ?? []);
   const [focusOwnerId, setFocusOwnerId] = useState<string | null>(null);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>(initialData?.audit ?? []);
@@ -256,7 +255,7 @@ export function StoreProvider({
     residentThreads, setResidentThreads,
     customEvents, setCustomEvents,
     ledger, setLedger, bankAccounts, setBankAccounts,
-    fees, setFees, focusOwnerId, setFocusOwnerId,
+    invoices, setInvoices, fees, setFees, focusOwnerId, setFocusOwnerId,
     auditLog, audit, stamp, uid, currentUser: actor, currentRole, isAdministrator, metrics, addressBook, signIns,
     allowedSections: allowed,
   };

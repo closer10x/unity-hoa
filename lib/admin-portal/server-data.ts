@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { loadInvoices } from "./invoice-actions";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -23,6 +24,7 @@ import type {
   Community,
   Doc,
   Fee,
+  Invoice,
   LedgerEntry,
   Mailing,
   Owner,
@@ -55,6 +57,7 @@ export type PortalData = {
   communities: Community[];
   ledger: LedgerEntry[];
   bankAccounts: BankAccount[];
+  invoices: Invoice[];
   audit: AuditEntry[];
   fees: Fee[];
   violations: Violation[];
@@ -95,6 +98,7 @@ const EMPTY: PortalData = {
   addressBook: [],
   ledger: [],
   bankAccounts: [],
+  invoices: [],
   audit: [],
   fees: [],
   metrics: [],
@@ -831,11 +835,12 @@ export async function loadPortalData(): Promise<PortalData> {
 
   /* These four are independent of one another and of everything computed
      below, so they go out together rather than in series. */
-  const [staff, rest, signIns, residentThreads] = await Promise.all([
+  const [staff, rest, signIns, residentThreads, invoices] = await Promise.all([
     loadStaff(db, { employees: empRes.data ?? undefined, profiles: profiles }),
     loadRemainingDomains(db),
     loadSignIns(db),
     loadResidentThreads(db, profiles),
+    loadInvoices(db),
   ]);
 
   const calendar: CalEvent[] = (eventsRes.data ?? []).map((e) => ({
@@ -977,6 +982,7 @@ export async function loadPortalData(): Promise<PortalData> {
     payments,
     communities,
     ...rest,
+    invoices,
     signIns,
     addressBook,
     ledger: accounting.ledger,

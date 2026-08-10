@@ -6,11 +6,15 @@ import {
   addFee, addLedgerEntry, connectBankAccount, deleteLedgerEntry,
   disconnectBankAccount, getBankLinkToken, setFeeActive, syncBankNow, updateFee,
 } from "@/lib/admin-portal/accounting-actions";
+import {
+  createInvoice, recordInvoicePayment, sendInvoice, voidInvoice,
+} from "@/lib/admin-portal/invoice-actions";
 import { CARD_FEE_RATE, DELINQ_STEPS, PAY_METHODS } from "@/lib/admin-portal/actions";
 import { openPlaidLink } from "@/lib/admin-portal/plaid-link";
 import { buildReport } from "@/lib/admin-portal/report-actions";
 import { buildActionMenu, useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
+import { formatUsdFromCents } from "@/lib/format/money";
 import type {
   BankAccount, Fee, LedgerEntry, PendingConfirm, ReportData, ReportType,
 } from "@/lib/admin-portal/types";
@@ -40,6 +44,7 @@ function todayISO(): string {
 const ACCOUNTING_TABS = [
   { id: "overview", label: "Overview" },
   { id: "ledger", label: "General ledger" },
+  { id: "invoices", label: "Invoices" },
   { id: "reports", label: "Reports" },
   { id: "fees", label: "Fee schedule" },
   { id: "bank", label: "Bank accounts" },
@@ -379,9 +384,296 @@ export default function Accounting() {
           <LedgerCard />
         </>
       ) : null}
+      {tab === "invoices" ? <InvoicesCard /> : null}
       {tab === "reports" ? <ReportsCard /> : null}
       {tab === "fees" ? <FeeCard /> : null}
       {tab === "bank" ? <BankCard /> : null}
+    </>
+  );
+}
+
+/* ═══ Invoices ═════════════════════════════════════════════════════════ */
+
+const INVOICE_FILTERS = ["All", "Draft", "Issued", "Overdue", "Paid", "Void"];
+
+function InvoicesCard() {
+  const s = useStore();
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("All");
+  const [drawer, setDrawer] = useState(false);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [note, setNote] = useState("");
+
+  const [lotId, setLotId] = useState("");
+  const [dueOn, setDueOn] = useState("");
+  const [memo, setMemo] = useState("");
+  const [lines, setLines] = useState([{ description: "", amount: "", quantity: "1" }]);
+
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [collecting, setCollecting] = useState<string | null>(null);
+  const [paidOn, setPaidOn] = useState("");
+  const [method, setMethod] = useState("Bank transfer");
+  const [voiding, setVoiding] = useState<string | null>(null);
+  const [voidReason, setVoidReason] = useState("");
+
+  const visible = useSearchFilter(
+    s.invoices, query, ["number", "billTo", "address", "total"],
+    (i) => {
+      if (filter === "All") return true;
+      if (filter === "Draft") return i.status === "draft";
+      if (filter === "Issued") return i.status === "sent";
+      if (filter === "Overdue") return i.overdue;
+      if (filter === "Paid") return i.status === "paid";
+      return i.status === "void";
+    },
+  );
+
+  const owing = s.invoices.filter((i) => i.status === "sent");
+  const owedCents = owing.reduce((t, i) => t + i.totalCents, 0);
+  const overdueCount = s.invoices.filter((i) => i.overdue).length;
+
+  function setLine(idx: number, patch: Partial<{ description: string; amount: string; quantity: string }>) {
+    setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
+  }
+
+  async function save() {
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    setNote("");
+    const res = await createInvoice({ lotId, dueOn, memo, lines });
+    setSaving(false);
+    if (!res.ok) return setError(res.error);
+    s.setInvoices(res.invoices);
+    s.audit(`Invoices: drafted ${res.number}`);
+    setNote(`${res.number} drafted. Issue it when you are ready to bill.`);
+    setLines([{ description: "", amount: "", quantity: "1" }]);
+    setMemo(""); setDueOn("");
+    setDrawer(false);
+  }
+
+  async function issue(id: string, number: string) {
+    setError("");
+    const res = await sendInvoice(id);
+    if (!res.ok) return setError(res.error);
+    s.setInvoices(res.invoices);
+    s.audit(`Invoices: issued ${number}`);
+  }
+
+  async function collect(id: string, number: string) {
+    setError("");
+    const res = await recordInvoicePayment({ id, paidOn, method });
+    setCollecting(null);
+    if (!res.ok) return setError(res.error);
+    s.setInvoices(res.invoices);
+    s.audit(`Invoices: collected ${number}`);
+    setPaidOn("");
+  }
+
+  async function discard(id: string, number: string) {
+    setError("");
+    const res = await voidInvoice({ id, reason: voidReason });
+    if (!res.ok) return setError(res.error);
+    s.setInvoices(res.invoices);
+    s.audit(`Invoices: voided ${number}`);
+    setVoiding(null);
+    setVoidReason("");
+  }
+
+  return (
+    <>
+      <Tiles min={200}>
+        <Tile label="Outstanding" value={formatUsdFromCents(owedCents)}
+          note={owing.length ? `${owing.length} invoice${owing.length === 1 ? "" : "s"} issued and unpaid` : "Nothing outstanding"} />
+        <Tile label="Overdue" value={String(overdueCount)}
+          note={overdueCount ? "Past the due date" : "None past due"} />
+        <Tile label="Invoices" value={String(s.invoices.length)} note="Drafted, issued, collected and void" />
+      </Tiles>
+
+      <Card>
+        <CardHead title="Invoices"
+          meta="Bill a household, then record the payment — issuing posts the charge and collecting posts the ledger entry" />
+
+        <AddDrawer open={drawer}
+          onOpen={() => { setDrawer(true); setError(""); setNote(""); }}
+          onCancel={() => { setDrawer(false); setError(""); }}
+          openLabel="New invoice" title="New invoice">
+          <FieldGrid>
+            <Field label="Bill to" hint="The home this invoice is for">
+              <Select value={lotId} onChange={setLotId} placeholder="Pick a home…"
+                options={s.owners.map((o) => ({
+                  id: o.id,
+                  label: `${o.account} · ${o.name === "Unassigned lot" ? o.address.split("\n")[0] : o.name}`,
+                }))} />
+            </Field>
+            <Field label="Due date"><DateInput value={dueOn} onChange={setDueOn} /></Field>
+          </FieldGrid>
+
+          <div style={{ display: "grid", gap: 10 }}>
+            <span style={{ fontSize: 14, color: color.inkSecondary }}>Lines</span>
+            {s.fees.filter((f) => f.active).length > 0 ? (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {s.fees.filter((f) => f.active).map((f) => (
+                  <Chip key={f.id} size="sm" on={false}
+                    onClick={() => setLines((prev) => {
+                      const next = [...prev];
+                      const blank = next.findIndex((l) => !l.description && !l.amount);
+                      const line = { description: f.name, amount: f.amount.replace(/[^0-9.]/g, ""), quantity: "1" };
+                      if (blank >= 0) next[blank] = line; else next.push(line);
+                      return next;
+                    })}>
+                    {f.name} · {f.amount}
+                  </Chip>
+                ))}
+              </div>
+            ) : null}
+
+            {lines.map((l, i) => (
+              <FieldGrid key={i}>
+                <Field label={i === 0 ? "Description" : ""}>
+                  <Input value={l.description} onChange={(v) => setLine(i, { description: v })} placeholder="e.g. Q3 HOA fee" />
+                </Field>
+                <Field label={i === 0 ? "Quantity" : ""}>
+                  <Input value={l.quantity} onChange={(v) => setLine(i, { quantity: v })} placeholder="1" />
+                </Field>
+                <Field label={i === 0 ? "Amount each" : ""}>
+                  <Input value={l.amount} onChange={(v) => setLine(i, { amount: v })} placeholder="e.g. 375.00" />
+                </Field>
+              </FieldGrid>
+            ))}
+            <TextButton onClick={() => setLines((prev) => [...prev, { description: "", amount: "", quantity: "1" }])}>
+              Add another line
+            </TextButton>
+          </div>
+
+          <Field label="Memo" hint="Appears on the invoice">
+            <Input value={memo} onChange={setMemo} placeholder="Optional" />
+          </Field>
+
+          {error ? <ErrorLine>{error}</ErrorLine> : null}
+          <Primary onClick={save} style={{ justifySelf: "start", opacity: saving ? 0.6 : 1 }}>
+            {saving ? "Saving…" : "Save as draft"}
+          </Primary>
+        </AddDrawer>
+
+        <FilterBar query={query} onQuery={setQuery} placeholder="Search number, household or address…"
+          filters={INVOICE_FILTERS} active={filter} onFilter={setFilter} />
+
+        {note ? <div style={{ padding: `12px ${pad.card}`, fontSize: 14, color: color.accent }}>{note}</div> : null}
+        {error && !drawer ? <div style={{ padding: `12px ${pad.card}` }}><ErrorLine>{error}</ErrorLine></div> : null}
+
+        {visible.length === 0 ? (
+          <Empty>
+            {s.invoices.length === 0
+              ? "No invoices yet. Bill a household and it appears here, then in the ledger once it is collected."
+              : "No invoices match that."}
+          </Empty>
+        ) : visible.map((inv) => (
+          <React.Fragment key={inv.id}>
+            <Row>
+              <Mono size={13} style={{ color: color.neutral }}>{inv.number}</Mono>
+              <RowMain label={inv.billTo} detail={inv.address} />
+              <span>
+                <span style={{ display: "block", fontSize: 14, color: color.inkSecondary }}>Due {inv.due}</span>
+                <Mono size={11} style={{ color: color.inkQuaternary }}>Issued {inv.issued}</Mono>
+              </span>
+              <Mono size={15}>{inv.total}</Mono>
+              <Status tone={
+                inv.status === "paid" ? "positive"
+                  : inv.overdue ? "critical"
+                    : inv.status === "sent" ? "attention"
+                      : "neutral"
+              }>
+                {inv.status === "void" ? "Void"
+                  : inv.status === "paid" ? "Paid"
+                    : inv.overdue ? "Overdue"
+                      : inv.status === "sent" ? "Issued" : "Draft"}
+              </Status>
+              <span style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                <TextButton onClick={() => setOpenId(openId === inv.id ? null : inv.id)}>
+                  {openId === inv.id ? "Close" : "View"}
+                </TextButton>
+                {inv.status === "draft" ? (
+                  <TextButton onClick={() => issue(inv.id, inv.number)}>Issue…</TextButton>
+                ) : null}
+                {inv.status === "sent" ? (
+                  <TextButton onClick={() => { setCollecting(inv.id); setPaidOn(todayISO()); }}>Record payment…</TextButton>
+                ) : null}
+                {inv.status === "draft" || inv.status === "sent" ? (
+                  <TextButton tone="destructive" onClick={() => { setVoiding(inv.id); setVoidReason(""); }}>Void…</TextButton>
+                ) : null}
+              </span>
+            </Row>
+
+            {openId === inv.id ? (
+              <div style={{ padding: `0 ${pad.card} 18px` }}>
+                <div style={{ background: color.surfaceSunken, border: `1px solid ${color.hairline}`, borderRadius: radius.lg, padding: 18, display: "grid", gap: 10 }}>
+                  {inv.lines.map((l) => (
+                    <div key={l.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 14 }}>
+                      <span style={{ color: color.inkSecondary }}>
+                        {l.description}{l.quantity > 1 ? ` × ${l.quantity}` : ""}
+                      </span>
+                      <Mono size={13}>{l.amount}</Mono>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, borderTop: `1px solid ${color.hairlineSoft}`, paddingTop: 10, fontWeight: 600 }}>
+                    <span>Total</span><Mono size={14}>{inv.total}</Mono>
+                  </div>
+                  {inv.memo ? <span style={{ fontSize: 13.5, color: color.inkTertiary }}>{inv.memo}</span> : null}
+                  {inv.paidOn ? <span style={{ fontSize: 13.5, color: color.positive }}>Collected {inv.paidOn}.</span> : null}
+                  {inv.voidReason ? <span style={{ fontSize: 13.5, color: color.inkTertiary }}>Voided — {inv.voidReason}</span> : null}
+                </div>
+              </div>
+            ) : null}
+
+            {collecting === inv.id ? (
+              <div style={{ padding: `0 ${pad.card} 18px` }}>
+                <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: 18, display: "grid", gap: 14 }}>
+                  <span style={{ fontSize: 15, fontWeight: 600 }}>Record payment for {inv.number}</span>
+                  <FieldGrid>
+                    <Field label="Date received"><DateInput value={paidOn} onChange={setPaidOn} /></Field>
+                    <Field label="How it came in">
+                      <Select value={method} onChange={setMethod} options={[
+                        { id: "Bank transfer", label: "Bank transfer" },
+                        { id: "Card", label: "Card" },
+                        { id: "Check", label: "Check" },
+                        { id: "Cash", label: "Cash" },
+                      ]} />
+                    </Field>
+                  </FieldGrid>
+                  <span style={{ fontSize: 13, color: color.inkQuaternary }}>
+                    {inv.total} posts to the ledger against {inv.billTo} and clears their balance.
+                  </span>
+                  <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+                    <Primary onClick={() => collect(inv.id, inv.number)} style={{ justifySelf: "start" }}>
+                      Record {inv.total} received
+                    </Primary>
+                    <TextButton tone="muted" onClick={() => setCollecting(null)}>Cancel</TextButton>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {voiding === inv.id ? (
+              <div style={{ padding: `0 ${pad.card} 18px` }}>
+                <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: 18, display: "grid", gap: 14 }}>
+                  <Field label={`Why is ${inv.number} being voided?`} hint="Stays on the record — an invoice is never deleted">
+                    <Input value={voidReason} onChange={setVoidReason} placeholder="e.g. billed to the wrong home" />
+                  </Field>
+                  <ConfirmBar
+                    text={inv.status === "sent"
+                      ? `Void ${inv.number}? The ${inv.total} charge is reversed with an opposing entry, so the ledger still shows it happened and was undone.`
+                      : `Void ${inv.number}? It was never issued, so nothing is reversed — it stays on the record as void.`}
+                    confirmLabel="Yes, void it"
+                    onCancel={() => setVoiding(null)}
+                    onConfirm={() => discard(inv.id, inv.number)} />
+                </div>
+              </div>
+            ) : null}
+          </React.Fragment>
+        ))}
+      </Card>
     </>
   );
 }

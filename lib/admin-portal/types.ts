@@ -170,6 +170,38 @@ export interface BankAccount {
   status: "active" | "disconnected";
 }
 
+/* ─── Invoices ──────────────────────────────────────────────────────── */
+
+export interface InvoiceLine {
+  id: string;
+  description: string;
+  quantity: number;
+  amount: string;
+  amountCents: number;
+}
+
+export type InvoiceStatus = "draft" | "sent" | "paid" | "void";
+
+export interface Invoice {
+  id: string;
+  number: string;
+  lotId: string | null;
+  billTo: string;
+  address: string;
+  issued: string;
+  due: string;
+  dueOn: string | null;
+  status: InvoiceStatus;
+  /** Issued, past its due date and still unpaid. */
+  overdue: boolean;
+  memo: string;
+  total: string;
+  totalCents: number;
+  paidOn: string | null;
+  voidReason: string | null;
+  lines: InvoiceLine[];
+}
+
 export interface Delinquent {
   id: string; owner: string; address: string; balance: string; stage: string;
 }
