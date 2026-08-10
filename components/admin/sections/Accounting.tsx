@@ -14,14 +14,11 @@ import { openPlaidLink } from "@/lib/admin-portal/plaid-link";
 import { buildReport } from "@/lib/admin-portal/report-actions";
 import { buildActionMenu, useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
-import { formatUsdFromCents } from "@/lib/format/money";
 import type {
   BankAccount, Fee, LedgerEntry, PendingConfirm, ReportData, ReportType,
 } from "@/lib/admin-portal/types";
 import {
-  ActionSelect, AddDrawer, Card, CardHead, Chip, ConfirmBar, DateInput, Empty,
-  ErrorLine, Field, FieldGrid, FilterBar, Input, Mono, PageTitle, Primary, Row,
-  RowMain, Select, Status, TextButton, Tile, Tiles,
+  ActionSelect, AddDrawer, Card, CardHead, Chip, ConfirmBar, DateInput, Empty, ErrorLine, Field, FieldGrid, FilterBar, HomePicker, Input, Mono, PageTitle, Primary, Row, RowMain, Select, Status, TextButton, Tile, Tiles,
 } from "../ui";
 
 const INCOME_CATEGORIES = [
@@ -405,7 +402,7 @@ function InvoicesCard() {
   const [saving, setSaving] = useState(false);
   const [note, setNote] = useState("");
 
-  const [lotId, setLotId] = useState("");
+  const [home, setHome] = useState<{ id: string; label: string } | null>(null);
   const [dueOn, setDueOn] = useState("");
   const [memo, setMemo] = useState("");
   const [lines, setLines] = useState([{ description: "", amount: "", quantity: "1" }]);
@@ -442,14 +439,14 @@ function InvoicesCard() {
     setSaving(true);
     setError("");
     setNote("");
-    const res = await createInvoice({ lotId, dueOn, memo, lines });
+    const res = await createInvoice({ lotId: home?.id ?? "", dueOn, memo, lines });
     setSaving(false);
     if (!res.ok) return setError(res.error);
     s.setInvoices(res.invoices);
     s.audit(`Invoices: drafted ${res.number}`);
     setNote(`${res.number} drafted. Issue it when you are ready to bill.`);
     setLines([{ description: "", amount: "", quantity: "1" }]);
-    setMemo(""); setDueOn("");
+    setMemo(""); setDueOn(""); setHome(null);
     setDrawer(false);
   }
 
@@ -484,7 +481,7 @@ function InvoicesCard() {
   return (
     <>
       <Tiles min={200}>
-        <Tile label="Outstanding" value={formatUsdFromCents(owedCents)}
+        <Tile label="Outstanding" value={usd(owedCents)}
           note={owing.length ? `${owing.length} invoice${owing.length === 1 ? "" : "s"} issued and unpaid` : "Nothing outstanding"} />
         <Tile label="Overdue" value={String(overdueCount)}
           note={overdueCount ? "Past the due date" : "None past due"} />
@@ -500,13 +497,14 @@ function InvoicesCard() {
           onCancel={() => { setDrawer(false); setError(""); }}
           openLabel="New invoice" title="New invoice">
           <FieldGrid>
-            <Field label="Bill to" hint="The home this invoice is for">
-              <Select value={lotId} onChange={setLotId} placeholder="Pick a home…"
-                options={s.owners.map((o) => ({
-                  id: o.id,
-                  label: `${o.account} · ${o.name === "Unassigned lot" ? o.address.split("\n")[0] : o.name}`,
-                }))} />
-            </Field>
+            <HomePicker
+              label="Bill to"
+              hint="Search by owner name, address or account number"
+              value={home}
+              onChange={setHome}
+              homes={s.owners.map((o) => ({
+                id: o.id, name: o.name, address: o.address, account: o.account,
+              }))} />
             <Field label="Due date"><DateInput value={dueOn} onChange={setDueOn} /></Field>
           </FieldGrid>
 
@@ -530,21 +528,39 @@ function InvoicesCard() {
             ) : null}
 
             {lines.map((l, i) => (
-              <FieldGrid key={i}>
-                <Field label={i === 0 ? "Description" : ""}>
-                  <Input value={l.description} onChange={(v) => setLine(i, { description: v })} placeholder="e.g. Q3 HOA fee" />
-                </Field>
-                <Field label={i === 0 ? "Quantity" : ""}>
-                  <Input value={l.quantity} onChange={(v) => setLine(i, { quantity: v })} placeholder="1" />
-                </Field>
-                <Field label={i === 0 ? "Amount each" : ""}>
-                  <Input value={l.amount} onChange={(v) => setLine(i, { amount: v })} placeholder="e.g. 375.00" />
-                </Field>
-              </FieldGrid>
+              <div key={i} style={{ display: "grid", gap: 8 }}>
+                <FieldGrid>
+                  <Field label={i === 0 ? "Description" : ""}>
+                    <Input value={l.description} onChange={(v) => setLine(i, { description: v })} placeholder="e.g. Q3 HOA fee" />
+                  </Field>
+                  <Field label={i === 0 ? "Quantity" : ""}>
+                    <Input value={l.quantity} onChange={(v) => setLine(i, { quantity: v })} placeholder="1" />
+                  </Field>
+                  <Field label={i === 0 ? "Amount each" : ""}>
+                    <Input value={l.amount} onChange={(v) => setLine(i, { amount: v })} placeholder="e.g. 375.00" />
+                  </Field>
+                </FieldGrid>
+                {/* The last line stays: an invoice with nothing on it cannot
+                    be billed, so removing it would only need adding back. */}
+                {lines.length > 1 ? (
+                  <TextButton tone="destructive"
+                    onClick={() => setLines((prev) => prev.filter((_, x) => x !== i))}>
+                    Remove this line
+                  </TextButton>
+                ) : null}
+              </div>
             ))}
-            <TextButton onClick={() => setLines((prev) => [...prev, { description: "", amount: "", quantity: "1" }])}>
-              Add another line
-            </TextButton>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+              <TextButton onClick={() => setLines((prev) => [...prev, { description: "", amount: "", quantity: "1" }])}>
+                Add another line
+              </TextButton>
+              <Mono size={14}>
+                Total {usd(lines.reduce((t, l) => {
+                  const cents = Math.round((parseFloat(l.amount.replace(/[^0-9.]/g, "")) || 0) * 100);
+                  return t + cents * (Math.max(1, parseInt(l.quantity, 10) || 1));
+                }, 0))}
+              </Mono>
+            </div>
           </div>
 
           <Field label="Memo" hint="Appears on the invoice">

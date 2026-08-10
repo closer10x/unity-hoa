@@ -142,6 +142,78 @@ export function Chip({ children, on, onClick, size = "md" }: { children: React.R
   );
 }
 
+/**
+ * Type-to-find picker for a home. A select listing four hundred addresses is
+ * a scroll, not a choice — this matches on owner name, street address or
+ * account number as you type, and shows all three on every result so the
+ * right one is obvious.
+ */
+export function HomePicker({
+  value, onChange, homes, label, hint, placeholder = "Start typing a name, address or account number",
+}: {
+  value: { id: string; label: string } | null;
+  onChange: (v: { id: string; label: string } | null) => void;
+  homes: { id: string; name: string; address: string; account: string }[];
+  label: string;
+  hint?: string;
+  placeholder?: string;
+}) {
+  const [query, setQuery] = React.useState("");
+
+  const matches = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q || value) return [];
+    return homes
+      .filter((h) => `${h.name} ${h.address} ${h.account}`.toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [query, value, homes]);
+
+  return (
+    <div style={{ position: "relative" }}>
+      <Field label={label} hint={hint}>
+        <Input
+          value={value ? value.label : query}
+          placeholder={placeholder}
+          onChange={(v) => { setQuery(v); if (value) onChange(null); }}
+        />
+      </Field>
+
+      {matches.length > 0 ? (
+        <div style={{
+          position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0,
+          background: color.surface, border: `1px solid ${color.borderInput}`,
+          borderRadius: 12, boxShadow: "0 14px 36px oklch(0.4 0.02 150 / 0.12)",
+          padding: 6, zIndex: 20, display: "grid", gap: 2,
+          maxHeight: 280, overflowY: "auto",
+        }}>
+          {matches.map((h) => (
+            <button key={h.id} type="button"
+              onClick={() => {
+                onChange({ id: h.id, label: `${h.account} \u00B7 ${h.name === "Unassigned lot" ? h.address.split("\n")[0] : h.name}` });
+                setQuery("");
+              }}
+              style={{ textAlign: "left", width: "100%", background: "none", border: "none", borderRadius: 8, padding: "10px 12px", font: "inherit", cursor: "pointer", color: "inherit" }}>
+              <span style={{ display: "block", fontSize: 15, fontWeight: 500 }}>
+                {h.name === "Unassigned lot" ? h.address.split("\n")[0] : h.name}
+              </span>
+              <span style={{ display: "block", fontSize: 13, color: color.inkQuaternary, marginTop: 2 }}>
+                {h.address.replace(/\n/g, ", ")} \u00B7 {h.account}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {value ? (
+        <span style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6 }}>
+          <Mono size={12} style={{ color: color.positive }}>Billing {value.label}</Mono>
+          <TextButton tone="muted" onClick={() => { onChange(null); setQuery(""); }}>Change</TextButton>
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 export function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
     <label style={{ display: "block" }}>

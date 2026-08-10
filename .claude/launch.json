@@ -2,15 +2,14 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "unity-hoa-dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 3001,
-      "autoPort": true
+      "name": "unity-hoa",
+      "url": "http://localhost:3001",
+      "port": 3001
     },
     {
-      "name": "unity-hoa-attach",
-      "url": "http://localhost:3001",
+      "name": "unity-hoa-start",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
       "port": 3001
     }
   ]
