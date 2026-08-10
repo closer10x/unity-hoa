@@ -166,6 +166,7 @@ export type Announcement = {
   meta: string;
   title: string;
   body: string;
+  imageUrl: string | null;
 };
 
 /** Notice type id → delivery channels. */

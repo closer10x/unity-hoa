@@ -10,7 +10,7 @@ import type { AnnouncementRow } from "@/lib/types/community";
 
 export type PublicAnnouncement = Pick<
   AnnouncementRow,
-  "id" | "title" | "body" | "published_at"
+  "id" | "title" | "body" | "image_url" | "published_at"
 >;
 
 export type PublicEvent = {
@@ -30,7 +30,7 @@ export async function getPublishedAnnouncements(
     const supabase = requireServiceSupabase();
     const { data, error } = await supabase
       .from("announcements")
-      .select("id, title, body, published_at")
+      .select("id, title, body, image_url, published_at")
       .eq("status", "published")
       .order("published_at", { ascending: false, nullsFirst: false })
       .limit(limit);

@@ -529,7 +529,7 @@ export async function loadResidentData(user: {
   const announcements = await safe([] as Announcement[], async () => {
     const { data, error } = await db
       .from("announcements")
-      .select("id, title, body, published_at")
+      .select("id, title, body, image_url, published_at")
       .eq("status", "published")
       .order("published_at", { ascending: false })
       .limit(12);
@@ -539,6 +539,7 @@ export async function loadResidentData(user: {
       meta: shortDate(r.published_at as string),
       title: (r.title as string) ?? "",
       body: (r.body as string) ?? "",
+      imageUrl: (r.image_url as string | null) ?? null,
     }));
   });
 

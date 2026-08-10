@@ -225,6 +225,14 @@ export default async function HomePage() {
             <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-10">
               {announcements.map((a) => (
                 <div key={a.id}>
+                  {a.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={a.image_url}
+                      alt=""
+                      className="mb-4 aspect-[16/9] w-full rounded-[14px] border border-outline-variant object-cover"
+                    />
+                  ) : null}
                   <p className="mb-2.5 font-label text-xs text-outline">
                     {formatShortDate(a.published_at) ?? "Announcement"}
                   </p>

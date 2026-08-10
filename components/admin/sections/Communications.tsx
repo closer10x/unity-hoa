@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  countAnnouncementAudience, deleteAnnouncement, listAnnouncements, sendAnnouncement,
-  unpublishAnnouncement, updateAnnouncement,
+  approveAnnouncement, countAnnouncementAudience, deleteAnnouncement, listAnnouncements,
+  rejectAnnouncement, type SentAnnouncement, submitAnnouncement, unpublishAnnouncement,
+  updateAnnouncement, uploadAnnouncementImage,
 } from "@/lib/admin-portal/announcement-actions";
 import {
   replyToResidentThread, setResidentThreadStatus,
@@ -384,12 +385,61 @@ export default function Communications() {
   const [sent, setSent] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
-  const [history, setHistory] = useState<
-    { id: string; date: string; subject: string; body: string; meta: string }[]
-  >([]);
+  const [history, setHistory] = useState<SentAnnouncement[]>([]);
+  const [viewerIsOwner, setViewerIsOwner] = useState(false);
   const [allCount, setAllCount] = useState<number | null>(null);
   const [unpublishing, setUnpublishing] = useState<string | null>(null);
   const [composeOpen, setComposeOpen] = useState(true);
+
+  /* Optional image behind the announcement — uploaded to the public bucket the
+     moment it's chosen, so by send time we already hold a stable URL. */
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageError, setImageError] = useState("");
+
+  /* Optional schedule. A datetime-local string; empty means "send now". */
+  const [scheduleOn, setScheduleOn] = useState(false);
+  const [scheduleAt, setScheduleAt] = useState("");
+
+  /* Owner approval queue actions. */
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+
+  async function uploadImage(file: File | undefined) {
+    if (!file) return;
+    setImageError("");
+    setImageUploading(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await uploadAnnouncementImage(fd);
+    setImageUploading(false);
+    if (!res.ok) return setImageError(res.error);
+    setImageUrl(res.url);
+  }
+
+  async function refreshHistory() {
+    const r = await listAnnouncements();
+    if (r.ok) { setHistory(r.sent); setViewerIsOwner(r.viewerIsOwner); }
+  }
+
+  async function approve(id: string, subject: string) {
+    if (approvingId) return;
+    setApprovingId(id);
+    const res = await approveAnnouncement(id);
+    setApprovingId(null);
+    if (!res.ok) return setWarnings([res.error]);
+    await refreshHistory();
+    s.audit(`Communications: approved announcement “${subject}”`);
+  }
+
+  async function decline(id: string, subject: string) {
+    if (approvingId) return;
+    setApprovingId(id);
+    const res = await rejectAnnouncement(id);
+    setApprovingId(null);
+    if (!res.ok) return setWarnings([res.error]);
+    setHistory((prev) => prev.filter((h) => h.id !== id));
+    s.audit(`Communications: declined announcement “${subject}”`);
+  }
 
   /* Inline edit of a sent announcement: which row is open and its draft. */
   const [editId, setEditId] = useState<string | null>(null);
@@ -427,8 +477,7 @@ export default function Communications() {
     const res = await unpublishAnnouncement(id);
     setUnpublishing(null);
     if (!res.ok) return setWarnings([res.error]);
-    const refreshed = await listAnnouncements();
-    if (refreshed.ok) setHistory(refreshed.sent);
+    await refreshHistory();
     s.audit(`Communications: unpublished announcement “${subject}”`);
   }
 
@@ -448,7 +497,9 @@ export default function Communications() {
 
   useEffect(() => {
     let alive = true;
-    listAnnouncements().then((r) => { if (alive && r.ok) setHistory(r.sent); });
+    listAnnouncements().then((r) => {
+      if (alive && r.ok) { setHistory(r.sent); setViewerIsOwner(r.viewerIsOwner); }
+    });
     countAnnouncementAudience("all").then((r) => {
       if (alive && r.ok) setAllCount(r.households);
     });
@@ -462,7 +513,7 @@ export default function Communications() {
     { id: "board", label: "Board members", count: s.directors.length },
   ];
 
-  async function send() {
+  async function submit() {
     if (sending) return;
     if (!subject.trim()) return setError("Give the announcement a subject.");
     if (!body.trim()) return setError("Write the message.");
@@ -470,21 +521,40 @@ export default function Communications() {
     if (active.length === 0) return setError("Pick at least one channel.");
     const a = audiences.find((x) => x.id === audience)!;
 
+    // A schedule that's toggled on but empty, or set to the past, is a mistake
+    // worth catching before the row is written.
+    let scheduledFor: string | null = null;
+    if (scheduleOn) {
+      if (!scheduleAt) return setError("Pick the date and time to send it, or turn scheduling off.");
+      const when = new Date(scheduleAt);
+      if (Number.isNaN(when.getTime())) return setError("That schedule time isn't valid.");
+      if (when.getTime() < Date.now()) return setError("That time is in the past \u2014 pick a future time.");
+      scheduledFor = when.toISOString();
+    }
+
     setSending(true);
     setError("");
     setSent("");
     setWarnings([]);
-    const res = await sendAnnouncement({
+    const res = await submitAnnouncement({
       subject, body, audience, audienceLabel: a.label, channels,
+      imageUrl, scheduledFor,
     });
     setSending(false);
     if (!res.ok) return setError(res.error);
     setSent(res.summary);
     setWarnings(res.warnings);
-    s.audit(`Sent announcement \u201C${subject.trim()}\u201D to ${a.label.toLowerCase()}`);
-    const refreshed = await listAnnouncements();
-    if (refreshed.ok) setHistory(refreshed.sent);
+    s.audit(
+      res.status === "pending"
+        ? `Communications: submitted announcement \u201C${subject.trim()}\u201D for approval`
+        : res.status === "scheduled"
+          ? `Communications: scheduled announcement \u201C${subject.trim()}\u201D`
+          : `Sent announcement \u201C${subject.trim()}\u201D to ${a.label.toLowerCase()}`,
+    );
+    await refreshHistory();
     setSubject(""); setBody("");
+    setImageUrl(null); setImageError("");
+    setScheduleOn(false); setScheduleAt("");
   }
 
   return (
@@ -492,7 +562,7 @@ export default function Communications() {
       <PageTitle title="Communications" lede="Resident conversations, and announcements to owners by email, text and the portal." />
       <ResidentInbox />
       <Card>
-        <CardHead title="New announcement" meta={composeOpen ? undefined : "Collapsed"}>
+        <CardHead title="New announcement">
           <TextButton tone="muted" onClick={() => setComposeOpen((o) => !o)}>
             {composeOpen ? "Collapse" : "New announcement"}
           </TextButton>
@@ -501,6 +571,45 @@ export default function Communications() {
         <div style={{ padding: 24, display: "grid", gap: 16, maxWidth: 760 }}>
           <Field label="Subject"><Input value={subject} onChange={setSubject} placeholder="e.g. Water shut-off Thursday" /></Field>
           <Field label="Message"><Area value={body} onChange={setBody} rows={4} placeholder="Plain language. Lead with what changes and when." /></Field>
+
+          <div style={{ display: "grid", gap: 10 }}>
+            <span style={{ fontSize: 14, color: color.inkSecondary }}>Image (optional)</span>
+            {imageUrl ? (
+              <div style={{ display: "grid", gap: 10, justifyItems: "start" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imageUrl}
+                  alt=""
+                  style={{
+                    width: "100%", maxWidth: 360, aspectRatio: "16 / 9", objectFit: "cover",
+                    borderRadius: radius.lg, border: `1px solid ${color.hairline}`,
+                  }}
+                />
+                <TextButton tone="destructive" onClick={() => { setImageUrl(null); setImageError(""); }}>
+                  Remove image
+                </TextButton>
+              </div>
+            ) : (
+              <label
+                style={{
+                  border: `1px dashed oklch(0.82 0.014 145)`, borderRadius: radius.md,
+                  padding: 18, textAlign: "center", cursor: imageUploading ? "default" : "pointer",
+                  fontFamily: font.mono, fontSize: 13, color: color.inkQuaternary,
+                }}
+              >
+                {imageUploading ? "Uploading…" : "Add a photo or graphic — JPG, PNG, WebP or GIF, up to 8 MB"}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  disabled={imageUploading}
+                  onChange={(e) => uploadImage(e.target.files?.[0])}
+                  style={{ display: "none" }}
+                />
+              </label>
+            )}
+            {imageError ? <ErrorLine>{imageError}</ErrorLine> : null}
+          </div>
+
           <div style={{ display: "grid", gap: 10 }}>
             <span style={{ fontSize: 14, color: color.inkSecondary }}>Audience</span>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -520,33 +629,102 @@ export default function Communications() {
               Text messages reach only residents who have opted in.
             </span>
           </div>
+
+          <div style={{ display: "grid", gap: 10 }}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+              <span style={{ fontSize: 14, color: color.inkSecondary }}>When</span>
+              <Chip on={!scheduleOn} onClick={() => setScheduleOn(false)}>Send now</Chip>
+              <Chip on={scheduleOn} onClick={() => setScheduleOn(true)}>Schedule</Chip>
+            </div>
+            {scheduleOn ? (
+              <input
+                type="datetime-local"
+                value={scheduleAt}
+                onChange={(e) => setScheduleAt(e.target.value)}
+                style={{
+                  justifySelf: "start", font: "inherit", fontFamily: font.mono, fontSize: 14,
+                  color: color.ink, background: color.surfaceSunken,
+                  border: `1px solid ${color.borderInput}`, borderRadius: 10, padding: "10px 12px",
+                }}
+              />
+            ) : null}
+            {scheduleOn ? (
+              <span style={{ fontSize: 13, color: color.inkQuaternary }}>
+                It goes out automatically at that time (Central). Nothing is sent until then.
+              </span>
+            ) : null}
+          </div>
+
+          {!viewerIsOwner ? (
+            <span style={{ fontSize: 13, color: color.attention }}>
+              Your announcements go to an Owner to approve before they\u2019re sent.
+            </span>
+          ) : null}
           {error ? <ErrorLine>{error}</ErrorLine> : null}
           {sent ? <p style={{ fontSize: 14, color: color.accent, margin: 0 }}>{sent}</p> : null}
           {warnings.map((w) => (
             <p key={w} style={{ fontSize: 14, color: color.attention, margin: 0 }}>{w}</p>
           ))}
-          <Primary onClick={send} style={{ justifySelf: "start", opacity: sending ? 0.6 : 1 }}>
-            {sending ? "Sending\u2026" : "Send announcement"}
+          <Primary onClick={submit} style={{ justifySelf: "start", opacity: sending || imageUploading ? 0.6 : 1 }}>
+            {sending
+              ? "Working\u2026"
+              : !viewerIsOwner
+                ? "Submit for approval"
+                : scheduleOn
+                  ? "Schedule announcement"
+                  : "Send announcement"}
           </Primary>
         </div>
         ) : null}
       </Card>
 
+      {history.some((h) => h.isPending) ? (
+        <Card>
+          <CardHead
+            title="Awaiting approval"
+            meta={viewerIsOwner
+              ? "Announcements from staff, waiting for you to release"
+              : "Your announcements, waiting for an Owner to release"}
+          />
+          {history.filter((h) => h.isPending).map((h) => (
+            <Row key={h.id} style={{ alignItems: "baseline" }}>
+              <Mono size={13} style={{ color: color.neutral }}>{h.date}</Mono>
+              <RowMain
+                label={h.subject}
+                detail={[h.channels, h.audienceLabel, h.scheduledFor].filter(Boolean).join(" · ")}
+              />
+              <Mono size={12} style={{ color: color.inkQuaternary }}>from {h.authorName ?? "staff"}</Mono>
+              {viewerIsOwner ? (
+                <span style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", gridColumn: "-2 / -1", justifySelf: "end" }}>
+                  <Primary
+                    onClick={() => approve(h.id, h.subject)}
+                    style={{ padding: "8px 16px", fontSize: 13, opacity: approvingId === h.id ? 0.6 : 1 }}
+                  >
+                    {approvingId === h.id ? "Working…" : h.scheduledFor ? "Approve & schedule" : "Approve & send"}
+                  </Primary>
+                  <TextButton tone="destructive" onClick={() => decline(h.id, h.subject)}>Decline</TextButton>
+                </span>
+              ) : (
+                <Status tone="attention">Pending</Status>
+              )}
+            </Row>
+          ))}
+        </Card>
+      ) : null}
+
       <Card>
-        <CardHead title="Sent history" meta="Announcements that have actually gone out" />
-        {history.length === 0 ? (
+        <CardHead title="Announcements" meta="Sent, scheduled, and posted — newest first" />
+        {history.filter((h) => !h.isPending).length === 0 ? (
           <Empty>Nothing sent yet. Announcements you send appear here.</Empty>
-        ) : history.map((h) => {
-          const isPosted = h.meta === "Posted to the resident portal";
+        ) : history.filter((h) => !h.isPending).map((h) => {
+          const isPosted = h.isPosted;
           return (
             <React.Fragment key={h.id}>
               <Row>
                 <Mono size={13} style={{ color: color.neutral }}>{h.date}</Mono>
                 <RowMain label={h.subject} detail={h.meta} />
-                {isPosted ? null : (
-                  <Mono size={12} style={{ color: color.inkQuaternary }}>Not on the portal</Mono>
-                )}
-                <span style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                <Mono size={12} style={{ color: color.inkQuaternary }}>{h.channels}</Mono>
+                <span style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", gridColumn: "-2 / -1", justifySelf: "end" }}>
                   <TextButton tone="muted" onClick={() => openEdit(h)}>
                     {editId === h.id ? "Close" : "Edit"}
                   </TextButton>

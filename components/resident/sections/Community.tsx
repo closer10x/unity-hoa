@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 
 import { useResident } from "@/lib/resident-portal/store";
-import { color, pad } from "@/lib/admin-portal/tokens";
+import { color, pad, radius } from "@/lib/admin-portal/tokens";
 import {
   Card, CardHead, Chip, Empty, Mono, PageTitle, Row, RowMain, TextButton,
 } from "@/components/admin/ui";
@@ -64,6 +64,18 @@ export default function Community() {
           s.announcements.map((a) => (
             <div key={a.id} style={{ padding: `18px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, display: "grid", gap: 6 }}>
               <Mono size={12} style={{ color: color.inkQuaternary }}>{a.meta}</Mono>
+              {a.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={a.imageUrl}
+                  alt=""
+                  style={{
+                    width: "100%", maxWidth: 520, aspectRatio: "16 / 9",
+                    objectFit: "cover", borderRadius: radius.lg,
+                    border: `1px solid ${color.hairline}`, margin: "2px 0 6px",
+                  }}
+                />
+              ) : null}
               <span style={{ fontSize: 16, fontWeight: 500 }}>{a.title}</span>
               <span style={{ fontSize: 14, lineHeight: 1.6, color: color.inkTertiary }}>{a.body}</span>
             </div>
