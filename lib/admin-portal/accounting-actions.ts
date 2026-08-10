@@ -190,6 +190,62 @@ export async function addFee(input: {
   }
 }
 
+/**
+ * Changing a fee changes what gets quoted from here on. Amounts already
+ * posted to a ledger are untouched — those are what was actually charged,
+ * and rewriting history would put the books out of step with the notices
+ * that went out.
+ */
+export async function updateFee(input: {
+  id: string;
+  name: string;
+  amount: string;
+  category: string;
+}): Promise<Ok<{ fees: Fee[] }> | Fail> {
+  try {
+    const { db, actorName, actorId } = await adminContext();
+
+    const name = input.name.trim();
+    if (!name) return { ok: false, error: "Name the fee — it appears on forms exactly as written." };
+    const cents = parseDollarsToCents(input.amount);
+    if (cents == null || cents < 0) return { ok: false, error: "Enter the fee amount." };
+
+    const { data: before, error: readErr } = await db
+      .from("fee_schedule")
+      .select("name, amount_cents, category")
+      .eq("id", input.id)
+      .maybeSingle();
+    if (readErr) throw new Error(readErr.message);
+    if (!before) return { ok: false, error: "That fee no longer exists." };
+
+    const category = input.category.trim() || "Other income";
+    const { error } = await db
+      .from("fee_schedule")
+      .update({ name, amount_cents: cents, category })
+      .eq("id", input.id);
+    if (error) throw new Error(error.message);
+
+    const changes: string[] = [];
+    if (before.name !== name) changes.push(`name \u2192 ${name}`);
+    if (before.amount_cents !== cents) {
+      changes.push(`${usd(before.amount_cents)} \u2192 ${usd(cents)}`);
+    }
+    if ((before.category ?? "") !== category) changes.push(`category \u2192 ${category}`);
+
+    await writeAudit(
+      db,
+      `Fee schedule: updated ${before.name}${changes.length ? ` \u2014 ${changes.join(", ")}` : " \u2014 no change"}`,
+      actorName,
+      actorId,
+    );
+    revalidatePath("/admin");
+    revalidatePath("/portal");
+    return { ok: true, fees: await loadFees(db) };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 /** Fees retire rather than delete, so old ledger references keep meaning. */
 export async function setFeeActive(
   id: string,

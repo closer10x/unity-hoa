@@ -4,13 +4,13 @@ import React, { useMemo, useState } from "react";
 import { AGING, BUDGET } from "@/lib/admin-portal/fixtures";
 import {
   addFee, addLedgerEntry, connectBankAccount, deleteLedgerEntry,
-  disconnectBankAccount, getBankLinkToken, setFeeActive, syncBankNow,
+  disconnectBankAccount, getBankLinkToken, setFeeActive, syncBankNow, updateFee,
 } from "@/lib/admin-portal/accounting-actions";
 import { CARD_FEE_RATE, DELINQ_STEPS, PAY_METHODS } from "@/lib/admin-portal/actions";
 import { openPlaidLink } from "@/lib/admin-portal/plaid-link";
 import { buildReport } from "@/lib/admin-portal/report-actions";
 import { buildActionMenu, useSearchFilter, useStore } from "@/lib/admin-portal/store";
-import { color, font, radius } from "@/lib/admin-portal/tokens";
+import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
 import type {
   BankAccount, Fee, LedgerEntry, PendingConfirm, ReportData, ReportType,
 } from "@/lib/admin-portal/types";
@@ -928,6 +928,27 @@ function FeeCard() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [confirmRetire, setConfirmRetire] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [ef, setEf] = useState({ name: "", amount: "", category: INCOME_CATEGORIES[0] });
+
+  function openEdit(f: Fee) {
+    if (editId === f.id) { setEditId(null); return; }
+    setEditId(f.id);
+    setError("");
+    setEf({ name: f.name, amount: f.amount.replace(/[^0-9.]/g, ""), category: f.category });
+  }
+
+  async function saveEdit(f: Fee) {
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    const res = await updateFee({ id: f.id, name: ef.name, amount: ef.amount, category: ef.category });
+    setSaving(false);
+    if (!res.ok) return setError(res.error);
+    s.setFees(res.fees);
+    s.audit(`Fee schedule: updated ${f.name}`);
+    setEditId(null);
+  }
 
   async function save() {
     if (saving) return;
@@ -1019,12 +1040,36 @@ function FeeCard() {
             <RowMain label={f.name} detail={`Books to ${f.category}`} />
             <Mono size={15}>{f.amount}</Mono>
             <Status tone={f.active ? "positive" : "neutral"}>{f.active ? "Active" : "Retired"}</Status>
-            {f.active ? (
-              <TextButton tone="destructive" onClick={() => setConfirmRetire(f.id)}>Retire…</TextButton>
-            ) : (
-              <TextButton onClick={() => toggle(f)}>Restore</TextButton>
-            )}
+            <span style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <TextButton onClick={() => openEdit(f)}>{editId === f.id ? "Close" : "Edit"}</TextButton>
+              {f.active ? (
+                <TextButton tone="destructive" onClick={() => setConfirmRetire(f.id)}>Retire…</TextButton>
+              ) : (
+                <TextButton onClick={() => toggle(f)}>Restore</TextButton>
+              )}
+            </span>
           </Row>
+
+          {editId === f.id ? (
+            <div style={{ padding: `0 ${pad.card} 18px` }}>
+              <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: 18, display: "grid", gap: 14 }}>
+                <FieldGrid>
+                  <Field label="Fee name"><Input value={ef.name} onChange={(v) => setEf({ ...ef, name: v })} /></Field>
+                  <Field label="Amount"><Input value={ef.amount} onChange={(v) => setEf({ ...ef, amount: v })} placeholder="e.g. 375.00" /></Field>
+                  <Field label="Books to">
+                    <Select value={ef.category} onChange={(v) => setEf({ ...ef, category: v })}
+                      options={INCOME_CATEGORIES.map((c) => ({ id: c, label: c }))} />
+                  </Field>
+                </FieldGrid>
+                <span style={{ fontSize: 13, color: color.inkQuaternary }}>
+                  Changes what gets quoted from here on. Amounts already posted to the ledger stay as they were charged.
+                </span>
+                <Primary onClick={() => saveEdit(f)} style={{ justifySelf: "start", opacity: saving ? 0.6 : 1 }}>
+                  {saving ? "Saving\u2026" : "Save fee"}
+                </Primary>
+              </div>
+            </div>
+          ) : null}
           {confirmRetire === f.id ? (
             <ConfirmBar
               text={`Retire ${f.name} (${f.amount})? It disappears from the quick-picks; ledger entries that already reference it are untouched.`}
