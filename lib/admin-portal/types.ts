@@ -68,6 +68,8 @@ export interface Minutes {
 
 export interface Director {
   id: string; name: string; role: string; address: string; term: string;
+  /** Which community's board this seat belongs to. */
+  community: string;
   /** ISO end date when the seat has been closed out; null while seated. */
   termEnd: string | null;
 }

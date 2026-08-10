@@ -226,6 +226,7 @@ type DirectorRow = {
   id: string;
   name: string;
   role: string | null;
+  community: string | null;
   street_number: string | null;
   street_name: string | null;
   unit: string | null;
@@ -249,6 +250,7 @@ function toDirector(d: DirectorRow): Director {
     id: d.id,
     name: d.name,
     role: d.role ?? "Director",
+    community: d.community ?? "",
     address:
       [
         [d.street_number, d.street_name].filter(Boolean).join(" "),
@@ -279,6 +281,7 @@ function toTermDate(raw: string, edge: "start" | "end"): string | null {
 export async function seatDirector(input: {
   name: string;
   role: string;
+  community: string;
   streetNumber: string;
   streetName: string;
   unit: string;

@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { BoardRoster } from "@/components/site/BoardRoster";
 import { PageIntro, SECTION_COL, SECTION_PAD } from "@/components/site/PageIntro";
+import { loadBoard } from "@/lib/site/board";
 
 export const metadata: Metadata = { title: "Governance" };
+
+/* The roster is read from the directors the office seats, so the page has to
+   re-render when a seat changes — but it is a public marketing page that
+   should stay fast, so it revalidates on a timer rather than per request. */
+export const revalidate = 300;
 
 const DOCUMENTS = [
   { title: "Declaration of Covenants, Conditions & Restrictions", meta: "PDF" },
@@ -21,14 +28,8 @@ const ARC_STEPS = [
   { n: "04", label: "Close out", detail: "tell us when work finishes so the file can be closed." },
 ] as const;
 
-const BOARD = [
-  { name: "Phillip Dautrich", role: "President", note: "Volunteer homeowner, elected by the membership" },
-  { name: "William Robert Jackson", role: "Vice president", note: "Volunteer homeowner, elected by the membership" },
-  { name: "Renee Alvarado", role: "Treasurer", note: "Volunteer homeowner, elected by the membership" },
-  { name: "Susan Ngo", role: "Secretary", note: "Volunteer homeowner, elected by the membership" },
-] as const;
-
-export default function GovernancePage() {
+export default async function GovernancePage() {
+  const board = await loadBoard();
   return (
     <main>
       <PageIntro
@@ -125,23 +126,11 @@ export default function GovernancePage() {
               Your board
             </h2>
             <span className="font-label text-xs text-outline">
-              Elected annually · terms run through the annual meeting
+              Elected every five years · terms run through the annual meeting
             </span>
           </div>
 
-          <div className="mb-8 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] justify-items-start gap-8">
-            {BOARD.map((m) => (
-              <div key={m.name}>
-                <p className="text-base font-medium">{m.name}</p>
-                <p className="font-label text-xs text-secondary-muted">
-                  {m.role}
-                </p>
-                <p className="mt-1.5 text-sm text-on-surface-variant">
-                  {m.note}
-                </p>
-              </div>
-            ))}
-          </div>
+          <BoardRoster community="Sofi Lakes" members={board} />
 
           <p className="max-w-[70ch] text-[15px] leading-relaxed text-on-surface-variant text-pretty">
             The board meets monthly; the schedule and location are posted with
