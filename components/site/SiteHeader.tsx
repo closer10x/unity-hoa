@@ -37,7 +37,10 @@ export function SiteHeader() {
   }, [navOpen]);
 
   return (
-    <header className="sticky top-0 z-20 border-b border-outline-variant bg-surface px-4 py-4 sm:px-6 md:px-8">
+    /* Frosted: the page shows through as it scrolls under. The opaque
+       background stays for anything without backdrop-filter, so the nav is
+       never unreadable text floating over photography. */
+    <header className="sticky top-0 z-20 border-b border-outline-variant bg-surface px-4 py-4 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-surface/65 sm:px-6 md:px-8">
       <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center justify-between gap-6">
         <Link href="/" className="flex flex-none items-center">
           <img
