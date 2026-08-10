@@ -199,6 +199,8 @@ export interface Invoice {
   totalCents: number;
   paidOn: string | null;
   voidReason: string | null;
+  /** The account that raised it, so anyone reading the row knows who to ask. */
+  createdBy: string;
   lines: InvoiceLine[];
 }
 

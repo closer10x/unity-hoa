@@ -7,7 +7,7 @@ import {
   disconnectBankAccount, getBankLinkToken, setFeeActive, syncBankNow, updateFee,
 } from "@/lib/admin-portal/accounting-actions";
 import {
-  createInvoice, recordInvoicePayment, sendInvoice, voidInvoice,
+  createInvoice, recordInvoicePayment, sendInvoice, updateInvoice, voidInvoice,
 } from "@/lib/admin-portal/invoice-actions";
 import { CARD_FEE_RATE, DELINQ_STEPS, PAY_METHODS } from "@/lib/admin-portal/actions";
 import { openPlaidLink } from "@/lib/admin-portal/plaid-link";
@@ -15,7 +15,7 @@ import { buildReport } from "@/lib/admin-portal/report-actions";
 import { buildActionMenu, useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
 import type {
-  BankAccount, Fee, LedgerEntry, PendingConfirm, ReportData, ReportType,
+  BankAccount, Fee, Invoice, LedgerEntry, PendingConfirm, ReportData, ReportType,
 } from "@/lib/admin-portal/types";
 import {
   ActionSelect, AddDrawer, Card, CardHead, Chip, ConfirmBar, DateInput, Empty, ErrorLine, Field, FieldGrid, FilterBar, HomePicker, Input, Mono, PageTitle, Primary, Row, RowMain, Select, Status, TextButton, Tile, Tiles,
@@ -50,8 +50,12 @@ type AccountingTab = (typeof ACCOUNTING_TABS)[number]["id"];
 
 export default function Accounting() {
   const s = useStore();
-  /* Issued and not yet collected — what the office still has to chase. */
-  const outstandingCount = s.invoices.filter((i) => i.status === "sent").length;
+  /* Anything still wanting the office's attention: a draft waiting to be
+     issued, or an issued invoice waiting to be collected. A paid or void one
+     is finished with. */
+  const outstandingCount = s.invoices.filter(
+    (i) => i.status === "draft" || i.status === "sent",
+  ).length;
 
   /* ----- take a payment (collapsed at the top; product rule 1) ----- */
   const [open, setOpen] = useState(false);
@@ -455,6 +459,42 @@ function InvoicesCard() {
   }
   const [voiding, setVoiding] = useState<string | null>(null);
   const [voidReason, setVoidReason] = useState("");
+  const [editing, setEditing] = useState<string | null>(null);
+  const [eDue, setEDue] = useState("");
+  const [eMemo, setEMemo] = useState("");
+  const [eLines, setELines] = useState([{ description: "", amount: "", quantity: "1" }]);
+
+  function openEdit(inv: Invoice) {
+    if (editing === inv.id) { setEditing(null); return; }
+    setEditing(inv.id);
+    setError("");
+    setEDue(inv.dueOn ?? "");
+    setEMemo(inv.memo);
+    setELines(
+      inv.lines.length
+        ? inv.lines.map((l) => ({
+            description: l.description,
+            quantity: String(l.quantity),
+            amount: (l.amountCents / 100 / Math.max(1, l.quantity)).toFixed(2),
+          }))
+        : [{ description: "", amount: "", quantity: "1" }],
+    );
+  }
+
+  async function saveEdit(inv: Invoice) {
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    const res = await updateInvoice({
+      id: inv.id, dueOn: eDue, memo: eMemo,
+      lines: eLines,
+    });
+    setSaving(false);
+    if (!res.ok) return setError(res.error);
+    s.setInvoices(res.invoices);
+    s.audit(`Invoices: edited ${inv.number}`);
+    setEditing(null);
+  }
 
   const visible = useSearchFilter(
     s.invoices, query, ["number", "billTo", "address", "total"],
@@ -668,6 +708,11 @@ function InvoicesCard() {
                 <TextButton onClick={() => setOpenId(openId === inv.id ? null : inv.id)}>
                   {openId === inv.id ? "Close" : "View"}
                 </TextButton>
+                {inv.status === "draft" || inv.status === "sent" ? (
+                  <TextButton onClick={() => openEdit(inv)}>
+                    {editing === inv.id ? "Close" : "Edit"}
+                  </TextButton>
+                ) : null}
                 {inv.status === "draft" ? (
                   <TextButton onClick={() => issue(inv.id, inv.number)}>Issue…</TextButton>
                 ) : null}
@@ -695,8 +740,66 @@ function InvoicesCard() {
                     <span>Total</span><Mono size={14}>{inv.total}</Mono>
                   </div>
                   {inv.memo ? <span style={{ fontSize: 13.5, color: color.inkTertiary }}>{inv.memo}</span> : null}
+                  <Mono size={12} style={{ color: color.inkQuaternary }}>
+                    Raised by {inv.createdBy} · issued {inv.issued}
+                  </Mono>
                   {inv.paidOn ? <span style={{ fontSize: 13.5, color: color.positive }}>Collected {inv.paidOn}.</span> : null}
                   {inv.voidReason ? <span style={{ fontSize: 13.5, color: color.inkTertiary }}>Voided — {inv.voidReason}</span> : null}
+                </div>
+              </div>
+            ) : null}
+
+            {editing === inv.id ? (
+              <div style={{ padding: `0 ${pad.card} 18px` }}>
+                <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: 18, display: "grid", gap: 14 }}>
+                  <span style={{ fontSize: 15, fontWeight: 600 }}>Edit {inv.number}</span>
+
+                  <FieldGrid>
+                    <Field label="Due date"><DateInput value={eDue} onChange={setEDue} /></Field>
+                    <Field label="Memo"><Input value={eMemo} onChange={setEMemo} placeholder="Optional" /></Field>
+                  </FieldGrid>
+
+                  <div style={{ display: "grid", gap: 10 }}>
+                      <span style={{ fontSize: 14, color: color.inkSecondary }}>Lines</span>
+                      {eLines.map((l, i) => (
+                        <div key={i} style={{ display: "grid", gap: 8 }}>
+                          <FieldGrid>
+                            <Field label={i === 0 ? "Description" : ""}>
+                              <Input value={l.description} onChange={(v) => setELines((prev) => prev.map((x, n) => n === i ? { ...x, description: v } : x))} />
+                            </Field>
+                            <Field label={i === 0 ? "Quantity" : ""}>
+                              <Input value={l.quantity} onChange={(v) => setELines((prev) => prev.map((x, n) => n === i ? { ...x, quantity: v } : x))} />
+                            </Field>
+                            <Field label={i === 0 ? "Amount each" : ""}>
+                              <Input value={l.amount} onChange={(v) => setELines((prev) => prev.map((x, n) => n === i ? { ...x, amount: v } : x))} />
+                            </Field>
+                          </FieldGrid>
+                          {eLines.length > 1 ? (
+                            <TextButton tone="destructive" onClick={() => setELines((prev) => prev.filter((_, n) => n !== i))}>
+                              Remove this line
+                            </TextButton>
+                          ) : null}
+                        </div>
+                      ))}
+                      <TextButton onClick={() => setELines((prev) => [...prev, { description: "", amount: "", quantity: "1" }])}>
+                        Add another line
+                      </TextButton>
+                    </div>
+
+                  {inv.status === "sent" ? (
+                    <span style={{ fontSize: 13, lineHeight: 1.6, color: color.attention }}>
+                      {inv.number} has already been issued. Changing what it bills is
+                      recorded in the audit trail with the old and new figures — if a
+                      notice went out at {inv.total}, send the household the corrected one.
+                    </span>
+                  ) : null}
+
+                  <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+                    <Primary onClick={() => saveEdit(inv)} style={{ justifySelf: "start", opacity: saving ? 0.6 : 1 }}>
+                      {saving ? "Saving…" : "Save changes"}
+                    </Primary>
+                    <TextButton tone="muted" onClick={() => setEditing(null)}>Cancel</TextButton>
+                  </div>
                 </div>
               </div>
             ) : null}

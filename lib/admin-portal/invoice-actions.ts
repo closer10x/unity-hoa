@@ -71,6 +71,7 @@ type InvoiceRow = {
   total_cents: number;
   paid_on: string | null;
   void_reason: string | null;
+  created_by_name: string | null;
 };
 
 function toInvoice(r: InvoiceRow, address: string, lines: InvoiceLine[]): Invoice {
@@ -96,6 +97,7 @@ function toInvoice(r: InvoiceRow, address: string, lines: InvoiceLine[]): Invoic
     totalCents: r.total_cents ?? 0,
     paidOn: r.paid_on ? dateLabel(r.paid_on) : null,
     voidReason: r.void_reason ?? null,
+    createdBy: r.created_by_name?.trim() || "the office",
     lines,
   };
 }
@@ -400,6 +402,119 @@ export async function recordInvoicePayment(input: {
     await audit(
       db,
       `Invoices: collected ${inv.invoice_number} — ${usd(inv.total_cents)} received${detail ? ` (${detail})` : ""}`,
+      actorName,
+      actorId,
+    );
+
+    revalidatePath("/admin");
+    revalidatePath("/portal");
+    return { ok: true, invoices: await loadInvoices(db) };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
+
+/**
+ * Editing what an invoice says.
+ *
+ * Drafts and issued invoices are both fully editable, at the owner's
+ * direction — the office often catches a wrong figure before the household
+ * has acted on it, and voiding and reissuing for a typo is heavy.
+ *
+ * The safeguard is the trail rather than the lock: changing what an issued
+ * invoice bills is written to the audit log with the old and new figures, so
+ * a record that no longer matches a notice already sent is always traceable
+ * to who changed it and when. A collected invoice stays closed — money has
+ * been recorded against it, and that is a refund, not an edit.
+ */
+export async function updateInvoice(input: {
+  id: string;
+  dueOn: string;
+  memo: string;
+  /** Draft only — ignored once the invoice has been issued. */
+  lines?: { description: string; amount: string; quantity: string }[];
+}): Promise<Ok<{ invoices: Invoice[] }> | Fail> {
+  try {
+    const { db, actorName, actorId } = await officeContext();
+
+    const { data: inv, error } = await db
+      .from("invoices")
+      .select("*")
+      .eq("id", input.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!inv) return { ok: false, error: "That invoice no longer exists." };
+    if (inv.status === "paid") {
+      return { ok: false, error: "A collected invoice cannot be edited — the money has been recorded against it." };
+    }
+    if (inv.status === "void") {
+      return { ok: false, error: "A void invoice cannot be edited. Raise a fresh one instead." };
+    }
+
+    const dueOn = /^\d{4}-\d{2}-\d{2}$/.test(input.dueOn) ? input.dueOn : null;
+    const memo = input.memo.trim() || null;
+    const changes: string[] = [];
+    if ((inv.due_on ?? null) !== dueOn) changes.push(`due ${dateLabel(dueOn)}`);
+    if ((inv.memo ?? null) !== memo) changes.push("memo");
+
+    if (input.lines) {
+      const lines = input.lines
+        .map((l) => {
+          const cents = parseDollarsToCents(l.amount);
+          const qty = Math.max(1, parseInt(l.quantity, 10) || 1);
+          return {
+            description: l.description.trim(),
+            quantity: qty,
+            unit: cents,
+            total: cents == null ? null : cents * qty,
+          };
+        })
+        .filter((l) => l.description || l.unit != null);
+
+      if (lines.length === 0) return { ok: false, error: "An invoice needs at least one line." };
+      for (const l of lines) {
+        if (!l.description) return { ok: false, error: "Every line needs a description." };
+        if (l.unit == null || l.unit < 0) {
+          return { ok: false, error: `Enter an amount for “${l.description}”.` };
+        }
+      }
+
+      const { error: delErr } = await db
+        .from("invoice_lines")
+        .delete()
+        .eq("invoice_id", input.id);
+      if (delErr) throw new Error(delErr.message);
+
+      const { error: insErr } = await db.from("invoice_lines").insert(
+        lines.map((l) => ({
+          invoice_id: input.id,
+          description: l.description,
+          quantity: l.quantity,
+          unit_amount_cents: l.unit as number,
+          amount_cents: l.total as number,
+        })),
+      );
+      if (insErr) throw new Error(`The lines could not be saved: ${insErr.message}`);
+
+      const total = lines.reduce((a, l) => a + (l.total ?? 0), 0);
+      if (total !== inv.total_cents) {
+        changes.push(
+          inv.status === "sent"
+            ? `billed amount after issue ${usd(inv.total_cents)} → ${usd(total)}`
+            : `${usd(inv.total_cents)} → ${usd(total)}`,
+        );
+      }
+    }
+
+    const { error: upErr } = await db
+      .from("invoices")
+      .update({ due_on: dueOn, memo, updated_at: new Date().toISOString() })
+      .eq("id", input.id);
+    if (upErr) throw new Error(upErr.message);
+
+    await audit(
+      db,
+      `Invoices: edited ${inv.invoice_number}${changes.length ? ` — ${changes.join(", ")}` : " — no change"}`,
       actorName,
       actorId,
     );

@@ -6,6 +6,36 @@ import { useStore } from "@/lib/admin-portal/store";
 import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
 import { NavIcon } from "@/components/admin/ui/NavIcon";
 
+/**
+ * Work waiting in a section, counted from what is actually loaded. Only
+ * sections that have something pending appear — a badge reading zero is
+ * noise, so it is simply absent.
+ */
+function useSectionCounts(): Record<string, number> {
+  const s = useStore();
+  return React.useMemo(() => ({
+    accounting: s.invoices.filter(
+      (i) => i.status === "draft" || i.status === "sent",
+    ).length,
+  }), [s.invoices]);
+}
+
+/** The count itself: Apple's red pill, so it reads as "needs you". */
+function CountBadge({ children }: { children: React.ReactNode }) {
+  return (
+    <span style={{
+      display: "inline-grid", placeItems: "center",
+      minWidth: 19, height: 19, padding: "0 6px",
+      borderRadius: 999, background: "oklch(0.62 0.22 25)",
+      color: "oklch(0.99 0.01 25)",
+      fontFamily: font.mono, fontSize: 11, fontWeight: 600, lineHeight: 1,
+      flex: "0 0 auto",
+    }}>
+      {children}
+    </span>
+  );
+}
+
 function Badge({ children }: { children: React.ReactNode }) {
   return (
     <span style={{ fontFamily: font.mono, fontSize: 11, background: color.chipOn, color: "oklch(0.38 0.05 155)", borderRadius: 999, padding: "2px 8px" }}>
@@ -18,6 +48,7 @@ function Badge({ children }: { children: React.ReactNode }) {
 export function Sidebar() {
   const s = useStore();
   const items = NAV.filter((n) => s.allowedSections.includes(n.id));
+  const counts = useSectionCounts();
   return (
     /* Reads as its own surface, the way cards do against the stone page, and
        takes its own scrollbar so a long nav never drags the page with it. */
@@ -62,7 +93,7 @@ export function Sidebar() {
                   <NavIcon id={n.id} />
                   <span style={{ fontWeight: on ? 600 : 400 }}>{n.label}</span>
                 </span>
-                {"badge" in n && n.badge ? <Badge>{n.badge}</Badge> : null}
+                {counts[n.id] ? <CountBadge>{counts[n.id]}</CountBadge> : null}
               </button>
             );
           })}
