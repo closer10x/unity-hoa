@@ -22,7 +22,9 @@ Open each \`.dc.html\` file directly in a browser to interact with the prototype
 **High-fidelity.** Colors, typography, spacing, copy, and interaction states are final and intentional. Recreate the UI to match, using the codebase's existing component library where equivalents exist. Two deliberate exceptions:
 
 - **Photography is placeholder.** Every image is a labeled diagonal-striped block. Real photography will be supplied separately; keep the aspect ratios.
-- **Data is fixture data.** Names, addresses, amounts, and dates are representative samples, not seed data.
+- **Data in the prototypes is fixture data.** The names, addresses, amounts and dates in the `.dc.html` files are representative samples, not seed data — they exist so the screens can be read.
+
+  This applies to the prototypes only. **In the build, nothing is fixture data.** Every list reads from the database and an empty section says so plainly. Sample figures carried across from these files have shipped twice and were bugs both times; see product rule 12.
 
 ---
 
@@ -134,7 +136,29 @@ align-items: baseline;
 
 This is **not** a cosmetic choice. Fixed pixel column tracks were tried and repeatedly collapsed cells to unreadable widths at laptop and tablet sizes. \`auto-fit\` with a 170px floor lets columns reflow into fewer, wider tracks as space shrinks, and \`justify-items: start\` keeps text from stretching. Where a row has a genuinely narrow leading cell (a date, a checkbox), use a wrapping flex row with \`flex: 0 0 auto\` on the narrow item and \`flex: 1 1 220px; min-width: 0\` on the text, rather than a fixed grid track.
 
-Card summary tiles use the same rule with a 180–320px floor and a 12px gap.
+Two consequences of this grid, both learned in the build rather than in design:
+
+- **A row has a cell budget, not a column count.** At laptop width it fits about five tracks. A sixth cell does not squeeze — it wraps to a second line, and the cell that wraps is whichever came last, which is usually the action cluster. Pair a new cell with an existing one instead: the invoice row stacks amount over status in a single track for exactly this reason.
+- **Right-aligning a cell needs the last track, not \`justify-self\`.** \`justify-self: end\` only reaches the right edge of an item's *own* column, and \`auto-fit\` routinely makes more tracks than a row has cells — so a cluster sits mid-row with empty columns beyond it. Use \`grid-column: -2 / -1\` **and** \`justify-self: end\`.
+
+### Card summary tiles — the exception
+
+Tiles were originally specified as the row grid with a 180–320px floor. They are **not** built that way, deliberately.
+
+\`auto-fit\` computes a fixed column count from the container, and any tile that does not divide evenly into it is stranded one column wide with the rest of its row empty beside it — five dashboard metrics in a 942px container produced four columns and orphaned the fifth. Tiles therefore use:
+
+\`\`\`css
+display: flex;
+flex-wrap: wrap;
+gap: 12px;
+/* each tile */
+flex: 1 1 <floor>px;
+min-width: 0;
+\`\`\`
+
+flex-wrap grows whatever lands on the final row to fill it, at any tile count and any width. The floor stays in the **170–320px** band — 170 rather than 180 on the dashboard is a deliberate hair, and is the difference between five even tiles and four plus one running full width as a banner. Tiles set \`height: 100%\` so a taller neighbour does not leave one short.
+
+This is still intrinsic layout and still uses no media queries.
 
 ### Responsive behavior
 
@@ -168,6 +192,10 @@ These are non-negotiable and apply across both portals. Several were established
 6. **Addresses are structured everywhere.** Never a single free-text address field. Always: street number, street name, unit/lot, city, state (Texas is the default and, for properties, the only option), ZIP — as separate inputs. Mailing addresses lead with a "Same as property" toggle and only reveal their own fields when the user chooses "Different address". This applies to owners, vendors, and communities alike.
 7. **Say "HOA fee," never "assessment"** in any resident- or staff-facing copy. The one exception is "Special assessment", which is a distinct legal instrument.
 8. **Portfolios are never deleted.** They can be created and scoped; no delete affordance exists in the UI.
+9. **A field employee always has a job board.** Creating a Maintenance tech or an Inspector mints their \`/crew/<token>\` link in the same call, and the link goes out in their welcome text. A tech must never exist without somewhere to see their work, and nobody should have to remember a second step.
+10. **Every dollar belongs to a company.** The office keeps books for two legal entities: the HOA fee and fines are **Sofi Lakes Residential Association Inc.**; HOA certificates and the other management fees are **Unity Grid Management LLC**. Revenue is assigned on the fee; an invoice copies it from its lines; a ledger entry copies it from the invoice — copied at each step and never looked up later, so re-pointing a fee at the other company next year cannot restate last year's books. An invoice whose lines disagree is left unassigned rather than guessed at, because it has to be split before either company can book it and silently picking one is how revenue ends up in the wrong return.
+11. **Nobody is mailed a password they did not choose.** Invites mint a one-time token; \`/auth/confirm\` exchanges it server-side and lands on a set-password screen. Never generate a password and email it. The link is one-time and expires, so every invite path also needs a resend.
+12. **A fixture never stands in for a record.** A section reads from the database or says plainly that there is nothing. Empty placeholder arrays and hard-coded sample figures have both shipped here and both were bugs — a hard-coded aging constant showed five confident \`$0\` tiles as the association's receivables position, which is worse than an empty card, because an empty card is visibly empty.
 
 ---
 
@@ -241,14 +269,23 @@ Header carries the wordmark, a **scope switcher** (All communities / a portfolio
 
 ### 1. Dashboard
 
-Metric tiles (receivables, open work orders, pending architectural reviews, delinquency rate) and a prioritized action queue. Each queue item routes to its own section.
+Metric tiles (outstanding invoices, outstanding HOA fees, open work orders, homes on the roster, delinquency rate) and a prioritized action queue. Each queue item routes to its own section.
+
+Tiles carry a **tone** — neutral, positive, attention or critical — drawn as a hairline down the tile's leading edge and applied to the figure itself. Tone is how a number *feels*, not what it is: a figure that wants somebody to act is coloured, and everything settled stays quiet, because if every number is coloured none of them are. Delinquency turns critical past ten per cent, the point at which it stops being a few late payers.
+
+The action queue is computed from live records — never a static list. It watches invoices past due, invoices assigned to no company, drafts never issued, architectural applications on the 30-day clock (critical inside a week, because silence approves them), work orders with nobody assigned, open violation cases, booking requests, and staff with no way to sign in. Each entry names the number **and** the consequence: "3 invoices past due — collections start here", not "3 items". Urgency is a coloured dot plus a mono word, never a glyph.
 
 ### 2. Accounting
 
 - **Take a payment** — at the top, collapsed behind an "Add a payment" button. Opens a form for phone, walk-in, or mailed payments: owner typeahead (searches name, address, and account number; shows each match's address, balance, and status), amount, what to apply it to, and method (card / ACH / check / money order / cash). Card selection reveals card fields and a 2.95% fee line; check and money order reveal reference number and received date. Card-not-present requires the "Owner authorized by phone" flag before the charge button will fire. On success: a receipt panel, a new ledger entry, a reduced owner balance, and an audit-trail stamp. Card details are never stored — the processor returns a token and last four.
-- **Aging summary** — current / 1–30 / 31–60 / 61–90 / 90+ tiles.
+- **Aging summary** — current / 1–30 / 31–60 / 61–90 / 90+ tiles, computed from the invoices actually outstanding and sharing its bucket boundaries with the aged-receivables report, so the tiles and the report a board is handed cannot disagree.
 - **Delinquent accounts** — with a collection-stage action dropdown (reminder → late notice → final notice → 90+ → lien → payment plan), each with its own confirmation copy.
-- **Recent payments** ledger and **budget vs. actual** for the year to date.
+- **Recent payments** ledger. **Budget vs. actual** is specified but not built: it needs an approved budget to compare against and there is no table for one. It is deliberately absent rather than stubbed — an invented number in a financial statement is worse than an absent one.
+- **Books for** — a switch across the whole section: both companies, or one, plus an "Unassigned" chip that appears only when something is genuinely unassigned. The tiles, the ledger, the invoice list and the reports all answer to it, because "outstanding" for one company is a different number from the sum.
+- **Invoices** — raised against a household from the fee schedule's quick-picks, itemised. Issuing bills the household and touches nothing; only collecting writes a ledger entry, so the books record money rather than expectations. A sent invoice is never edited or deleted — corrections are a void with a reason, then a fresh invoice — and a collected one cannot be voided at all, because undoing a payment that arrived is a refund. Recording a payment captures how it arrived (a check must carry its number), whether it has been **deposited** and on what day, and proof of payment as a private attachment. Each row carries which company it bills for; the company can be set on the invoice and changed later, with the change named in the audit trail.
+- **Financial reports** — the monthly package a board expects, grouped as it is assembled. *Statements*: balance sheet, income statement, revenue by company. *What is owed*: aged receivables (current / 1–30 / 31–60 / 61–90 / over 90) and owner balances. *Money that moved*: receipts by payment method, disbursements, cash & bank. *Detail*: general ledger and owner charges. Each prints to PDF or exports as CSV.
+
+  Two rules govern them. **Receivables are read across all time, not the reporting period** — a debt is owed today regardless of the month it was raised, and an aging report scoped to the last 30 days shows a clean book on an association owed for two years. And **a report states what it does not cover, on the report itself**, in a printed caveat block: a balance sheet with no liabilities section is wrong unless it says so, and whoever reads the printed copy will not have the screen in front of them.
 
 ### 3. Owners
 
@@ -376,7 +413,9 @@ The prototypes hold everything in one component's state. In production, split by
 
 Fonts load from Google Fonts (Instrument Sans, IBM Plex Mono). Self-host them in production.
 
-No icon set is used. Status is carried by color and mono text labels, not glyphs. There are no emoji anywhere, by design.
+No icon set is used. Status is carried by color and mono text labels, not glyphs.
+
+There is **one sanctioned emoji**: the weather glyph in the admin header, added at the owner's request. Weather is the only thing on screen that is not association data, so it reads as a glance-at-it detail rather than part of the record. Adding a second exception is a design decision, not a styling tweak — raise it rather than reaching for a glyph because a row is crowded. (The sidebar's navigation marks are inline SVG drawn from the token palette, not an icon font, and predate this rule.)
 
 ---
 

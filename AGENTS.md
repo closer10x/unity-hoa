@@ -30,16 +30,17 @@ do not invest further there without asking.
 
 ## Non-negotiables
 
-The eight product rules in the handoff are non-negotiable — violating one is a
-regression. In short: add-forms on top; status changes are "Take action…"
-dropdowns listing every valid next state; every action confirms inline with
-plain-language consequences and a specifically labeled confirm button; every
-mutation is stamped with the acting account and appears in Team → Audit trail;
-every list has search + filter chips; addresses are always structured fields,
-never free text; say "HOA fee" (never "assessment", except "Special
-assessment"); portfolios are never deleted.
+The twelve product rules in the handoff are non-negotiable — violating one is a
+regression. The first eight, in short: add-forms on top; status changes are
+"Take action…" dropdowns listing every valid next state; every action confirms
+inline with plain-language consequences and a specifically labeled confirm
+button; every mutation is stamped with the acting account and appears in
+Team → Audit trail; every list has search + filter chips; addresses are always
+structured fields, never free text; say "HOA fee" (never "assessment", except
+"Special assessment"); portfolios are never deleted.
 
-Three more that are rules, not niceties:
+The four added during the build, expanded because they are the ones a new
+session gets wrong:
 
 - **A field employee always has a job board.** Creating a Maintenance tech or
   an Inspector mints their `/crew/<token>` link in the same call
@@ -57,6 +58,13 @@ Three more that are rules, not niceties:
   year cannot restate last year's books. A mixed invoice is left unassigned
   rather than guessed at. Anything new that creates money must carry
   `entity_key` forward, or it lands in neither return.
+
+- **Nobody is mailed a password they did not choose.** Invites mint a one-time
+  token; `/auth/confirm` exchanges it server-side and lands on a set-password
+  screen. Never generate a password and email it. The link is one-time and
+  expires, so every path that sends one also needs a resend — and a resend
+  always sends a set-password link, because a resend is what somebody reaches
+  for precisely when the recipient cannot get in.
 
 - **Never ship a fixture standing in for a record.** `fixtures.ts` already said
   so in its own docstring and was violated anyway: empty arrays fed two cards
