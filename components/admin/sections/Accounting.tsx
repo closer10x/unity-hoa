@@ -698,7 +698,7 @@ function InvoicesCard() {
                 <span style={{ display: "block", fontSize: 14, color: color.inkSecondary }}>Due {inv.due}</span>
                 <Mono size={11} style={{ color: color.inkQuaternary }}>Issued {inv.issued}</Mono>
                 <span style={{ display: "block", fontSize: 12.5, color: color.inkTertiary, marginTop: 2 }}>
-                  Raised by {inv.createdBy}
+                  Created by {inv.createdBy}
                 </span>
               </span>
               <Mono size={15}>{inv.total}</Mono>
@@ -750,7 +750,7 @@ function InvoicesCard() {
                   </div>
                   {inv.memo ? <span style={{ fontSize: 13.5, color: color.inkTertiary }}>{inv.memo}</span> : null}
                   <Mono size={12} style={{ color: color.inkQuaternary }}>
-                    Raised by {inv.createdBy} · issued {inv.issued}
+                    Created by {inv.createdBy} · issued {inv.issued}
                   </Mono>
                   {inv.paidOn ? (
                     <span style={{ fontSize: 13.5, color: color.positive }}>
