@@ -724,25 +724,38 @@ function InvoicesCard() {
                   Created by {inv.createdBy}
                 </span>
               </span>
-              <Mono size={15}>{inv.total}</Mono>
-              <Status tone={
-                inv.status === "paid" ? "positive"
-                  : inv.overdue ? "critical"
-                    : inv.status === "sent" ? "attention"
-                      : "neutral"
-              }>
-                {inv.status === "void" ? "Void"
-                  : inv.status === "paid" ? "Paid"
-                    : inv.overdue ? "Overdue"
-                      : inv.status === "sent" ? "Issued" : "Draft"}
-              </Status>
+              {/* Amount and status share a track. Six cells against the five
+                  the row fits at laptop width meant one always wrapped, and
+                  the one that wrapped was the actions. These two belong
+                  together anyway — what is owed and whether it has been. */}
+              <span style={{ display: "grid", gap: 3 }}>
+                <Mono size={15}>{inv.total}</Mono>
+                <Status tone={
+                  inv.status === "paid" ? "positive"
+                    : inv.overdue ? "critical"
+                      : inv.status === "sent" ? "attention"
+                        : "neutral"
+                }>
+                  {inv.status === "void" ? "Void"
+                    : inv.status === "paid" ? "Paid"
+                      : inv.overdue ? "Overdue"
+                        : inv.status === "sent" ? "Issued" : "Draft"}
+                </Status>
+              </span>
               {/* View and Edit stay in the open, because reading an invoice
                   and correcting a typo are not "actions" in the sense the
                   rule means. What moves it along a status — issuing,
                   collecting, voiding — goes behind Take action…, the same
                   control work orders and violations use, which also lets the
                   cluster hold one line instead of wrapping into three. */}
-              <span style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "nowrap" }}>
+              {/* justify-self alone only reaches the right of its own track,
+                  and auto-fit makes more tracks than this row has cells — so
+                  the cluster sat mid-row with empty columns beyond it.
+                  Placing it in the last track is what puts it at the edge. */}
+              <span style={{
+                display: "flex", gap: 10, alignItems: "center", flexWrap: "nowrap",
+                gridColumn: "-2 / -1", justifySelf: "end",
+              }}>
                 <TextButton onClick={() => setOpenId(openId === inv.id ? null : inv.id)}>
                   {openId === inv.id ? "Close" : "View"}
                 </TextButton>
