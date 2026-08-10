@@ -531,6 +531,10 @@ function InvoicesCard() {
   const [home, setHome] = useState<{ id: string; label: string } | null>(null);
   const [dueOn, setDueOn] = useState("");
   const [memo, setMemo] = useState("");
+  /* Empty means "whatever the fees say" — the schedule already knows that a
+     certificate is the management company's and the HOA fee is the
+     association's, so the common case needs no decision. */
+  const [invEntity, setInvEntity] = useState("");
   const [lines, setLines] = useState([{ description: "", amount: "", quantity: "1" }]);
 
   const [openId, setOpenId] = useState<string | null>(null);
@@ -567,6 +571,7 @@ function InvoicesCard() {
   const [editing, setEditing] = useState<string | null>(null);
   const [eDue, setEDue] = useState("");
   const [eMemo, setEMemo] = useState("");
+  const [eEntity, setEEntity] = useState("");
   const [eLines, setELines] = useState([{ description: "", amount: "", quantity: "1" }]);
 
   function openEdit(inv: Invoice) {
@@ -575,6 +580,7 @@ function InvoicesCard() {
     setError("");
     setEDue(inv.dueOn ?? "");
     setEMemo(inv.memo);
+    setEEntity(inv.entity ?? "");
     setELines(
       inv.lines.length
         ? inv.lines.map((l) => ({
@@ -592,7 +598,7 @@ function InvoicesCard() {
     setError("");
     const res = await updateInvoice({
       id: inv.id, dueOn: eDue, memo: eMemo,
-      lines: eLines,
+      lines: eLines, entity: eEntity,
     });
     setSaving(false);
     if (!res.ok) return setError(res.error);
@@ -600,6 +606,20 @@ function InvoicesCard() {
     s.audit(`Invoices: edited ${inv.number}`);
     setEditing(null);
   }
+
+  /* What the lines on the drawer imply, so the field can show the answer the
+     schedule would give before anything is saved. Lines that disagree imply
+     nothing — that invoice has to be split or assigned by hand. */
+  const impliedEntity: EntityKey = (() => {
+    const keys = new Set(
+      lines
+        .map((l) => s.fees.find(
+          (f) => f.name.trim().toLowerCase() === l.description.trim().toLowerCase(),
+        )?.entity)
+        .filter(Boolean),
+    );
+    return keys.size === 1 ? ([...keys][0] as string) : null;
+  })();
 
   const entityFilter = useEntityFilter();
   const visible = useSearchFilter(
@@ -631,14 +651,16 @@ function InvoicesCard() {
     setSaving(true);
     setError("");
     setNote("");
-    const res = await createInvoice({ lotId: home?.id ?? "", dueOn, memo, lines });
+    const res = await createInvoice({
+      lotId: home?.id ?? "", dueOn, memo, lines, entity: invEntity,
+    });
     setSaving(false);
     if (!res.ok) return setError(res.error);
     s.setInvoices(res.invoices);
     s.audit(`Invoices: drafted ${res.number}`);
     setNote(`${res.number} drafted. Issue it when you are ready to bill.`);
     setLines([{ description: "", amount: "", quantity: "1" }]);
-    setMemo(""); setDueOn(""); setHome(null);
+    setMemo(""); setDueOn(""); setHome(null); setInvEntity("");
     setDrawer(false);
   }
 
@@ -701,6 +723,32 @@ function InvoicesCard() {
                 id: o.id, name: o.name, address: o.address, account: o.account,
               }))} />
             <Field label="Due date"><DateInput value={dueOn} onChange={setDueOn} /></Field>
+            {s.entities.length > 1 ? (
+              <Field
+                label="Revenue goes to"
+                hint={
+                  invEntity
+                    ? "Overrides the fee schedule for this invoice"
+                    : impliedEntity
+                      ? `From the fee schedule: ${entityName(s.entities, impliedEntity)}`
+                      : "Pick a fee below, or choose the company yourself"
+                }
+              >
+                <Select
+                  value={invEntity}
+                  onChange={setInvEntity}
+                  options={[
+                    {
+                      id: "",
+                      label: impliedEntity
+                        ? `From the fee — ${entityShort(s.entities, impliedEntity)}`
+                        : "From the fee schedule",
+                    },
+                    ...s.entities.map((e) => ({ id: e.key, label: e.legalName })),
+                  ]}
+                />
+              </Field>
+            ) : null}
           </FieldGrid>
 
           <div style={{ display: "grid", gap: 10 }}>
@@ -915,6 +963,19 @@ function InvoicesCard() {
                   <FieldGrid>
                     <Field label="Due date"><DateInput value={eDue} onChange={setEDue} /></Field>
                     <Field label="Memo"><Input value={eMemo} onChange={setEMemo} placeholder="Optional" /></Field>
+                    {/* Reassignable after the fact: whose revenue something
+                        is gets decided at the fee schedule, and sometimes
+                        gets decided wrong. Named in the audit trail rather
+                        than folded into "edited". */}
+                    {s.entities.length > 1 ? (
+                      <Field label="Revenue belongs to" hint="Moves the invoice between the two companies' books">
+                        <Select value={eEntity} onChange={setEEntity}
+                          options={[
+                            { id: "", label: "Unassigned" },
+                            ...s.entities.map((e) => ({ id: e.key, label: e.legalName })),
+                          ]} />
+                      </Field>
+                    ) : null}
                   </FieldGrid>
 
                   <div style={{ display: "grid", gap: 10 }}>

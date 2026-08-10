@@ -486,6 +486,8 @@ export async function updateInvoice(input: {
   memo: string;
   /** Draft only — ignored once the invoice has been issued. */
   lines?: { description: string; amount: string; quantity: string }[];
+  /** Which company's revenue this is; "" clears the assignment. */
+  entity?: string;
 }): Promise<Ok<{ invoices: Invoice[] }> | Fail> {
   try {
     const { db, actorName, actorId } = await officeContext();
@@ -509,6 +511,16 @@ export async function updateInvoice(input: {
     const changes: string[] = [];
     if ((inv.due_on ?? null) !== dueOn) changes.push(`due ${dateLabel(dueOn)}`);
     if ((inv.memo ?? null) !== memo) changes.push("memo");
+
+    /* Moving an invoice between companies is a real correction, so it is
+       named in the trail rather than folded into "edited". Only the invoice
+       moves — a payment already collected against it keeps the company it
+       was booked under, because that money is already in a return. */
+    const entityKey =
+      input.entity === undefined ? (inv.entity_key ?? null) : input.entity.trim() || null;
+    if ((inv.entity_key ?? null) !== entityKey) {
+      changes.push(`revenue → ${entityKey ?? "unassigned"}`);
+    }
 
     if (input.lines) {
       const lines = input.lines
@@ -561,7 +573,12 @@ export async function updateInvoice(input: {
 
     const { error: upErr } = await db
       .from("invoices")
-      .update({ due_on: dueOn, memo, updated_at: new Date().toISOString() })
+      .update({
+        due_on: dueOn,
+        memo,
+        entity_key: entityKey,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", input.id);
     if (upErr) throw new Error(upErr.message);
 
