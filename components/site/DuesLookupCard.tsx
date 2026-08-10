@@ -123,7 +123,7 @@ export function DuesLookupCard({
               <input
                 className={FIELD}
                 inputMode="numeric"
-                placeholder="e.g. SL-000042"
+                placeholder="e.g. SL48213"
                 value={account}
                 onChange={(e) => setAccount(e.target.value)}
               />
@@ -153,7 +153,7 @@ export function DuesLookupCard({
 
           <p className="mt-[18px] text-sm leading-relaxed text-on-surface-variant">
             Your account number is printed on your statement — it looks like
-            SL-000042. Registered residents can{" "}
+            SL48213. Registered residents can{" "}
             <Link href="/admin/login" className="text-secondary hover:underline">
               sign in
             </Link>{" "}
