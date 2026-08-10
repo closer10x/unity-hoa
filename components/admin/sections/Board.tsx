@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { MEETING_STEPS } from "@/lib/admin-portal/actions";
 import { emptyAddress } from "@/lib/admin-portal/address";
 import {
-  createMeeting, endDirectorTerm, saveMinutes, seatDirector, setMeetingStatus,
+  createMeeting, endDirectorTerm, saveMinutes, seatDirector, setMeetingStatus, updateDirector,
 } from "@/lib/admin-portal/board-actions";
 import { buildActionMenu, useStore } from "@/lib/admin-portal/store";
 import { color, pad } from "@/lib/admin-portal/tokens";
@@ -46,6 +46,54 @@ export default function Board() {
   const [dSaving, setDSaving] = useState(false);
   const [dFlowError, setDFlowError] = useState("");
   const [ending, setEnding] = useState("");
+
+  /* inline edit of a seated director */
+  const [editing, setEditing] = useState("");
+  const [ef, setEf] = useState({ name: "", role: ROLES[0], address: emptyAddress(), start: "", end: "" });
+  const [eError, setEError] = useState("");
+  const [eSaving, setESaving] = useState(false);
+
+  // The Director carries composed strings; parse them back so the edit form
+  // opens pre-filled. Both the address and the "start – end" term follow a
+  // known format, so this round-trips the standard cases.
+  function openEdit(d: (typeof s.directors)[number]) {
+    setEnding("");
+    setEError("");
+    const years = (d.term.match(/\b(\d{4})\b/g) ?? []);
+    const parts = d.address === "No address recorded" ? [] : d.address.split(", ");
+    const streetParts = (parts[0] ?? "").split(" ");
+    const streetNo = /^\d/.test(streetParts[0] ?? "") ? streetParts[0] : "";
+    const street = streetNo ? streetParts.slice(1).join(" ") : (parts[0] ?? "");
+    const cityStateZip = parts.slice(1);
+    const city = cityStateZip[0] ?? "";
+    const stateZip = (cityStateZip[cityStateZip.length - 1] ?? "").split(" ");
+    const zip = /^\d{5}/.test(stateZip[stateZip.length - 1] ?? "") ? stateZip[stateZip.length - 1] : "";
+    const state = zip ? stateZip.slice(0, -1).join(" ") : cityStateZip.slice(1).join(", ");
+    setEf({
+      name: d.name,
+      role: ROLES.includes(d.role) ? d.role : ROLES[0],
+      address: { ...emptyAddress(), streetNo, street, city, state: state || "Texas", zip },
+      start: years[0] ?? "",
+      end: years[1] ?? "",
+    });
+    setEditing(d.id);
+  }
+
+  async function saveEdit(id: string) {
+    if (!ef.name.trim()) return setEError("Add the director's name.");
+    if (!ef.start.trim() || !ef.end.trim()) return setEError("Add the term start and end years.");
+    setESaving(true);
+    const res = await updateDirector({
+      id, name: ef.name, role: ef.role,
+      streetNumber: ef.address.streetNo, streetName: ef.address.street, unit: ef.address.unit,
+      city: ef.address.city, state: ef.address.state, zip: ef.address.zip,
+      termStart: ef.start, termEnd: ef.end,
+    });
+    setESaving(false);
+    if (!res.ok) return setEError(res.error);
+    s.setDirectors((prev) => prev.map((x) => (x.id === id ? res.director : x)));
+    setEditing("");
+  }
 
   /* meetings */
   const [mOpen, setMOpen] = useState(false);
@@ -134,15 +182,42 @@ export default function Board() {
                 <RowMain label={d.name} detail={d.address} />
                 <Mono size={12} style={{ color: color.neutral }}>{d.role}</Mono>
                 <span style={{ fontSize: 14, color: color.inkTertiary }}>{d.term}</span>
-                {ended ? (
-                  <Status tone="neutral">Term ended</Status>
-                ) : (
-                  <TextButton tone="destructive"
-                    onClick={() => { setDFlowError(""); setEnding(ending === d.id ? "" : d.id); }}>
-                    End term
+                <span style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                  <TextButton onClick={() => (editing === d.id ? setEditing("") : openEdit(d))}>
+                    {editing === d.id ? "Close" : "Edit"}
                   </TextButton>
-                )}
+                  {ended ? (
+                    <Status tone="neutral">Term ended</Status>
+                  ) : (
+                    <TextButton tone="destructive"
+                      onClick={() => { setDFlowError(""); setEnding(ending === d.id ? "" : d.id); }}>
+                      End term
+                    </TextButton>
+                  )}
+                </span>
               </Row>
+              {editing === d.id ? (
+                <div style={{ padding: `18px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, background: color.surfaceSunken, display: "grid", gap: 16 }}>
+                  <FieldGrid>
+                    <Field label="Name"><Input value={ef.name} onChange={(v) => setEf((p) => ({ ...p, name: v }))} placeholder="First and last" /></Field>
+                    <Field label="Role"><Select value={ef.role} onChange={(v) => setEf((p) => ({ ...p, role: v }))} options={ROLES.map((r) => ({ id: r, label: r }))} /></Field>
+                  </FieldGrid>
+                  <AddressFields value={ef.address} onChange={(a) => setEf((p) => ({ ...p, address: a }))} />
+                  <FieldGrid>
+                    <Field label="Term start" hint="A year starts the term on January 1.">
+                      <Input value={ef.start} onChange={(v) => setEf((p) => ({ ...p, start: v }))} placeholder="e.g. 2026" />
+                    </Field>
+                    <Field label="Term end" hint="A year runs the term through December 31.">
+                      <Input value={ef.end} onChange={(v) => setEf((p) => ({ ...p, end: v }))} placeholder="e.g. 2029" />
+                    </Field>
+                  </FieldGrid>
+                  {eError ? <ErrorLine>{eError}</ErrorLine> : null}
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <Primary onClick={() => saveEdit(d.id)} style={{ justifySelf: "start" }}>{eSaving ? "Saving…" : "Save changes"}</Primary>
+                    <TextButton tone="muted" onClick={() => setEditing("")}>Cancel</TextButton>
+                  </div>
+                </div>
+              ) : null}
               {ending === d.id ? (
                 <ConfirmBar
                   text={`End ${d.name}'s term as ${d.role}? The seat closes out as of today and they come off the seated count. The term stays on the roster with its end date, and the change is written to the audit trail.`}

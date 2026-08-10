@@ -338,6 +338,65 @@ export async function seatDirector(input: {
  * The roster is history: ending a term closes it out at today's date rather
  * than removing the row, so who sat when stays answerable.
  */
+export async function updateDirector(input: {
+  id: string;
+  name: string;
+  role: string;
+  streetNumber: string;
+  streetName: string;
+  unit: string;
+  city: string;
+  state: string;
+  zip: string;
+  termStart: string;
+  termEnd: string;
+}): Promise<{ ok: true; director: Director } | Fail> {
+  try {
+    const { db, actorName, actorId } = await officeContext();
+
+    const name = input.name.trim();
+    if (!name) return { ok: false, error: "Add the director's name." };
+
+    const termStart = toTermDate(input.termStart, "start");
+    const termEnd = toTermDate(input.termEnd, "end");
+    if (!termStart || !termEnd) {
+      return { ok: false, error: "Add the term start and end years, e.g. 2026 and 2029." };
+    }
+    if (termEnd < termStart) {
+      return { ok: false, error: "The term ends before it starts — check the years." };
+    }
+
+    const { data, error } = await db
+      .from("directors")
+      .update({
+        name,
+        role: input.role.trim() || "Director",
+        street_number: input.streetNumber.trim() || null,
+        street_name: input.streetName.trim() || null,
+        unit: input.unit.trim() || null,
+        city: input.city.trim() || null,
+        state: input.state.trim() || null,
+        zip: input.zip.trim() || null,
+        term_start: termStart,
+        term_end: termEnd,
+      })
+      .eq("id", input.id)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+
+    await audit(
+      db, actorName, actorId,
+      `Board: updated ${name} (${input.role.trim() || "Director"})`,
+    );
+
+    revalidatePath("/admin");
+    return { ok: true, director: toDirector(data as DirectorRow) };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
+
 export async function endDirectorTerm(input: {
   id: string;
   name: string;
