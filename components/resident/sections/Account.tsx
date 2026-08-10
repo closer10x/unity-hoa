@@ -1,8 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { requestResidentPasswordReset } from "@/app/portal/login/actions";
+import {
+  addHouseholdMember, getHousehold, removeHouseholdMember,
+} from "@/lib/resident-portal/household-actions";
 import { useResident } from "@/lib/resident-portal/store";
 import { color, pad } from "@/lib/admin-portal/tokens";
 import type { Address } from "@/lib/admin-portal/types";
@@ -101,19 +104,38 @@ export default function Account() {
     setContactSaved(true);
   }
 
-  function savePerson() {
+  // Load the persisted household on mount, keeping the locked owner-of-record
+  // row the store seeds. Members survive a refresh now — they live in the
+  // household_members table, not just this session.
+  useEffect(() => {
+    let live = true;
+    getHousehold().then((rows) => {
+      if (!live || rows.length === 0) return;
+      s.setHousehold((prev) => [...prev.filter((m) => m.locked), ...rows]);
+    });
+    return () => { live = false; };
+    // Once on mount; the store setter is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function savePerson() {
     if (!personName.trim()) return setPersonError("Add a name.");
     if (!personEmail.trim() && !personPhone.trim())
       return setPersonError("Add an email or a mobile — the portal invite needs one.");
-    const contact = [personEmail.trim(), personPhone.trim()].filter(Boolean).join(" · ");
     const accessLabel = ACCESS_LEVELS.find((a) => a.id === personAccess)?.label ?? "";
     const accessShort = accessLabel.split(" — ")[0];
-    const person: HouseholdMember = {
-      id: s.uid("hh"),
+    setPersonError("");
+    // Persist first so the member survives a refresh; the DB id is what the
+    // row and any invite are keyed on.
+    const res = await addHouseholdMember({
       name: personName.trim(),
-      role: `${personRole} · ${accessShort}`,
-      contact,
-    };
+      relationship: personRole,
+      accessLevel: personAccess,
+      email: personEmail.trim(),
+      phone: personPhone.trim(),
+    });
+    if ("error" in res) return setPersonError(res.error);
+    const person = res.member;
     s.setHousehold((prev) => [...prev, person]);
     // Email the new member their access instructions, when we have an address.
     const inviteEmail = personEmail.trim();
@@ -123,6 +145,14 @@ export default function Account() {
     setPersonOpen(false);
     setPersonError(""); setPersonName(""); setPersonEmail(""); setPersonPhone("");
     setPersonAccess("view"); setPersonRole(RELATIONSHIPS[0]);
+  }
+
+  async function removePerson(id: string) {
+    // Optimistic remove; restore the row if the server rejects it.
+    const snapshot = s.household;
+    s.setHousehold((prev) => prev.filter((x) => x.id !== id));
+    const res = await removeHouseholdMember(id);
+    if ("error" in res) s.setHousehold(snapshot);
   }
 
   function savePet() {
@@ -284,7 +314,7 @@ export default function Account() {
                     </TextButton>
                   ) : null}
                   <TextButton tone="destructive"
-                    onClick={() => s.setHousehold((prev) => prev.filter((x) => x.id !== h.id))}>
+                    onClick={() => removePerson(h.id)}>
                     Remove
                   </TextButton>
                 </span>
