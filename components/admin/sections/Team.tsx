@@ -25,6 +25,17 @@ const ROLES: StaffRole[] = [
   "Assistant manager", "Community manager", "Administrator", "Owner",
 ];
 
+/* Format a US number as it's typed — "(832) 302-5722". Reformatting from the
+   raw digits each keystroke keeps deletes working. The stored value stays
+   human-readable; the SMS sender strips it back to digits (normalizePhone). */
+function formatUsPhone(raw: string): string {
+  const d = raw.replace(/\D/g, "").slice(0, 10);
+  if (d.length === 0) return "";
+  if (d.length < 4) return `(${d}`;
+  if (d.length < 7) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+}
+
 /* Row order is chosen so each role's column is as close to one unbroken run
    of green as the permissions allow — sections reached by the same roles sit
    next to each other, instead of green scattered down the page. Dashboard and
@@ -365,7 +376,7 @@ export default function Team() {
           <FieldGrid>
             <Field label="Name"><Input value={name} onChange={setName} placeholder="First and last" /></Field>
             <Field label="Work email"><Input value={email} onChange={setEmail} placeholder="name@unitygrid.com" /></Field>
-            <Field label="Cell (for text notifications)"><Input value={phone} onChange={setPhone} placeholder="(713) 555-0100" /></Field>
+            <Field label="Cell (for text notifications)"><Input value={phone} onChange={(v) => setPhone(formatUsPhone(v))} placeholder="(713) 555-0100" /></Field>
             <Field label="Role">
               <Select value={role}
                 onChange={(v) => {

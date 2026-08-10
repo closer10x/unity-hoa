@@ -635,7 +635,10 @@ export function AddDrawer({
   if (!open) {
     return (
       <div style={{ padding: pad.card, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
-        <Pill onClick={onOpen}>{openLabel}</Pill>
+        {/* The one filled action per add-section: a solid accent pill, the same
+            dark green as the primary/AI buttons, so "add something" reads as the
+            call to action rather than one more outlined control. */}
+        <Primary onClick={onOpen} style={{ borderRadius: radius.pill, padding: "11px 22px" }}>{openLabel}</Primary>
         {note ? <span style={{ fontSize: 14, color: color.inkTertiary }}>{note}</span> : null}
         {count ? (
           <Mono size={13} style={{ color: color.neutral, marginLeft: "auto" }}>{count}</Mono>
