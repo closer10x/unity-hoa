@@ -240,19 +240,24 @@ export default function Dashboard() {
           s.auditLog.slice(0, 6).map((a) => (
             <Row key={a.id} style={{ alignItems: "baseline" }}>
               <span style={{ fontSize: 15, lineHeight: 1.5 }}>{a.text}</span>
-              {/* The account reads as a label rather than more prose, so the
-                  eye can run down the column and find one person's work. */}
-              <span
-                style={{
-                  fontSize: 12.5, color: "oklch(0.4 0.04 155)",
-                  background: color.accentTint, borderRadius: radius.pill,
-                  padding: "3px 10px", whiteSpace: "nowrap", justifySelf: "start",
-                }}
-              >
-                {a.who}
-              </span>
-              <span style={{ fontFamily: font.mono, fontSize: 12, color: color.inkQuaternary, justifySelf: "end" }}>
-                {a.time}
+              {/* Account and time cluster at the right of the row — the actor
+                  reads as a label rather than more prose, and the eye can run
+                  down the right edge to find one person's work. gridColumn
+                  "-2 / -1" pins the cluster to the last track (auto-fit makes
+                  more tracks than cells, so justifySelf alone would strand it). */}
+              <span style={{ display: "flex", gap: 10, alignItems: "baseline", gridColumn: "-2 / -1", justifySelf: "end" }}>
+                <span
+                  style={{
+                    fontSize: 12.5, color: "oklch(0.4 0.04 155)",
+                    background: color.accentTint, borderRadius: radius.pill,
+                    padding: "3px 10px", whiteSpace: "nowrap",
+                  }}
+                >
+                  {a.who}
+                </span>
+                <span style={{ fontFamily: font.mono, fontSize: 12, color: color.inkQuaternary }}>
+                  {a.time}
+                </span>
               </span>
             </Row>
           ))

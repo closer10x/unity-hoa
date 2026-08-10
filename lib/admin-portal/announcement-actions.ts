@@ -78,7 +78,7 @@ async function resolveRecipients(
 
 /** What has actually gone out, newest first — the real sent history. */
 export async function listAnnouncements(): Promise<
-  { ok: true; sent: { id: string; date: string; subject: string; meta: string }[] } | Fail
+  { ok: true; sent: { id: string; date: string; subject: string; body: string; meta: string }[] } | Fail
 > {
   try {
     const { db } = await officeContext();
@@ -100,6 +100,7 @@ export async function listAnnouncements(): Promise<
             year: "numeric",
           }),
           subject: (r.title as string) ?? "Untitled",
+          body: (r.body as string) ?? "",
           meta:
             r.status === "published"
               ? "Posted to the resident portal"
@@ -127,6 +128,48 @@ export async function unpublishAnnouncement(
       .update({ status: "archived" })
       .eq("id", id)
       .eq("status", "published");
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
+
+/** Fix the wording of an announcement in place. A published notice is edited
+ *  live, so the correction shows on the portal immediately; the row keeps its
+ *  id, status and publish date. */
+export async function updateAnnouncement(input: {
+  id: string;
+  subject: string;
+  body: string;
+}): Promise<{ ok: true } | Fail> {
+  try {
+    const { db } = await officeContext();
+    const subject = input.subject.trim();
+    const body = input.body.trim();
+    if (!subject) return { ok: false, error: "Give the announcement a subject." };
+    if (!body) return { ok: false, error: "Write the message." };
+    const { error } = await db
+      .from("announcements")
+      .update({ title: subject, body, updated_at: new Date().toISOString() })
+      .eq("id", input.id);
+    if (error) throw new Error(error.message);
+    revalidatePath("/admin");
+    revalidatePath("/portal");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
+
+/** Permanently remove an announcement (from history and, if it was live, the
+ *  public site). Unlike unpublish this deletes the row outright. */
+export async function deleteAnnouncement(
+  id: string,
+): Promise<{ ok: true } | Fail> {
+  try {
+    const { db } = await officeContext();
+    const { error } = await db.from("announcements").delete().eq("id", id);
     if (error) throw new Error(error.message);
     return { ok: true };
   } catch (e) {

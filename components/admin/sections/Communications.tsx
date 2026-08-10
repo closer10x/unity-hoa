@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  countAnnouncementAudience, listAnnouncements, sendAnnouncement, unpublishAnnouncement,
+  countAnnouncementAudience, deleteAnnouncement, listAnnouncements, sendAnnouncement,
+  unpublishAnnouncement, updateAnnouncement,
 } from "@/lib/admin-portal/announcement-actions";
 import {
   replyToResidentThread, setResidentThreadStatus,
@@ -15,7 +16,7 @@ import {
 import { useStore } from "@/lib/admin-portal/store";
 import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
 import {
-  Area, Card, CardHead, Chip, DateInput, Empty, ErrorLine, Field, FieldGrid,
+  Area, Card, CardHead, Chip, ConfirmBar, DateInput, Empty, ErrorLine, Field, FieldGrid,
   Input, Mono, PageTitle, Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
 
@@ -384,10 +385,41 @@ export default function Communications() {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   const [history, setHistory] = useState<
-    { id: string; date: string; subject: string; meta: string }[]
+    { id: string; date: string; subject: string; body: string; meta: string }[]
   >([]);
   const [allCount, setAllCount] = useState<number | null>(null);
   const [unpublishing, setUnpublishing] = useState<string | null>(null);
+  const [composeOpen, setComposeOpen] = useState(true);
+
+  /* Inline edit of a sent announcement: which row is open and its draft. */
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editSubject, setEditSubject] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const [editError, setEditError] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  function openEdit(h: { id: string; subject: string; body: string }) {
+    setConfirmDelete(null);
+    setEditError("");
+    if (editId === h.id) { setEditId(null); return; }
+    setEditId(h.id);
+    setEditSubject(h.subject);
+    setEditBody(h.body);
+  }
+
+  async function saveEdit(id: string) {
+    if (savingEdit) return;
+    setSavingEdit(true);
+    setEditError("");
+    const res = await updateAnnouncement({ id, subject: editSubject, body: editBody });
+    setSavingEdit(false);
+    if (!res.ok) return setEditError(res.error);
+    setHistory((prev) =>
+      prev.map((h) => (h.id === id ? { ...h, subject: editSubject.trim(), body: editBody.trim() } : h)),
+    );
+    setEditId(null);
+    s.audit(`Communications: edited announcement “${editSubject.trim()}”`);
+  }
 
   async function unpublish(id: string, subject: string) {
     if (unpublishing) return;
@@ -398,6 +430,20 @@ export default function Communications() {
     const refreshed = await listAnnouncements();
     if (refreshed.ok) setHistory(refreshed.sent);
     s.audit(`Communications: unpublished announcement “${subject}”`);
+  }
+
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  async function remove(id: string, subject: string) {
+    if (deleting) return;
+    setDeleting(id);
+    const res = await deleteAnnouncement(id);
+    setDeleting(null);
+    setConfirmDelete(null);
+    if (!res.ok) return setWarnings([res.error]);
+    setHistory((prev) => prev.filter((h) => h.id !== id));
+    s.audit(`Communications: deleted announcement “${subject}”`);
   }
 
   useEffect(() => {
@@ -446,7 +492,12 @@ export default function Communications() {
       <PageTitle title="Communications" lede="Resident conversations, and announcements to owners by email, text and the portal." />
       <ResidentInbox />
       <Card>
-        <CardHead title="New announcement" />
+        <CardHead title="New announcement" meta={composeOpen ? undefined : "Collapsed"}>
+          <TextButton tone="muted" onClick={() => setComposeOpen((o) => !o)}>
+            {composeOpen ? "Collapse" : "New announcement"}
+          </TextButton>
+        </CardHead>
+        {composeOpen ? (
         <div style={{ padding: 24, display: "grid", gap: 16, maxWidth: 760 }}>
           <Field label="Subject"><Input value={subject} onChange={setSubject} placeholder="e.g. Water shut-off Thursday" /></Field>
           <Field label="Message"><Area value={body} onChange={setBody} rows={4} placeholder="Plain language. Lead with what changes and when." /></Field>
@@ -478,6 +529,7 @@ export default function Communications() {
             {sending ? "Sending\u2026" : "Send announcement"}
           </Primary>
         </div>
+        ) : null}
       </Card>
 
       <Card>
@@ -487,17 +539,58 @@ export default function Communications() {
         ) : history.map((h) => {
           const isPosted = h.meta === "Posted to the resident portal";
           return (
-            <Row key={h.id}>
-              <Mono size={13} style={{ color: color.neutral }}>{h.date}</Mono>
-              <RowMain label={h.subject} detail={h.meta} />
-              {isPosted ? (
-                <TextButton tone="muted" onClick={() => unpublish(h.id, h.subject)}>
-                  {unpublishing === h.id ? "Unpublishing…" : "Unpublish"}
-                </TextButton>
-              ) : (
-                <Mono size={12} style={{ color: color.inkQuaternary }}>Not on the portal</Mono>
-              )}
-            </Row>
+            <React.Fragment key={h.id}>
+              <Row>
+                <Mono size={13} style={{ color: color.neutral }}>{h.date}</Mono>
+                <RowMain label={h.subject} detail={h.meta} />
+                {isPosted ? null : (
+                  <Mono size={12} style={{ color: color.inkQuaternary }}>Not on the portal</Mono>
+                )}
+                <span style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                  <TextButton tone="muted" onClick={() => openEdit(h)}>
+                    {editId === h.id ? "Close" : "Edit"}
+                  </TextButton>
+                  {isPosted ? (
+                    <TextButton tone="muted" onClick={() => unpublish(h.id, h.subject)}>
+                      {unpublishing === h.id ? "Unpublishing…" : "Unpublish"}
+                    </TextButton>
+                  ) : null}
+                  <TextButton tone="destructive"
+                    onClick={() => setConfirmDelete(confirmDelete === h.id ? null : h.id)}>
+                    Delete
+                  </TextButton>
+                </span>
+              </Row>
+              {editId === h.id ? (
+                <div style={{
+                  padding: `4px ${pad.card} 20px`, display: "grid", gap: 12, maxWidth: 760,
+                  borderBottom: `1px solid ${color.hairlineSoft}`,
+                }}>
+                  <Field label="Subject"><Input value={editSubject} onChange={setEditSubject} /></Field>
+                  <Field label="Message"><Area value={editBody} onChange={setEditBody} rows={4} /></Field>
+                  {isPosted ? (
+                    <span style={{ fontSize: 13, color: color.inkQuaternary }}>
+                      This notice is live — saving updates it on the resident portal right away.
+                    </span>
+                  ) : null}
+                  {editError ? <ErrorLine>{editError}</ErrorLine> : null}
+                  <span style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <Primary onClick={() => saveEdit(h.id)} style={{ justifySelf: "start", padding: "9px 18px", opacity: savingEdit ? 0.6 : 1 }}>
+                      {savingEdit ? "Saving…" : "Save changes"}
+                    </Primary>
+                    <TextButton tone="muted" onClick={() => setEditId(null)}>Cancel</TextButton>
+                  </span>
+                </div>
+              ) : null}
+              {confirmDelete === h.id ? (
+                <ConfirmBar
+                  text={`Permanently delete the announcement “${h.subject}”? ${isPosted ? "It comes off the resident portal and " : "It "}is removed from the send history for good. This can't be undone.`}
+                  confirmLabel={deleting === h.id ? "Deleting…" : "Yes, delete it"}
+                  onCancel={() => setConfirmDelete(null)}
+                  onConfirm={() => remove(h.id, h.subject)}
+                />
+              ) : null}
+            </React.Fragment>
           );
         })}
       </Card>
