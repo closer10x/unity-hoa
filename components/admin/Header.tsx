@@ -28,6 +28,11 @@ export default function Header() {
   // The account string is "Name · Role"; split for display.
   const [namePart, rolePart] = s.currentUser.split("·").map((x) => x.trim());
 
+  /* The staff list already carries a signed URL for each avatar, so the
+     header reuses it rather than signing the same object a second time. */
+  const myPhoto =
+    s.staff.find((p) => p.profileId && p.profileId === s.currentUserId)?.photoUrl ?? null;
+
   useEffect(() => {
     if (!profileOpen) return;
     const onDown = (e: MouseEvent) => {
@@ -114,12 +119,17 @@ export default function Header() {
                 borderRadius: 999, padding: "6px 12px 6px 6px", cursor: "pointer",
                 color: color.ink, whiteSpace: "nowrap",
               }}>
+              {/* The photo if there is one, initials if not — the same chip
+                  either way, so the header never shifts when it loads. */}
               <span aria-hidden style={{
                 display: "grid", placeItems: "center", width: 28, height: 28,
                 borderRadius: "50%", background: color.accentTint, color: "oklch(0.34 0.05 155)",
-                fontSize: 12, fontWeight: 600, flex: "0 0 auto",
+                fontSize: 12, fontWeight: 600, flex: "0 0 auto", overflow: "hidden",
               }}>
-                {initials(s.currentUser)}
+                {myPhoto ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={myPhoto} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : initials(s.currentUser)}
               </span>
               <span style={{ fontSize: 14, color: color.inkSecondary }}>{namePart}</span>
               <span aria-hidden style={{ fontSize: 11, color: color.inkQuaternary }}>▾</span>

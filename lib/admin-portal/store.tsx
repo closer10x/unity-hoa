@@ -98,6 +98,8 @@ interface Store {
   stamp: () => string;
   uid: (prefix: string) => string;
   currentUser: string;
+  /** The signed-in account's profile id, so the header can find its photo. */
+  currentUserId: string | null;
   /** The signed-in account's staff role, from the server session. */
   currentRole: StaffRole | null;
   /** Destructive actions are Administrator-only. */
@@ -119,6 +121,7 @@ export function StoreProvider({
   children,
   allowedSections,
   currentUser,
+  currentUserId = null,
   currentRole = null,
   initialData,
 }: {
@@ -128,6 +131,8 @@ export function StoreProvider({
   allowedSections?: string[];
   /** The signed-in account, used to stamp audit entries. */
   currentUser?: string;
+  /** Their profile id, so the header can show their photo rather than initials. */
+  currentUserId?: string | null;
   /** staff_role from the session; gates destructive actions. */
   currentRole?: StaffRole | null;
   /**
@@ -258,7 +263,7 @@ export function StoreProvider({
     customEvents, setCustomEvents,
     ledger, setLedger, bankAccounts, setBankAccounts,
     invoices, setInvoices, invoiceMemos: initialData?.invoiceMemos ?? [], fees, setFees, focusOwnerId, setFocusOwnerId,
-    auditLog, audit, stamp, uid, currentUser: actor, currentRole, isAdministrator, metrics, addressBook, signIns,
+    auditLog, audit, stamp, uid, currentUser: actor, currentUserId, currentRole, isAdministrator, metrics, addressBook, signIns,
     allowedSections: allowed,
   };
 

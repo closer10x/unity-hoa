@@ -31,6 +31,7 @@ export default async function AdminPortalPage() {
     <StoreProvider
       allowedSections={[...resolveSections(staffRole, session.profile.section_access)]}
       currentUser={actor}
+      currentUserId={session.user.id}
       currentRole={role}
       initialData={data}
     >
