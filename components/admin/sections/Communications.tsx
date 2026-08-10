@@ -10,6 +10,7 @@ import {
   listMessageableResidents, replyToResidentThread, setResidentThreadStatus,
   startResidentThread,
 } from "@/lib/admin-portal/message-actions";
+import { getSmsSettings, setSmsEnabled } from "@/lib/admin-portal/sms-settings-actions";
 import {
   createArcFromMessage, createBookingFromMessage, createViolationFromMessage,
   createWorkOrderFromMessage, getThreadResidentContext,
@@ -510,6 +511,22 @@ export default function Communications() {
   /* Owner approval queue actions. */
   const [approvingId, setApprovingId] = useState<string | null>(null);
 
+  /* The master text-messaging switch. */
+  const [smsEnabled, setSmsEnabledState] = useState(false);
+  const [smsConfigured, setSmsConfigured] = useState(false);
+  const [smsBusy, setSmsBusy] = useState(false);
+
+  async function toggleSms() {
+    if (smsBusy) return;
+    const next = !smsEnabled;
+    setSmsBusy(true);
+    const res = await setSmsEnabled(next);
+    setSmsBusy(false);
+    if (!res.ok) return setWarnings([res.error]);
+    setSmsEnabledState(next);
+    s.audit(`Settings: turned text messaging ${next ? "on" : "off"}`);
+  }
+
   async function uploadImage(file: File | undefined) {
     if (!file) return;
     setImageError("");
@@ -609,6 +626,9 @@ export default function Communications() {
     countAnnouncementAudience("all").then((r) => {
       if (alive && r.ok) setAllCount(r.households);
     });
+    getSmsSettings().then((r) => {
+      if (alive && r.ok) { setSmsEnabledState(r.enabled); setSmsConfigured(r.configured); }
+    });
     return () => { alive = false; };
   }, []);
 
@@ -666,6 +686,27 @@ export default function Communications() {
   return (
     <>
       <PageTitle title="Communications" lede="Resident conversations, and announcements to owners by email, text and the portal." />
+
+      <Card>
+        <CardHead title="Text messaging" meta="The master switch for all outbound texts, through SignalWire.">
+          <span style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <Status tone={smsEnabled ? "positive" : "neutral"}>{smsEnabled ? "On" : "Off"}</Status>
+            <Chip on={smsEnabled} onClick={toggleSms}>
+              {smsBusy ? "Saving…" : smsEnabled ? "Turn off" : "Turn on"}
+            </Chip>
+          </span>
+        </CardHead>
+        <div style={{ padding: `14px ${pad.card} 18px` }}>
+          <span style={{ fontSize: 13.5, color: color.inkTertiary }}>
+            {!smsConfigured
+              ? "SignalWire isn’t configured yet — set the SIGNALWIRE_* keys, then turn this on to start sending texts."
+              : smsEnabled
+                ? "Texts are on. Announcements with the Text channel and reply-by-text will send through SignalWire."
+                : "Texts are off. Nothing is sent by text until this is turned on, whatever a message’s channels say."}
+          </span>
+        </div>
+      </Card>
+
       <ResidentInbox />
       <Card>
         <CardHead title="New announcement">
