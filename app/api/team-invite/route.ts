@@ -133,14 +133,14 @@ export async function POST(req: Request) {
     await service.auth.admin.updateUserById(userId, {
       user_metadata: { display_name: name, staff_role: role },
     });
-    /* An account that has never been signed into has no password its owner
-       knows — either a resident invite they never finished, or one minted by
-       the old temporary-password flow. Send them to choose one rather than
-       telling them to use a password they don't have. Someone who has signed
-       in keeps theirs, and hears only what changed. */
-    if (!prior?.last_sign_in_at) {
-      setPasswordUrl = await mintSetPasswordUrl(service, email, "admin");
-    }
+    /* An existing account gets a set-password link too, not a note saying
+       their old password still works. Being invited is the moment someone
+       expects to be let in, and the address is usually one that already has
+       a half-finished account — a resident invite never completed, or one
+       minted by the old temporary-password flow — so "use the password you
+       already have" points at a password nobody knows. The link is optional
+       to follow: ignore it and the existing password still works. */
+    setPasswordUrl = await mintSetPasswordUrl(service, email, "admin");
   }
 
   // Portal access + display name + staff_role (drives section permissions)
