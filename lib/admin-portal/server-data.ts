@@ -6,6 +6,7 @@ import { loadInvoiceMemos, loadInvoices } from "./invoice-actions";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
+  BillingEntity,
   AddressSuggestion,
   SignInEvent,
   ArcApp,
@@ -62,6 +63,8 @@ export type PortalData = {
   invoiceMemos: string[];
   audit: AuditEntry[];
   fees: Fee[];
+  /** The companies the office keeps books for. */
+  entities: BillingEntity[];
   violations: Violation[];
   arcApps: ArcApp[];
   bookings: Booking[];
@@ -104,6 +107,7 @@ const EMPTY: PortalData = {
   invoiceMemos: [],
   audit: [],
   fees: [],
+  entities: [],
   metrics: [],
   residentThreads: [],
 };
@@ -309,6 +313,7 @@ export type FinanceRow = {
   bank_account_id: string | null;
   lot_id: string | null;
   pending: boolean | null;
+  entity_key: string | null;
   created_at: string;
 };
 
@@ -377,12 +382,31 @@ export function mapLedgerRow(
     pending: Boolean(r.pending),
     ownerId: r.lot_id,
     ownerName: (r.lot_id && ownerNames.get(r.lot_id)) || "",
+    entity: r.entity_key ?? null,
   };
 }
 
 export function bankAccountLabel(b: BankAccount): string {
   const base = b.institution || b.name;
   return b.mask ? `${base} ····${b.mask}` : base;
+}
+
+/**
+ * The companies the office keeps books for. Read rather than hard-coded: a
+ * second association is the expected direction of travel, and the legal
+ * names belong on invoices, so they must be editable without a deploy.
+ */
+export async function loadBillingEntities(db: SupabaseClient): Promise<BillingEntity[]> {
+  const res = await db
+    .from("billing_entities")
+    .select("key, name, legal_name")
+    .eq("active", true)
+    .order("sort", { ascending: true });
+  return ((res.data ?? []) as { key: string; name: string; legal_name: string }[]).map((e) => ({
+    key: e.key,
+    name: e.name,
+    legalName: e.legal_name,
+  }));
 }
 
 /** The fee schedule, active first, in the office's chosen order. */
@@ -398,6 +422,7 @@ export async function loadFees(db: SupabaseClient): Promise<Fee[]> {
     category: string;
     amount_cents: number;
     active: boolean;
+    entity_key: string | null;
   }[]).map((f) => ({
     id: f.id,
     name: f.name,
@@ -405,6 +430,7 @@ export async function loadFees(db: SupabaseClient): Promise<Fee[]> {
     amount: usdExact(f.amount_cents),
     amountCents: f.amount_cents,
     active: f.active,
+    entity: f.entity_key ?? null,
   }));
 }
 
@@ -753,7 +779,7 @@ export async function loadPortalData(): Promise<PortalData> {
 
   // Fetched together; a failure on any one table leaves that section empty
   // rather than failing the whole portal.
-  const [lotsRes, profilesRes, woRes, docsRes, empRes, eventsRes, payRes, metricsRes, accounting, audit, fees] =
+  const [lotsRes, profilesRes, woRes, docsRes, empRes, eventsRes, payRes, metricsRes, accounting, audit, fees, entities] =
     await Promise.all([
       db.from("lots").select("*").order("lot_number", { ascending: true }).limit(1000),
       db.from("profiles").select("*"),
@@ -769,6 +795,7 @@ export async function loadPortalData(): Promise<PortalData> {
       loadAccounting(db),
       loadAuditTrail(db),
       loadFees(db),
+      loadBillingEntities(db),
     ]);
 
   const lots = (lotsRes.data ?? []) as LotRow[];
@@ -994,6 +1021,7 @@ export async function loadPortalData(): Promise<PortalData> {
     bankAccounts: accounting.bankAccounts,
     audit,
     fees,
+    entities,
     metrics,
     residentThreads,
   };

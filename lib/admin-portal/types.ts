@@ -128,6 +128,22 @@ export interface CalEvent {
 
 export interface Payment { id: string; date: string; label: string; amount: string; }
 
+/**
+ * One of the two companies the office keeps books for. The association levies
+ * HOA fees and fines; the management company sells certificates and services.
+ * Separate legal entities, separate returns.
+ */
+export interface BillingEntity {
+  key: string;
+  /** Short label for chips and rows. */
+  name: string;
+  /** What belongs on an invoice and a tax return. */
+  legalName: string;
+}
+
+/** Whose money a row is. Null means nobody has assigned it yet. */
+export type EntityKey = string | null;
+
 /** One line in the general ledger (finance_transactions). */
 export interface LedgerEntry {
   id: string;
@@ -146,6 +162,8 @@ export interface LedgerEntry {
   /** The owner (lot) this money belongs to, when linked — e.g. an HOA fee. */
   ownerId: string | null;
   ownerName: string;
+  /** Which company's books this belongs to. */
+  entity: EntityKey;
 }
 
 /** A named fee from the association's fee schedule (quick-picks on forms). */
@@ -156,6 +174,8 @@ export interface Fee {
   amount: string;
   amountCents: number;
   active: boolean;
+  /** Which company's revenue this fee is. Drives what an invoice is stamped. */
+  entity: EntityKey;
 }
 
 export interface BankAccount {
@@ -198,6 +218,8 @@ export interface Invoice {
   total: string;
   totalCents: number;
   paidOn: string | null;
+  /** Which company this bills for, copied from its fees when raised. */
+  entity: EntityKey;
   /** Whether the payment reached the bank. Null when it was never asked. */
   deposited: boolean | null;
   depositedOn: string | null;

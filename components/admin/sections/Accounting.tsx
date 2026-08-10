@@ -15,7 +15,8 @@ import { buildReport } from "@/lib/admin-portal/report-actions";
 import { buildActionMenu, useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
 import type {
-  BankAccount, Fee, Invoice, LedgerEntry, PendingConfirm, ReportData, ReportType,
+  BankAccount, BillingEntity, EntityKey, Fee, Invoice, LedgerEntry, PendingConfirm,
+  ReportData, ReportType,
 } from "@/lib/admin-portal/types";
 import {
   ActionSelect, AddDrawer, Card, CardHead, Chip, ConfirmBar, DateInput, Empty, ErrorLine, Field, FieldGrid, FilterBar, HomePicker, Input, Mono, PageTitle, Primary, Row, RowMain, Select, Status, TextButton, Tile, Tiles,
@@ -35,6 +36,38 @@ const usd = (cents: number) =>
 function todayISO(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Which company the section is currently showing. Held in context rather
+ * than threaded through every card: the tiles, the ledger, the invoices and
+ * the reports all answer to one switch, and a card that forgets to read it
+ * would quietly show both companies' money as one.
+ */
+const EntityFilterCtx = React.createContext<string>("all");
+const useEntityFilter = () => React.useContext(EntityFilterCtx);
+
+/** Does this row belong in the current view? "all" keeps everything. */
+function inEntity(filter: string, key: EntityKey): boolean {
+  if (filter === "all") return true;
+  if (filter === "unassigned") return !key;
+  return key === filter;
+}
+
+/**
+ * The company a row belongs to, named for display. Unassigned is said out
+ * loud rather than left blank — a blank reads as "no opinion", and whose
+ * revenue something is always has an answer somebody has to give.
+ */
+function entityName(entities: BillingEntity[], key: EntityKey): string {
+  if (!key) return "Unassigned";
+  return entities.find((e) => e.key === key)?.legalName ?? key;
+}
+
+/** The short form, for chips and row cells where the legal name is too long. */
+function entityShort(entities: BillingEntity[], key: EntityKey): string {
+  if (!key) return "Unassigned";
+  return entities.find((e) => e.key === key)?.name ?? key;
 }
 
 /**
@@ -79,6 +112,14 @@ export default function Accounting() {
   const outstandingCount = s.invoices.filter(
     (i) => i.status === "draft" || i.status === "sent",
   ).length;
+
+  /* Money nobody has said whose it is. Worth surfacing rather than hiding:
+     an unassigned row is not in either company's books, so it is invisible
+     at return time until someone claims it. */
+  const unassignedCount =
+    s.invoices.filter((i) => !i.entity).length +
+    s.ledger.filter((l) => !l.entity).length +
+    s.fees.filter((f) => !f.entity).length;
 
   /* ----- take a payment (collapsed at the top; product rule 1) ----- */
   const [open, setOpen] = useState(false);
@@ -154,6 +195,9 @@ export default function Accounting() {
   /* ----- sub-navigation ----- */
   const [tab, setTab] = useState<AccountingTab>("overview");
 
+  /* ----- which company's books are on screen ----- */
+  const [entityFilter, setEntityFilter] = useState("all");
+
   return (
     <>
       <PageTitle title="Accounting" lede={`Receivables, the general ledger and bank activity for ${s.scopeLabel}.`} />
@@ -192,6 +236,41 @@ export default function Accounting() {
         ))}
       </div>
 
+      {/* Two companies share this office and this screen. The switch says
+          whose money is being looked at; "Both" is the sum, which is useful
+          for cash on hand and useless for a tax return. */}
+      {s.entities.length > 1 ? (
+        <div style={{
+          display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center",
+          padding: "14px 0 2px",
+        }}>
+          <span style={{
+            fontFamily: font.mono, fontSize: 10.5, letterSpacing: "0.12em",
+            textTransform: "uppercase", color: color.inkQuaternary,
+          }}>
+            Books for
+          </span>
+          <Chip size="sm" on={entityFilter === "all"} onClick={() => setEntityFilter("all")}>
+            Both companies
+          </Chip>
+          {s.entities.map((e) => (
+            <Chip key={e.key} size="sm" on={entityFilter === e.key}
+              onClick={() => setEntityFilter(e.key)}>
+              {e.legalName}
+            </Chip>
+          ))}
+          {/* Only offered when something is actually unassigned — otherwise
+              it is a filter that always comes back empty. */}
+          {unassignedCount > 0 ? (
+            <Chip size="sm" on={entityFilter === "unassigned"}
+              onClick={() => setEntityFilter("unassigned")}>
+              Unassigned · {unassignedCount}
+            </Chip>
+          ) : null}
+        </div>
+      ) : null}
+
+      <EntityFilterCtx.Provider value={entityFilter}>
       {tab === "overview" ? (
       <>
       <LedgerTiles />
@@ -431,6 +510,7 @@ export default function Accounting() {
       {tab === "reports" ? <ReportsCard /> : null}
       {tab === "fees" ? <FeeCard /> : null}
       {tab === "bank" ? <BankCard /> : null}
+      </EntityFilterCtx.Provider>
     </>
   );
 }
@@ -521,9 +601,11 @@ function InvoicesCard() {
     setEditing(null);
   }
 
+  const entityFilter = useEntityFilter();
   const visible = useSearchFilter(
     s.invoices, query, ["number", "billTo", "address", "total"],
     (i) => {
+      if (!inEntity(entityFilter, i.entity)) return false;
       if (filter === "All") return true;
       if (filter === "Draft") return i.status === "draft";
       if (filter === "Issued") return i.status === "sent";
@@ -533,9 +615,12 @@ function InvoicesCard() {
     },
   );
 
-  const owing = s.invoices.filter((i) => i.status === "sent");
+  /* The tiles answer to the switch too — "outstanding" for one company is a
+     different number from both companies added together. */
+  const scoped = s.invoices.filter((i) => inEntity(entityFilter, i.entity));
+  const owing = scoped.filter((i) => i.status === "sent");
   const owedCents = owing.reduce((t, i) => t + i.totalCents, 0);
-  const overdueCount = s.invoices.filter((i) => i.overdue).length;
+  const overdueCount = scoped.filter((i) => i.overdue).length;
 
   function setLine(idx: number, patch: Partial<{ description: string; amount: string; quantity: string }>) {
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
@@ -723,6 +808,11 @@ function InvoicesCard() {
                 <span style={{ display: "block", fontSize: 12.5, color: color.inkTertiary, marginTop: 2 }}>
                   Created by {inv.createdBy}
                 </span>
+                {/* Shares this cell rather than taking a track of its own —
+                    the row is already at its five-cell budget. */}
+                <Mono size={11} style={{ color: inv.entity ? color.neutral : "oklch(0.55 0.13 55)" }}>
+                  {entityShort(s.entities, inv.entity)}
+                </Mono>
               </span>
               {/* Amount and status share a track. Six cells against the five
                   the row fits at laptop width meant one always wrapped, and
@@ -795,6 +885,13 @@ function InvoicesCard() {
                   <Mono size={12} style={{ color: color.inkQuaternary }}>
                     Created by {inv.createdBy} · issued {inv.issued}
                   </Mono>
+                  {/* The legal name, because this is the one that belongs on
+                      the notice the household receives and on the return. */}
+                  <span style={{ fontSize: 13.5, color: inv.entity ? color.inkTertiary : "oklch(0.5 0.13 55)" }}>
+                    {inv.entity
+                      ? `Billed for ${entityName(s.entities, inv.entity)}.`
+                      : "No company assigned — this invoice is in neither set of books. Set the fee's owner on the fee schedule."}
+                  </span>
                   {inv.paidOn ? (
                     <span style={{ fontSize: 13.5, color: color.positive }}>
                       Collected {inv.paidOn}.
@@ -1077,10 +1174,11 @@ function LedgerCard() {
     return true;
   }, [filter]);
 
+  const entityFilter = useEntityFilter();
   const filtered = useSearchFilter(
     s.ledger, query,
     ["description", "category", "account", "amount", "dateLabel"],
-    byFilter,
+    (e) => inEntity(entityFilter, e.entity) && byFilter(e),
   );
 
   async function save() {
@@ -1546,20 +1644,27 @@ function FeeCard() {
   const [error, setError] = useState("");
   const [confirmRetire, setConfirmRetire] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
-  const [ef, setEf] = useState({ name: "", amount: "", category: INCOME_CATEGORIES[0] });
+  const [ef, setEf] = useState({ name: "", amount: "", category: INCOME_CATEGORIES[0], entity: "" });
 
   function openEdit(f: Fee) {
     if (editId === f.id) { setEditId(null); return; }
     setEditId(f.id);
     setError("");
-    setEf({ name: f.name, amount: f.amount.replace(/[^0-9.]/g, ""), category: f.category });
+    setEf({
+      name: f.name,
+      amount: f.amount.replace(/[^0-9.]/g, ""),
+      category: f.category,
+      entity: f.entity ?? "",
+    });
   }
 
   async function saveEdit(f: Fee) {
     if (saving) return;
     setSaving(true);
     setError("");
-    const res = await updateFee({ id: f.id, name: ef.name, amount: ef.amount, category: ef.category });
+    const res = await updateFee({
+      id: f.id, name: ef.name, amount: ef.amount, category: ef.category, entity: ef.entity,
+    });
     setSaving(false);
     if (!res.ok) return setError(res.error);
     s.setFees(res.fees);
@@ -1654,7 +1759,10 @@ function FeeCard() {
       ) : s.fees.map((f) => (
         <React.Fragment key={f.id}>
           <Row>
-            <RowMain label={f.name} detail={`Books to ${f.category}`} />
+            <RowMain
+              label={f.name}
+              detail={`Books to ${f.category} \u00B7 ${entityName(s.entities, f.entity)}`}
+            />
             <Mono size={15}>{f.amount}</Mono>
             <Status tone={f.active ? "positive" : "neutral"}>{f.active ? "Active" : "Retired"}</Status>
             <span style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -1676,6 +1784,16 @@ function FeeCard() {
                   <Field label="Books to">
                     <Select value={ef.category} onChange={(v) => setEf({ ...ef, category: v })}
                       options={INCOME_CATEGORIES.map((c) => ({ id: c, label: c }))} />
+                  </Field>
+                  {/* Which company's revenue this is. The HOA fee and fines
+                      are the association's; certificates and services are the
+                      management company's. Two legal entities, two returns. */}
+                  <Field label="Revenue belongs to" hint="Applies to what is billed from here on, not to money already booked">
+                    <Select value={ef.entity} onChange={(v) => setEf({ ...ef, entity: v })}
+                      options={[
+                        { id: "", label: "Unassigned" },
+                        ...s.entities.map((e) => ({ id: e.key, label: e.legalName })),
+                      ]} />
                   </Field>
                 </FieldGrid>
                 <span style={{ fontSize: 13, color: color.inkQuaternary }}>

@@ -201,6 +201,8 @@ export async function updateFee(input: {
   name: string;
   amount: string;
   category: string;
+  /** Which company's revenue this fee is; "" leaves it unassigned. */
+  entity: string;
 }): Promise<Ok<{ fees: Fee[] }> | Fail> {
   try {
     const { db, actorName, actorId } = await adminContext();
@@ -212,16 +214,20 @@ export async function updateFee(input: {
 
     const { data: before, error: readErr } = await db
       .from("fee_schedule")
-      .select("name, amount_cents, category")
+      .select("name, amount_cents, category, entity_key")
       .eq("id", input.id)
       .maybeSingle();
     if (readErr) throw new Error(readErr.message);
     if (!before) return { ok: false, error: "That fee no longer exists." };
 
     const category = input.category.trim() || "Other income";
+    /* Only ever affects what is billed from here on. Invoices and ledger rows
+       carry their own copy, so moving a fee between companies never restates
+       money already booked. */
+    const entityKey = input.entity.trim() || null;
     const { error } = await db
       .from("fee_schedule")
-      .update({ name, amount_cents: cents, category })
+      .update({ name, amount_cents: cents, category, entity_key: entityKey })
       .eq("id", input.id);
     if (error) throw new Error(error.message);
 
@@ -231,6 +237,9 @@ export async function updateFee(input: {
       changes.push(`${usd(before.amount_cents)} \u2192 ${usd(cents)}`);
     }
     if ((before.category ?? "") !== category) changes.push(`category \u2192 ${category}`);
+    if ((before.entity_key ?? null) !== entityKey) {
+      changes.push(`revenue \u2192 ${entityKey ?? "unassigned"}`);
+    }
 
     await writeAudit(
       db,

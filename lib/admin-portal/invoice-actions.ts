@@ -70,6 +70,7 @@ type InvoiceRow = {
   memo: string | null;
   total_cents: number;
   paid_on: string | null;
+  entity_key: string | null;
   payment_deposited: boolean | null;
   payment_deposited_on: string | null;
   void_reason: string | null;
@@ -98,6 +99,7 @@ function toInvoice(r: InvoiceRow, address: string, lines: InvoiceLine[]): Invoic
     total: usd(r.total_cents ?? 0),
     totalCents: r.total_cents ?? 0,
     paidOn: r.paid_on ? dateLabel(r.paid_on) : null,
+    entity: r.entity_key ?? null,
     deposited: r.payment_deposited ?? null,
     depositedOn: r.payment_deposited_on ? dateLabel(r.payment_deposited_on) : null,
     voidReason: r.void_reason ?? null,
@@ -229,6 +231,23 @@ export async function createInvoice(input: {
       billTo = prof?.display_name?.trim() || billTo;
     }
 
+    /* Which company this bills for. A line raised from the fee schedule
+       carries that fee's entity; the invoice takes it when every line agrees.
+       A mixed invoice is left unassigned rather than guessed at — it would
+       have to be split before either company could book it, and silently
+       picking one is how revenue ends up in the wrong return. */
+    const { data: feeRows } = await db
+      .from("fee_schedule")
+      .select("id, name, entity_key");
+    const feeByName = new Map(
+      (feeRows ?? []).map((f) => [((f.name as string) ?? "").trim().toLowerCase(), f]),
+    );
+    const matched = lines.map((l) => feeByName.get(l.description.toLowerCase()));
+    const entities = new Set(
+      matched.map((f) => (f?.entity_key as string | undefined) ?? null).filter(Boolean),
+    );
+    const entityKey = entities.size === 1 ? [...entities][0] : null;
+
     const { data: inv, error } = await db
       .from("invoices")
       .insert({
@@ -238,6 +257,7 @@ export async function createInvoice(input: {
         due_on: /^\d{4}-\d{2}-\d{2}$/.test(input.dueOn) ? input.dueOn : null,
         memo: input.memo.trim() || null,
         status: "draft",
+        entity_key: entityKey,
         created_by_name: actorName,
       })
       .select("invoice_number, id")
@@ -245,8 +265,10 @@ export async function createInvoice(input: {
     if (error) throw new Error(error.message);
 
     const { error: lineErr } = await db.from("invoice_lines").insert(
-      lines.map((l) => ({
+      lines.map((l, i) => ({
         invoice_id: inv.id as string,
+        // Keeps the link back to the schedule the quick-pick came from.
+        fee_id: (matched[i]?.id as string | undefined) ?? null,
         description: l.description,
         quantity: l.quantity,
         unit_amount_cents: l.unit as number,
@@ -396,6 +418,10 @@ export async function recordInvoicePayment(input: {
         source: "manual",
         lot_id: inv.lot_id,
         owner_entry: "payment",
+        /* The money goes to whichever company the invoice billed for. Copied,
+           not looked up later: re-pointing a fee at the other company next
+           year must not move last year's income across the books. */
+        entity_key: inv.entity_key ?? null,
         entered_by_user_id: actorId,
         entered_by_name: actorName,
       })

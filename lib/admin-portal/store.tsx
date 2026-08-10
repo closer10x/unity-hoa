@@ -5,6 +5,7 @@ import * as fx from "./fixtures";
 import { ALL_SECTIONS } from "./permissions";
 import { MOBILE_BREAKPOINT } from "./tokens";
 import type {
+  BillingEntity,
   AddressSuggestion, ArcApp, AuditEntry, BankAccount, Booking, CalEvent, Community, Delinquent, Director, Doc, Fee, Invoice, LedgerEntry, LegalCase, Meeting, Owner, Payment, PendingConfirm, Portfolio, ResidentThread, SignInEvent, Staff, StaffRole, Vendor, Violation, WorkOrder,
 } from "./types";
 
@@ -87,6 +88,8 @@ interface Store {
   invoices: Invoice[];
   setInvoices: React.Dispatch<React.SetStateAction<Invoice[]>>;
   fees: Fee[];
+  /** The companies the office keeps books for, in display order. */
+  entities: BillingEntity[];
   setFees: React.Dispatch<React.SetStateAction<Fee[]>>;
   /** Set before jumping to Owners to open that owner in focus (search prefilled). */
   focusOwnerId: string | null;
@@ -154,6 +157,7 @@ export function StoreProvider({
     invoices: Invoice[];
     invoiceMemos: string[];
     fees: Fee[];
+    entities: BillingEntity[];
     /** Server-written audit trail (admin_audit_log), newest first. */
     audit: AuditEntry[];
     metrics: { label: string; value: string; note: string }[];
@@ -262,7 +266,8 @@ export function StoreProvider({
     residentThreads, setResidentThreads,
     customEvents, setCustomEvents,
     ledger, setLedger, bankAccounts, setBankAccounts,
-    invoices, setInvoices, invoiceMemos: initialData?.invoiceMemos ?? [], fees, setFees, focusOwnerId, setFocusOwnerId,
+    invoices, setInvoices, invoiceMemos: initialData?.invoiceMemos ?? [],
+    fees, setFees, entities: initialData?.entities ?? [], focusOwnerId, setFocusOwnerId,
     auditLog, audit, stamp, uid, currentUser: actor, currentUserId, currentRole, isAdministrator, metrics, addressBook, signIns,
     allowedSections: allowed,
   };
