@@ -1,5 +1,6 @@
 import "server-only";
 
+import { communityPrefix, formatAccountNumber } from "@/lib/accounts/account-number";
 import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -767,23 +768,30 @@ export async function loadPortalData(): Promise<PortalData> {
   const profiles = (profilesRes.data ?? []) as ProfileRow[];
   const byProfile = new Map(profiles.map((p) => [p.id, p]));
 
-  const owners: Owner[] = lots.map((l) => {
+  const owners: Owner[] = lots.map((l, i) => {
     const p = l.owner_profile_id ? byProfile.get(l.owner_profile_id) : undefined;
     const street = [l.street_number, l.street_name].filter(Boolean).join(" ");
     const cityLine = [l.city, [l.state, l.zip].filter(Boolean).join(" ")]
       .filter(Boolean)
       .join(", ");
+    // Community-prefixed account number, e.g. SL-000001. The lot number
+    // isn't globally unique (Lot 1 repeats across blocks), so the sequence
+    // seeds off the ordered position to keep every account distinct.
+    const prefix = communityPrefix(l.community ?? "") ?? "SL";
+    const account = formatAccountNumber(prefix, i + 1);
     return {
       id: l.id,
       name: p?.display_name?.trim() || "Unassigned lot",
-      address: [street, cityLine].filter(Boolean).join(", ") || "No address recorded",
+      // Street on one line, "City, State ZIP" on the next so the locality
+      // never wraps mid-line. RowMain renders the newline (white-space).
+      address: [street, cityLine].filter(Boolean).join("\n") || "No address recorded",
       contact: p?.phone?.trim() || "—",
       // Per-account balances are not tracked yet — no ledger per lot.
       balance: "—",
       status: p ? "Owner on file" : "No owner linked",
       scope: l.community ?? "all",
       flag: p ? "current" : "tenant",
-      account: l.lot_number ? `Lot ${l.lot_number}` : l.id.slice(0, 8),
+      account,
     };
   });
 
