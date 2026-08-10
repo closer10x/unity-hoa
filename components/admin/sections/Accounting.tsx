@@ -37,6 +37,29 @@ function todayISO(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/**
+ * Every state an invoice may legitimately move to from where it is, which is
+ * what the Take action… list offers — never a state the server would refuse.
+ *
+ * A collected invoice offers nothing: it cannot be voided, because undoing a
+ * payment that arrived is a refund, not a void. A void one is finished.
+ */
+function nextActions(inv: Invoice): { id: string; label: string }[] {
+  if (inv.status === "draft") {
+    return [
+      { id: "issue", label: "Issue it…" },
+      { id: "void", label: "Void it…" },
+    ];
+  }
+  if (inv.status === "sent") {
+    return [
+      { id: "collect", label: "Record payment…" },
+      { id: "void", label: "Void it…" },
+    ];
+  }
+  return [];
+}
+
 /** Sub-navigation inside Accounting — one surface per job, less scrolling. */
 const ACCOUNTING_TABS = [
   { id: "overview", label: "Overview" },
@@ -713,7 +736,13 @@ function InvoicesCard() {
                     : inv.overdue ? "Overdue"
                       : inv.status === "sent" ? "Issued" : "Draft"}
               </Status>
-              <span style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              {/* View and Edit stay in the open, because reading an invoice
+                  and correcting a typo are not "actions" in the sense the
+                  rule means. What moves it along a status — issuing,
+                  collecting, voiding — goes behind Take action…, the same
+                  control work orders and violations use, which also lets the
+                  cluster hold one line instead of wrapping into three. */}
+              <span style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "nowrap" }}>
                 <TextButton onClick={() => setOpenId(openId === inv.id ? null : inv.id)}>
                   {openId === inv.id ? "Close" : "View"}
                 </TextButton>
@@ -722,14 +751,15 @@ function InvoicesCard() {
                     {editing === inv.id ? "Close" : "Edit"}
                   </TextButton>
                 ) : null}
-                {inv.status === "draft" ? (
-                  <TextButton onClick={() => issue(inv.id, inv.number)}>Issue…</TextButton>
-                ) : null}
-                {inv.status === "sent" ? (
-                  <TextButton onClick={() => { setCollecting(inv.id); setPaidOn(todayISO()); }}>Record payment…</TextButton>
-                ) : null}
-                {inv.status === "draft" || inv.status === "sent" ? (
-                  <TextButton tone="destructive" onClick={() => { setVoiding(inv.id); setVoidReason(""); }}>Void…</TextButton>
+                {nextActions(inv).length > 0 ? (
+                  <ActionSelect
+                    options={nextActions(inv)}
+                    onChoose={(id) => {
+                      if (id === "issue") return void issue(inv.id, inv.number);
+                      if (id === "collect") { setCollecting(inv.id); setPaidOn(todayISO()); return; }
+                      if (id === "void") { setVoiding(inv.id); setVoidReason(""); }
+                    }}
+                  />
                 ) : null}
               </span>
             </Row>
