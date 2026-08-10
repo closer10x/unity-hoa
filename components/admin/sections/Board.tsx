@@ -10,7 +10,7 @@ import { buildActionMenu, useStore } from "@/lib/admin-portal/store";
 import { color, pad } from "@/lib/admin-portal/tokens";
 import type { Address, MeetingStatus, PendingConfirm } from "@/lib/admin-portal/types";
 import {
-  ActionSelect, AddDrawer, AddressFields, Area, Card, CardHead, ConfirmBar,
+  ActionSelect, AddDrawer, AddressFields, Area, Card, CardHead, Chip, ConfirmBar,
   DateInput, Empty, ErrorLine, Eyebrow, Field, FieldGrid, Input, Mono, PageTitle,
   Pill, Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
@@ -40,16 +40,22 @@ export default function Board() {
   const [dError, setDError] = useState("");
   const [dName, setDName] = useState("");
   const [dRole, setDRole] = useState(ROLES[0]);
+  const [dComm, setDComm] = useState(s.communities[0]?.name ?? "");
   const [dAddress, setDAddress] = useState<Address>(emptyAddress());
   const [dStart, setDStart] = useState("");
   const [dEnd, setDEnd] = useState("");
   const [dSaving, setDSaving] = useState(false);
   const [dFlowError, setDFlowError] = useState("");
   const [ending, setEnding] = useState("");
+  /* Filter the roster to one community's board when there is more than one. */
+  const [dFilter, setDFilter] = useState("all");
+  const dVisible = dFilter === "all"
+    ? s.directors
+    : s.directors.filter((d) => d.community === dFilter);
 
   /* inline edit of a seated director */
   const [editing, setEditing] = useState("");
-  const [ef, setEf] = useState({ name: "", role: ROLES[0], address: emptyAddress(), start: "", end: "" });
+  const [ef, setEf] = useState({ name: "", role: ROLES[0], community: "", address: emptyAddress(), start: "", end: "" });
   const [eError, setEError] = useState("");
   const [eSaving, setESaving] = useState(false);
 
@@ -72,6 +78,7 @@ export default function Board() {
     setEf({
       name: d.name,
       role: ROLES.includes(d.role) ? d.role : ROLES[0],
+      community: d.community || (s.communities[0]?.name ?? ""),
       address: { ...emptyAddress(), streetNo, street, city, state: state || "Texas", zip },
       start: years[0] ?? "",
       end: years[1] ?? "",
@@ -84,7 +91,7 @@ export default function Board() {
     if (!ef.start.trim() || !ef.end.trim()) return setEError("Add the term start and end years.");
     setESaving(true);
     const res = await updateDirector({
-      id, name: ef.name, role: ef.role,
+      id, name: ef.name, role: ef.role, community: ef.community,
       streetNumber: ef.address.streetNo, streetName: ef.address.street, unit: ef.address.unit,
       city: ef.address.city, state: ef.address.state, zip: ef.address.zip,
       termStart: ef.start, termEnd: ef.end,
@@ -113,10 +120,11 @@ export default function Board() {
 
   async function saveDirector() {
     if (!dName.trim()) return setDError("Add the director's name.");
+    if (!dComm.trim()) return setDError("Pick the community this board serves.");
     if (!dStart.trim() || !dEnd.trim()) return setDError("Add the term start and end years.");
     setDSaving(true);
     const res = await seatDirector({
-      name: dName, role: dRole,
+      name: dName, role: dRole, community: dComm,
       streetNumber: dAddress.streetNo, streetName: dAddress.street, unit: dAddress.unit,
       city: dAddress.city, state: dAddress.state, zip: dAddress.zip,
       termStart: dStart, termEnd: dEnd,
@@ -124,7 +132,8 @@ export default function Board() {
     setDSaving(false);
     if (!res.ok) return setDError(res.error);
     s.setDirectors((prev) => [...prev, res.director]);
-    setDOpen(false); setDError(""); setDName(""); setDAddress(emptyAddress()); setDStart(""); setDEnd("");
+    setDOpen(false); setDError(""); setDName("");
+    setDComm(s.communities[0]?.name ?? ""); setDAddress(emptyAddress()); setDStart(""); setDEnd("");
   }
 
   async function saveMeeting() {
@@ -154,6 +163,10 @@ export default function Board() {
           <FieldGrid>
             <Field label="Name"><Input value={dName} onChange={setDName} placeholder="First and last" /></Field>
             <Field label="Role"><Select value={dRole} onChange={setDRole} options={ROLES.map((r) => ({ id: r, label: r }))} /></Field>
+            <Field label="Community" hint="Which community's board this seat is on.">
+              <Select value={dComm} onChange={setDComm} placeholder="Pick a community"
+                options={s.communities.map((c) => ({ id: c.name, label: c.name }))} />
+            </Field>
           </FieldGrid>
           <AddressFields value={dAddress} onChange={setDAddress} />
           <FieldGrid>
@@ -170,17 +183,33 @@ export default function Board() {
 
         {dFlowError ? <div style={{ padding: `12px ${pad.card} 0` }}><ErrorLine>{dFlowError}</ErrorLine></div> : null}
 
-        {s.directors.length === 0 ? (
-          <Empty>No directors on the roster. Seat the board here — each seat carries a role and a term, and the roster keeps past terms.</Empty>
+        {s.communities.length > 1 ? (
+          <div style={{ padding: `14px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <Chip size="sm" on={dFilter === "all"} onClick={() => setDFilter("all")}>All boards</Chip>
+            {s.communities.map((c) => (
+              <Chip key={c.id} size="sm" on={dFilter === c.name} onClick={() => setDFilter(c.name)}>{c.name}</Chip>
+            ))}
+          </div>
         ) : null}
 
-        {s.directors.map((d) => {
+        {s.directors.length === 0 ? (
+          <Empty>No directors on the roster. Seat the board here — each seat carries a role and a term, and the roster keeps past terms.</Empty>
+        ) : dVisible.length === 0 ? (
+          <Empty>No directors on the {dFilter} board yet.</Empty>
+        ) : null}
+
+        {dVisible.map((d) => {
           const ended = termEnded(d.term);
           return (
             <React.Fragment key={d.id}>
               <Row>
                 <RowMain label={d.name} detail={d.address} />
-                <Mono size={12} style={{ color: color.neutral }}>{d.role}</Mono>
+                {/* Role and community pair in one cell — the board a seat is on
+                    reads under the role, keeping the row inside its cell budget. */}
+                <span style={{ display: "grid", gap: 2 }}>
+                  <Mono size={12} style={{ color: color.neutral }}>{d.role}</Mono>
+                  {d.community ? <Mono size={11} style={{ color: color.inkQuaternary }}>{d.community}</Mono> : null}
+                </span>
                 <span style={{ fontSize: 14, color: color.inkTertiary }}>{d.term}</span>
                 <span style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                   <TextButton onClick={() => (editing === d.id ? setEditing("") : openEdit(d))}>
@@ -201,6 +230,10 @@ export default function Board() {
                   <FieldGrid>
                     <Field label="Name"><Input value={ef.name} onChange={(v) => setEf((p) => ({ ...p, name: v }))} placeholder="First and last" /></Field>
                     <Field label="Role"><Select value={ef.role} onChange={(v) => setEf((p) => ({ ...p, role: v }))} options={ROLES.map((r) => ({ id: r, label: r }))} /></Field>
+                    <Field label="Community" hint="Which community's board this seat is on.">
+                      <Select value={ef.community} onChange={(v) => setEf((p) => ({ ...p, community: v }))} placeholder="Pick a community"
+                        options={s.communities.map((c) => ({ id: c.name, label: c.name }))} />
+                    </Field>
                   </FieldGrid>
                   <AddressFields value={ef.address} onChange={(a) => setEf((p) => ({ ...p, address: a }))} />
                   <FieldGrid>

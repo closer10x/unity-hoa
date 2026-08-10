@@ -297,6 +297,8 @@ export async function seatDirector(input: {
 
     const name = input.name.trim();
     if (!name) return { ok: false, error: "Add the director's name." };
+    const community = input.community.trim();
+    if (!community) return { ok: false, error: "Pick the community this board serves." };
 
     const termStart = toTermDate(input.termStart, "start");
     const termEnd = toTermDate(input.termEnd, "end");
@@ -312,6 +314,7 @@ export async function seatDirector(input: {
       .insert({
         name,
         role: input.role.trim() || "Director",
+        community,
         street_number: input.streetNumber.trim() || null,
         street_name: input.streetName.trim() || null,
         unit: input.unit.trim() || null,
@@ -327,7 +330,7 @@ export async function seatDirector(input: {
 
     await audit(
       db, actorName, actorId,
-      `Board: seated ${name} as ${input.role.trim() || "Director"} (${dayLabel(termStart)} – ${dayLabel(termEnd)})`,
+      `Board: seated ${name} as ${input.role.trim() || "Director"} on the ${community} board (${dayLabel(termStart)} – ${dayLabel(termEnd)})`,
     );
 
     revalidatePath("/admin");
@@ -345,6 +348,7 @@ export async function updateDirector(input: {
   id: string;
   name: string;
   role: string;
+  community: string;
   streetNumber: string;
   streetName: string;
   unit: string;
@@ -359,6 +363,8 @@ export async function updateDirector(input: {
 
     const name = input.name.trim();
     if (!name) return { ok: false, error: "Add the director's name." };
+    const community = input.community.trim();
+    if (!community) return { ok: false, error: "Pick the community this board serves." };
 
     const termStart = toTermDate(input.termStart, "start");
     const termEnd = toTermDate(input.termEnd, "end");
@@ -374,6 +380,7 @@ export async function updateDirector(input: {
       .update({
         name,
         role: input.role.trim() || "Director",
+        community,
         street_number: input.streetNumber.trim() || null,
         street_name: input.streetName.trim() || null,
         unit: input.unit.trim() || null,

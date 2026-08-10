@@ -694,6 +694,7 @@ async function loadRemainingDomains(db: SupabaseClient) {
     id: d.id,
     name: d.name,
     role: d.role ?? "Director",
+    community: d.community ?? "",
     address: [
       [d.street_number, d.street_name].filter(Boolean).join(" "),
       d.city,
