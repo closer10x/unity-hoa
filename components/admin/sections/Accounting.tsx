@@ -1527,35 +1527,66 @@ const escapeHtml = (v: string) =>
 /** A standalone print document; the browser's print dialog saves it as PDF. */
 function printReport(r: ReportData) {
   const amountCol = (sec: { columns: string[] }, i: number) => i === sec.columns.length - 1;
+  // Absolute URL so the logo loads inside the about:blank print window.
+  const logo = `${window.location.origin}/images/unitylogo.png`;
+  // Brand palette as hex — print/PDF renderers are unreliable with oklch.
+  const C = { ink: "#2c332d", muted: "#616a62", faint: "#8a938a", sage: "#48644f", panel: "#f1f4ea", hair: "#e0e4d9" };
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(r.title)} — ${escapeHtml(r.periodLabel)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  @page { margin: 18mm; }
-  * { box-sizing: border-box; }
-  body { font: 14px/1.5 'Instrument Sans', system-ui, sans-serif; color: ${color.ink}; margin: 0; }
-  .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
-  header { border-bottom: 2px solid ${color.ink}; padding-bottom: 14px; margin-bottom: 20px; }
-  .wordmark { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: ${color.neutral}; }
-  h1 { font-size: 24px; margin: 6px 0 4px; letter-spacing: -0.02em; }
-  .meta { font-size: 13px; color: ${color.inkTertiary}; }
-  .summary { display: flex; gap: 28px; flex-wrap: wrap; margin: 0 0 22px; }
-  .summary div { min-width: 120px; }
-  .summary .l { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: ${color.inkTertiary}; }
-  .summary .v { font-size: 20px; font-weight: 600; margin-top: 2px; }
-  .summary .n { font-size: 12px; color: ${color.inkTertiary}; }
-  h2 { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: ${color.neutral}; margin: 24px 0 8px; }
+  @page { margin: 16mm; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font: 14px/1.55 'Instrument Sans', system-ui, sans-serif; color: ${C.ink}; margin: 0; }
+  .sheet { max-width: 780px; margin: 0 auto; }
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;
+           border-bottom: 2px solid ${C.sage}; padding-bottom: 16px; margin-bottom: 24px; }
+  header img { height: 34px; width: auto; display: block; }
+  .brandline { margin-top: 8px; font-family: 'IBM Plex Mono', ui-monospace, monospace;
+               font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: ${C.faint}; }
+  .head-right { text-align: right; }
+  .eyebrow { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10px;
+             letter-spacing: 0.14em; text-transform: uppercase; color: ${C.sage}; }
+  h1 { font-size: 25px; font-weight: 600; margin: 4px 0 4px; letter-spacing: -0.02em; }
+  .meta { font-size: 12.5px; color: ${C.muted}; }
+  .summary { display: flex; gap: 12px; flex-wrap: wrap; margin: 0 0 24px; }
+  .summary div { flex: 1 1 150px; background: ${C.panel}; border: 1px solid ${C.hair};
+                 border-radius: 12px; padding: 14px 16px; }
+  .summary .l { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 9.5px;
+                letter-spacing: 0.12em; text-transform: uppercase; color: ${C.muted}; }
+  .summary .v { font-size: 21px; font-weight: 600; margin-top: 5px; letter-spacing: -0.02em; }
+  .summary .n { font-size: 12px; color: ${C.muted}; margin-top: 2px; }
+  h2 { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.1em;
+       text-transform: uppercase; color: ${C.sage}; margin: 26px 0 8px; }
   table { width: 100%; border-collapse: collapse; page-break-inside: auto; }
-  th { text-align: left; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: ${color.inkTertiary}; font-weight: 400; padding: 6px 10px 6px 0; border-bottom: 1px solid ${color.ink}; }
-  td { font-size: 13px; padding: 7px 10px 7px 0; border-bottom: 1px solid ${color.hairline}; vertical-align: top; }
+  th { text-align: left; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 9.5px;
+       letter-spacing: 0.08em; text-transform: uppercase; color: ${C.muted}; font-weight: 400;
+       padding: 0 10px 7px 0; border-bottom: 1.5px solid ${C.ink}; }
+  td { font-size: 13px; padding: 8px 10px 8px 0; border-bottom: 1px solid ${C.hair}; vertical-align: top; }
+  tr { page-break-inside: avoid; }
   .num { text-align: right; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; white-space: nowrap; }
-  tr.total td { font-weight: 600; border-top: 2px solid ${color.ink}; border-bottom: none; }
-  .note { font-size: 14px; color: ${color.inkTertiary}; margin: 14px 0; }
-  footer { margin-top: 28px; padding-top: 10px; border-top: 1px solid ${color.hairline}; font-size: 11px; color: ${color.inkQuaternary}; }
+  tr.total td { font-weight: 600; border-top: 2px solid ${C.ink}; border-bottom: none; padding-top: 9px; }
+  .note { font-size: 13.5px; color: ${C.muted}; margin: 16px 0; padding: 12px 16px;
+          background: ${C.panel}; border-radius: 10px; }
+  footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid ${C.hair};
+           display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+           font-size: 11px; color: ${C.faint}; }
 </style></head><body>
+<div class="sheet">
 <header>
-  <div class="wordmark">Unity Grid Management</div>
-  <h1>${escapeHtml(r.title)}</h1>
-  <div class="meta">${escapeHtml(r.community)} · ${escapeHtml(r.periodLabel)}</div>
+  <div>
+    <img src="${logo}" alt="Unity Grid Management" />
+    <div class="brandline">7880 Morrison Road · Katy, Texas 77493</div>
+  </div>
+  <div class="head-right">
+    <div class="eyebrow">Financial statement</div>
+    <div class="meta">${escapeHtml(r.periodLabel)}</div>
+    <div class="meta">Generated ${escapeHtml(r.generatedAt)}</div>
+  </div>
 </header>
+<div class="eyebrow">${escapeHtml(r.community)}</div>
+<h1>${escapeHtml(r.title)}</h1>
+<div class="meta" style="margin-bottom:22px">Prepared by ${escapeHtml(r.generatedBy)}</div>
 <div class="summary">${r.summary.map((s) => `<div><div class="l">${escapeHtml(s.label)}</div><div class="v">${escapeHtml(s.value)}</div>${s.note ? `<div class="n">${escapeHtml(s.note)}</div>` : ""}</div>`).join("")}</div>
 ${r.note ? `<p class="note">${escapeHtml(r.note)}</p>` : ""}
 ${r.sections
@@ -1567,8 +1598,16 @@ ${r.sections
 ${sec.total ? `<tr class="total">${sec.total.map((cell, i) => `<td${amountCol(sec, i) ? ' class="num"' : ""}>${escapeHtml(cell)}</td>`).join("")}</tr>` : ""}</tbody></table>`,
   )
   .join("")}
-<footer>Generated ${escapeHtml(r.generatedAt)} by ${escapeHtml(r.generatedBy)} · Unity Grid Management admin portal</footer>
-<script>window.onload = () => window.print();</script>
+<footer>
+  <span>Unity Grid Management · Sofi Lakes Residential Association</span>
+  <span>Generated by ${escapeHtml(r.generatedBy)} · unitygridmanagement.com</span>
+</footer>
+</div>
+<script>
+  // Wait for the logo and webfonts before printing, so the PDF has both.
+  function go(){ setTimeout(function(){ window.focus(); window.print(); }, 350); }
+  if (document.readyState === "complete") go(); else window.addEventListener("load", go);
+</script>
 </body></html>`;
   const w = window.open("", "_blank", "width=900,height=1100");
   if (!w) return;
