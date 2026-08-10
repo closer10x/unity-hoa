@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Throwaway one-off scripts run from the repo root for node_modules resolution
+.*.tmp.mjs
