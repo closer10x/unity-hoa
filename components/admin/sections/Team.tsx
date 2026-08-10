@@ -426,7 +426,7 @@ export default function Team() {
           <Row key={p.id} style={{ padding: `10px ${pad.card}`, rowGap: 4, alignItems: "center" }}>
             <span style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
               <Avatar name={p.name} url={p.photoUrl} />
-              <RowMain label={p.name} detail={p.email} />
+              <RowMain label={p.name} detail={p.email} detailSize={12.5} />
             </span>
             <Mono size={12} style={{ color: color.neutral }}>{p.role}</Mono>
             <span style={{ fontSize: 14, color: color.inkTertiary, overflow: "hidden", textOverflow: "ellipsis" }}>

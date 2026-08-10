@@ -60,11 +60,11 @@ export function Row({ children, style }: { children: React.ReactNode; style?: Re
   );
 }
 
-export function RowMain({ label, detail }: { label: string; detail?: string }) {
+export function RowMain({ label, detail, detailSize = 14 }: { label: string; detail?: string; detailSize?: number }) {
   return (
     <span>
       <span style={{ display: "block", fontSize: 16, fontWeight: 500 }}>{label}</span>
-      {detail ? <span style={{ display: "block", fontSize: 14, color: color.inkTertiary, marginTop: 2, whiteSpace: "pre-line" }}>{detail}</span> : null}
+      {detail ? <span style={{ display: "block", fontSize: detailSize, color: color.inkTertiary, marginTop: 2, whiteSpace: "pre-line" }}>{detail}</span> : null}
     </span>
   );
 }
