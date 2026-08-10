@@ -112,6 +112,28 @@ export async function listAnnouncements(): Promise<
   }
 }
 
+/**
+ * Take a portal announcement down. Archives rather than deletes, so the
+ * send history keeps the record; getPublishedAnnouncements only reads
+ * 'published', so archiving removes it from the home page and /events.
+ */
+export async function unpublishAnnouncement(
+  id: string,
+): Promise<{ ok: true } | Fail> {
+  try {
+    const { db } = await officeContext();
+    const { error } = await db
+      .from("announcements")
+      .update({ status: "archived" })
+      .eq("id", id)
+      .eq("status", "published");
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
+}
+
 export async function sendAnnouncement(input: {
   subject: string;
   body: string;

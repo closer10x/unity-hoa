@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  countAnnouncementAudience, listAnnouncements, sendAnnouncement,
+  countAnnouncementAudience, listAnnouncements, sendAnnouncement, unpublishAnnouncement,
 } from "@/lib/admin-portal/announcement-actions";
 import {
   replyToResidentThread, setResidentThreadStatus,
@@ -387,6 +387,18 @@ export default function Communications() {
     { id: string; date: string; subject: string; meta: string }[]
   >([]);
   const [allCount, setAllCount] = useState<number | null>(null);
+  const [unpublishing, setUnpublishing] = useState<string | null>(null);
+
+  async function unpublish(id: string, subject: string) {
+    if (unpublishing) return;
+    setUnpublishing(id);
+    const res = await unpublishAnnouncement(id);
+    setUnpublishing(null);
+    if (!res.ok) return setWarnings([res.error]);
+    const refreshed = await listAnnouncements();
+    if (refreshed.ok) setHistory(refreshed.sent);
+    s.audit(`Communications: unpublished announcement “${subject}”`);
+  }
 
   useEffect(() => {
     let alive = true;
@@ -472,12 +484,22 @@ export default function Communications() {
         <CardHead title="Sent history" meta="Announcements that have actually gone out" />
         {history.length === 0 ? (
           <Empty>Nothing sent yet. Announcements you send appear here.</Empty>
-        ) : history.map((h) => (
-          <Row key={h.id}>
-            <Mono size={13} style={{ color: color.neutral }}>{h.date}</Mono>
-            <RowMain label={h.subject} detail={h.meta} />
-          </Row>
-        ))}
+        ) : history.map((h) => {
+          const isPosted = h.meta === "Posted to the resident portal";
+          return (
+            <Row key={h.id}>
+              <Mono size={13} style={{ color: color.neutral }}>{h.date}</Mono>
+              <RowMain label={h.subject} detail={h.meta} />
+              {isPosted ? (
+                <TextButton tone="muted" onClick={() => unpublish(h.id, h.subject)}>
+                  {unpublishing === h.id ? "Unpublishing…" : "Unpublish"}
+                </TextButton>
+              ) : (
+                <Mono size={12} style={{ color: color.inkQuaternary }}>Not on the portal</Mono>
+              )}
+            </Row>
+          );
+        })}
       </Card>
     </>
   );
