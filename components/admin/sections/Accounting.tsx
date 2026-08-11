@@ -289,12 +289,12 @@ export default function Accounting() {
             Books for
           </span>
           <Chip size="sm" on={entityFilter === "all"} onClick={() => setEntityFilter("all")}>
-            Both companies
+            {s.isMobile ? "Both" : "Both companies"}
           </Chip>
           {s.entities.map((e) => (
             <Chip key={e.key} size="sm" on={entityFilter === e.key}
               onClick={() => setEntityFilter(e.key)}>
-              {e.legalName}
+              {s.isMobile ? e.name : e.legalName}
             </Chip>
           ))}
           {/* Only offered when something is actually unassigned — otherwise
@@ -478,7 +478,7 @@ export default function Accounting() {
       {/* Computed from the invoices actually outstanding. These read $0
           across the board from a hard-coded constant before — five made-up
           zeros presented as the association's receivables position. */}
-      <Tiles min={180}>
+      <Tiles min={150}>
         {agingTiles.map((a) => (
           <Tile key={a.label} label={a.label} value={a.amount} note={a.note} />
         ))}
@@ -731,7 +731,7 @@ function InvoicesCard() {
 
   return (
     <>
-      <Tiles min={200}>
+      <Tiles min={150}>
         <Tile label="Outstanding" value={usd(owedCents)}
           note={owing.length ? `${owing.length} invoice${owing.length === 1 ? "" : "s"} issued and unpaid` : "Nothing outstanding"} />
         <Tile label="Overdue" value={String(overdueCount)}
@@ -1217,7 +1217,7 @@ function LedgerTiles() {
   const bankCents = withBalance.reduce((sum, b) => sum + (b.balanceCents ?? 0), 0);
 
   return (
-    <Tiles min={180}>
+    <Tiles min={150}>
       <Tile label={`Income · ${year}`} value={usd(incomeCents)} />
       <Tile label={`Expenses · ${year}`} value={usd(expenseCents)} />
       <Tile label={`Net · ${year}`} value={`${net < 0 ? "−" : ""}${usd(Math.abs(net))}`}

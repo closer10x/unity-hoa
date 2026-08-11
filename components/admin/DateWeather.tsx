@@ -146,13 +146,20 @@ export default function DateWeather({ compact = false }: { compact?: boolean }) 
        alone is wider than a 375px viewport. */
     <span style={{
       display: "flex", alignItems: "baseline", gap: 10,
-      flexWrap: "wrap", minWidth: 0, flex: "1 1 auto",
+      flexWrap: "wrap", minWidth: 0,
+      /* On a phone it is one chip among three on a single row, so it must not
+         claim the leftover space the way it does on a wide header. */
+      flex: compact ? "0 0 auto" : "1 1 auto",
     }}>
-      <span style={{ fontSize: 14, color: color.ink }}>
-        {compact
-          ? SHORT_FMT.format(now)
-          : `${dayName}, ${monthDay.replace(String(day), ordinal(day))}, ${year}`}
-      </span>
+      {/* The date is the first thing to go on a phone: it cost a whole
+          header row, and the device shows one on its own lock screen. The
+          conditions stay because they are the one thing here you cannot get
+          from the phone itself. */}
+      {compact ? null : (
+        <span style={{ fontSize: 14, color: color.ink }}>
+          {`${dayName}, ${monthDay.replace(String(day), ordinal(day))}, ${year}`}
+        </span>
+      )}
       {/* The phone puts the time in its own status bar an inch above this,
           so repeating it costs a header row for nothing. */}
       {compact ? null : (
@@ -162,7 +169,9 @@ export default function DateWeather({ compact = false }: { compact?: boolean }) 
       )}
       {weather ? (
         <>
-          <span aria-hidden style={{ color: color.inkQuaternary, fontSize: 12 }}>&middot;</span>
+          {compact ? null : (
+            <span aria-hidden style={{ color: color.inkQuaternary, fontSize: 12 }}>&middot;</span>
+          )}
           {/* The conditions become the control that opens the week, so the
               strip gains a forecast without gaining a second thing to look
               at. With no forecast to show it stays plain text. */}

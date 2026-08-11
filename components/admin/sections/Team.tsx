@@ -90,9 +90,10 @@ function Chevron({ open, onToggle, label }: { open: boolean; onToggle: () => voi
       aria-expanded={open}
       aria-label={`${open ? "Collapse" : "Expand"} ${label}`}
       style={{
-        background: "none", border: "none", padding: "8px 2px",
+        background: "none", border: "none", padding: "8px 12px",
+        minWidth: 44, minHeight: 44,
         cursor: "pointer", color: "oklch(0.44 0.045 155)",
-        display: "inline-flex", alignItems: "center",
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
       }}
     >
       <svg
@@ -472,7 +473,9 @@ export default function Team() {
                   style={{
                     font: "inherit", fontSize: 12.5, fontWeight: 500,
                     background: "none", border: "1px solid transparent",
-                    borderRadius: 999, padding: "10px 10px", cursor: "pointer",
+                    borderRadius: 999, padding: "10px 10px", minHeight: 44,
+                    display: "inline-flex", alignItems: "center",
+                    cursor: "pointer",
                     color: "oklch(0.5 0.09 30)", whiteSpace: "nowrap",
                   }}>
                   Remove
@@ -758,9 +761,10 @@ export default function Team() {
             aria-expanded={matrixOpen}
             aria-label={matrixOpen ? "Hide role details" : "Show role details"}
             style={{
-              background: "none", border: "none", padding: "8px 2px",
+              background: "none", border: "none", padding: "8px 12px",
+              minWidth: 44, minHeight: 44,
               cursor: "pointer", color: "oklch(0.44 0.045 155)",
-              display: "inline-flex", alignItems: "center",
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
             }}
           >
             {/* Chevron matches the nav icons: one stroke weight, currentColor. */}

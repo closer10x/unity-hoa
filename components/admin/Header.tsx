@@ -65,26 +65,38 @@ export default function Header() {
       borderBottom: `1px solid ${color.hairline}`,
       position: "sticky", top: 0, zIndex: 20,
     }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px 14px", flexWrap: "wrap", minWidth: 0 }}>
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        /* 327px of chips against 343px of room: at a 14px gap the account
+           cluster wrapped to a second row by twelve pixels. */
+        gap: s.isMobile ? "8px" : "10px 14px",
+        flexWrap: "wrap", minWidth: 0,
+      }}>
         <span style={{ display: "flex", alignItems: "center", flex: "0 0 auto" }}>
           <img
             src="/images/unitylogo.png"
             alt="Unity Grid Management"
-            style={{ display: "block", height: 28, width: "auto" }}
+            style={{ display: "block", height: s.isMobile ? 22 : 28, width: "auto" }}
           />
         </span>
 
         <DateWeather compact={s.isMobile} />
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "1 1 auto", minWidth: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: s.isMobile ? 8 : 10,
+          flex: s.isMobile ? "0 0 auto" : "1 1 auto",
+          minWidth: 0, flexWrap: "wrap", justifyContent: "flex-end",
+        }}>
           <div style={{ position: "relative" }}>
             <button type="button" onClick={() => setOpen(!open)}
               style={{
                 font: "inherit", fontSize: 14, fontWeight: 500, background: color.surfaceSunken,
                 border: `1px solid ${color.borderInput}`, borderRadius: 999,
-                padding: "10px 18px", cursor: "pointer", color: color.ink, whiteSpace: "nowrap",
+                padding: s.isMobile ? "9px 10px" : "10px 18px",
+                minHeight: 44,
+                cursor: "pointer", color: color.ink, whiteSpace: "nowrap",
               }}>
-              {s.scope === "all" ? "All communities" : s.scopeLabel} ▾
+              {s.scope === "all" ? (s.isMobile ? "All" : "All communities") : s.scopeLabel} ▾
             </button>
             {open ? (
               <div style={{
@@ -131,7 +143,9 @@ export default function Header() {
                   <img src={myPhoto} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 ) : initials(s.currentUser)}
               </span>
-              <span style={{ fontSize: 14, color: color.inkSecondary }}>{namePart}</span>
+              {s.isMobile ? null : (
+                <span style={{ fontSize: 14, color: color.inkSecondary }}>{namePart}</span>
+              )}
               <span aria-hidden style={{ fontSize: 11, color: color.inkQuaternary }}>▾</span>
             </button>
 

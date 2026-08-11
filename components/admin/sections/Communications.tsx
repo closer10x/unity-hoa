@@ -233,7 +233,7 @@ function ResidentInbox() {
               placeholder="Search residents…"
               onChange={(e) => { setResidentQuery(e.target.value); setToId(""); }}
               style={{
-                width: "100%", font: "inherit", fontSize: 15, color: color.ink,
+                width: "100%", font: "inherit", fontSize: 16, color: color.ink,
                 background: color.surfaceSunken, border: `1px solid ${color.borderInput}`,
                 borderRadius: 10, padding: "11px 14px",
               }}
@@ -289,7 +289,7 @@ function ResidentInbox() {
           placeholder="Search residents or messages…"
           onChange={(e) => setQuery(e.target.value)}
           style={{
-            flex: "1 1 200px", font: "inherit", fontSize: 15, color: color.ink,
+            flex: "1 1 200px", font: "inherit", fontSize: 16, color: color.ink,
             background: color.surfaceSunken, border: `1px solid ${color.borderInput}`,
             borderRadius: 10, padding: "11px 14px",
           }}
@@ -789,7 +789,8 @@ export default function Communications() {
                 value={scheduleAt}
                 onChange={(e) => setScheduleAt(e.target.value)}
                 style={{
-                  justifySelf: "start", font: "inherit", fontFamily: font.mono, fontSize: 14,
+                  /* datetime-local is focusable, so 14px zooms iOS on tap. */
+                  justifySelf: "start", font: "inherit", fontFamily: font.mono, fontSize: 16,
                   color: color.ink, background: color.surfaceSunken,
                   border: `1px solid ${color.borderInput}`, borderRadius: 10, padding: "10px 12px",
                 }}

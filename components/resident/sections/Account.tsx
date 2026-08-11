@@ -445,6 +445,7 @@ export default function Account() {
             type="submit"
             style={{
               background: "none", border: "none", padding: "10px 2px", font: "inherit",
+              minHeight: 44, display: "inline-flex", alignItems: "center",
               fontSize: 14, color: "oklch(0.44 0.045 155)", cursor: "pointer", whiteSpace: "nowrap",
             }}
           >

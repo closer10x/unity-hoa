@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { color, fieldGrid, font, pad, radius, rowGrid } from "@/lib/admin-portal/tokens";
+import { MOBILE_BREAKPOINT, color, fieldGrid, font, pad, radius, rowGrid } from "@/lib/admin-portal/tokens";
 import type { Address, AddressSuggestion } from "@/lib/admin-portal/types";
 
 /* ---------- text ---------- */
@@ -180,7 +180,18 @@ export function Pill({ children, onClick, style, title }: { children: React.Reac
   return (
     <button type="button" onClick={onClick} title={title}
       onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-      style={{ font: "inherit", fontSize: 15, fontWeight: 500, background: "none", border: `1px solid ${hover ? "oklch(0.5 0.04 155)" : "oklch(0.8 0.02 150)"}`, borderRadius: radius.pill, padding: "11px 22px", cursor: "pointer", color: "oklch(0.32 0.02 150)", whiteSpace: "nowrap", ...style }}>
+      style={{
+        font: "inherit", fontSize: 15, fontWeight: 500, background: "none",
+        border: `1px solid ${hover ? "oklch(0.5 0.04 155)" : "oklch(0.8 0.02 150)"}`,
+        borderRadius: radius.pill, padding: "11px 22px",
+        /* Sections tighten the padding on row Pills — Team's Edit/Resend and
+           the dashboard's Open sat at 41 and 42. The floor survives an
+           override because it is not padding. */
+        minHeight: 44,
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        cursor: "pointer", color: "oklch(0.32 0.02 150)", whiteSpace: "nowrap",
+        ...style,
+      }}>
       {children}
     </button>
   );
@@ -682,7 +693,8 @@ export function ActionSelect({ options, onChoose }: { options: { id: string; lab
   return (
     <select value="" onChange={(e) => onChoose(e.target.value)}
       style={{
-        appearance: "none", font: "inherit", fontSize: 14, color: "oklch(0.32 0.02 150)",
+        /* A select counts as a focusable control for iOS's zoom rule too. */
+        appearance: "none", font: "inherit", fontSize: 16, color: "oklch(0.32 0.02 150)",
         background: color.surfaceSunken, border: `1px solid ${color.borderInput}`,
         borderRadius: radius.pill, padding: "11px 32px 11px 16px", cursor: "pointer", whiteSpace: "nowrap",
       }}>
@@ -721,22 +733,65 @@ export function FilterBar({
   sort?: string;
   onSort?: (id: string) => void;
 }) {
+  const narrow = useIsNarrow();
+  const [open, setOpen] = React.useState(false);
+
+  /* On a phone the chips, the sort control and whatever `extra` a section
+     adds stack into three or four rows of furniture above the first record —
+     on Owners you scrolled past all of it to reach a single homeowner. They
+     fold behind one button, which names the filter in force so nothing is
+     hidden silently. Search stays out: it is the one control people came for.
+
+     Nothing collapses on a desk, where it all fits on one line. */
+  const filtered = active && active !== filters[0];
+  const showControls = !narrow || open;
+
   return (
     <div style={{ padding: `16px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
       <input type="text" value={query} placeholder={placeholder} onChange={(e) => onQuery(e.target.value)}
         style={{ ...inputStyle, flex: "1 1 220px", width: "auto", background: color.surfaceSunken, padding: "12px 14px" }} />
-      {extra}
-      {sortOptions && sort !== undefined && onSort ? (
-        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontFamily: font.mono, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: color.inkQuaternary }}>
-            Sort
-          </span>
-          <Select value={sort} onChange={onSort} options={sortOptions} />
-        </label>
+
+      {narrow ? (
+        <Chip size="sm" on={open || Boolean(filtered)} onClick={() => setOpen((v) => !v)}>
+          {filtered ? `Filter · ${active}` : open ? "Done" : "Filter"}
+        </Chip>
       ) : null}
-      {filters.map((f) => <Chip key={f} size="sm" on={f === active} onClick={() => onFilter(f)}>{f}</Chip>)}
+
+      {showControls ? (
+        <>
+          {extra}
+          {sortOptions && sort !== undefined && onSort ? (
+            <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontFamily: font.mono, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: color.inkQuaternary }}>
+                Sort
+              </span>
+              <Select value={sort} onChange={onSort} options={sortOptions} />
+            </label>
+          ) : null}
+          {filters.map((f) => <Chip key={f} size="sm" on={f === active} onClick={() => onFilter(f)}>{f}</Chip>)}
+        </>
+      ) : null}
     </div>
   );
+}
+
+/**
+ * The one JS breakpoint, available to shared primitives.
+ *
+ * The shells read this from their own store, but `ui` is imported by both
+ * portals and each has a different store, so it listens itself. Same query,
+ * same 760px, no media queries in CSS.
+ */
+export function useIsNarrow(): boolean {
+  const [narrow, setNarrow] = React.useState(false);
+  React.useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const apply = () => setNarrow(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+  return narrow;
 }
 
 /* ---------- structured address (product rule 6) ---------- */
