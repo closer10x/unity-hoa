@@ -170,7 +170,8 @@ export function Tile({
       <p style={{
         margin: "0 0 4px", fontSize: "clamp(24px, 6.5vw, 30px)", fontWeight: 600,
         letterSpacing: "-0.025em", lineHeight: 1.05,
-        color: accent && tone !== "positive" ? accent : color.ink,
+        /* The number stays ink; colour lives in the wash and the edge bar. */
+        color: color.ink,
         fontVariantNumeric: "tabular-nums",
       }}>
         {value}
