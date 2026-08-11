@@ -74,6 +74,8 @@ export async function addLedgerEntry(input: {
   amount: string;
   /** The owner's lot this money belongs to (income from a resident). */
   lotId?: string | null;
+  /** The bank account this credits (income) or comes out of (expense). */
+  bankAccountId?: string | null;
 }): Promise<Ok<Snapshot> | Fail> {
   try {
     const { db, actorName, actorId } = await adminContext();
@@ -92,6 +94,20 @@ export async function addLedgerEntry(input: {
 
     const description = input.description.trim();
     if (!description) return { ok: false, error: "Describe what the money was for." };
+
+    // Validate the account belongs to us before stamping the entry with it.
+    let bankAccountId: string | null = null;
+    let accountNote = "";
+    if (input.bankAccountId) {
+      const { data: acct } = await db
+        .from("bank_accounts")
+        .select("id, name, mask")
+        .eq("id", input.bankAccountId)
+        .maybeSingle();
+      if (!acct) return { ok: false, error: "That account is no longer on file." };
+      bankAccountId = acct.id as string;
+      accountNote = ` ${kind === "income" ? "to" : "from"} ${acct.name}${acct.mask ? ` ····${acct.mask}` : ""}`;
+    }
 
     let ownerNote = "";
     if (input.lotId) {
@@ -112,6 +128,7 @@ export async function addLedgerEntry(input: {
       amount_cents: cents,
       source: "manual",
       lot_id: input.lotId ?? null,
+      bank_account_id: bankAccountId,
       entered_by_user_id: actorId,
       entered_by_name: actorName,
     });
@@ -119,7 +136,7 @@ export async function addLedgerEntry(input: {
 
     await writeAudit(
       db,
-      `Ledger: recorded ${usd(cents)} ${kind} (${input.category.trim() || "Other"})${ownerNote} — ${description}`,
+      `Ledger: recorded ${usd(cents)} ${kind} (${input.category.trim() || "Other"})${ownerNote}${accountNote} — ${description}`,
       actorName,
       actorId,
     );
@@ -430,6 +447,39 @@ async function syncItem(
   }
 
   return touched;
+}
+
+/**
+ * Add an account by hand, for offices not on bank sync. It carries no Plaid
+ * item, no synced balance and no imported transactions — it exists so a ledger
+ * entry can name which account the money moved through. Balances on a manual
+ * account come from the entries posted against it, not a feed.
+ */
+export async function addManualBankAccount(input: {
+  name: string;
+  institution: string;
+  mask: string;
+  type: string;
+}): Promise<Ok<Snapshot> | Fail> {
+  try {
+    const { db, actorName, actorId } = await adminContext();
+    const name = input.name.trim();
+    if (!name) return { ok: false, error: "Name the account, e.g. Operating checking." };
+    const mask = input.mask.replace(/[^0-9]/g, "").slice(-4);
+    const { error } = await db.from("bank_accounts").insert({
+      name,
+      institution_name: input.institution.trim() || "",
+      mask,
+      account_type: input.type.trim() || "checking",
+      status: "active",
+    });
+    if (error) throw new Error(error.message);
+    await writeAudit(db, `Accounting: added the ${name} account`, actorName, actorId);
+    revalidatePath("/admin");
+    return { ok: true, ...(await loadAccounting(db)) };
+  } catch (e) {
+    return fail(e);
+  }
 }
 
 export async function connectBankAccount(input: {

@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import {
-  addFee, addLedgerEntry, connectBankAccount, deleteLedgerEntry,
+  addFee, addLedgerEntry, addManualBankAccount, connectBankAccount, deleteLedgerEntry,
   disconnectBankAccount, getBankLinkToken, setFeeActive, syncBankNow, updateFee,
 } from "@/lib/admin-portal/accounting-actions";
 import {
@@ -1241,6 +1241,7 @@ function LedgerCard() {
   const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
   const [desc, setDesc] = useState("");
   const [amount, setAmount] = useState("");
+  const [bankAcct, setBankAcct] = useState("");
   const [ownerQuery, setOwnerQuery] = useState("");
   const [ownerPick, setOwnerPick] = useState<{ id: string; label: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -1283,6 +1284,7 @@ function LedgerCard() {
     const res = await addLedgerEntry({
       date, kind, category, description: desc, amount,
       lotId: kind === "income" ? (ownerPick?.id ?? null) : null,
+      bankAccountId: bankAcct || null,
     });
     setSaving(false);
     if (!res.ok) return setError(res.error);
@@ -1290,7 +1292,7 @@ function LedgerCard() {
     s.setBankAccounts(res.bankAccounts);
     s.audit(`Ledger: recorded ${kind} (${category})${ownerPick ? ` for ${ownerPick.label}` : ""} — ${desc.trim()}`);
     setNote(`Recorded ${kind === "income" ? "income" : "an expense"} — ${desc.trim()}.`);
-    setDesc(""); setAmount(""); setDate(todayISO());
+    setDesc(""); setAmount(""); setDate(todayISO()); setBankAcct("");
     setOwnerQuery(""); setOwnerPick(null);
     setDrawer(false);
   }
@@ -1347,6 +1349,16 @@ function LedgerCard() {
                 options={categories.map((c) => ({ id: c, label: c }))} />
             </Field>
             <Field label="Amount"><Input value={amount} onChange={setAmount} placeholder="$0.00" /></Field>
+            <Field label={kind === "income" ? "Deposited to" : "Paid from"}
+              hint={s.bankAccounts.length === 0 ? "Add an account in Bank accounts to track this." : undefined}>
+              <Select value={bankAcct} onChange={setBankAcct}
+                options={[
+                  { id: "", label: s.bankAccounts.length ? "No account" : "No accounts yet" },
+                  ...s.bankAccounts
+                    .filter((b) => b.status === "active")
+                    .map((b) => ({ id: b.id, label: b.mask ? `${b.name} ····${b.mask}` : b.name })),
+                ]} />
+            </Field>
           </FieldGrid>
           <Field label="Description">
             <Input value={desc} onChange={setDesc}
@@ -2023,7 +2035,30 @@ function BankCard() {
   const [note, setNote] = useState("");
   const [confirmDisconnect, setConfirmDisconnect] = useState<string | null>(null);
 
+  /* Add an account by hand, for offices not on Plaid bank sync. */
+  const [manualOpen, setManualOpen] = useState(false);
+  const [mName, setMName] = useState("");
+  const [mInst, setMInst] = useState("");
+  const [mMask, setMMask] = useState("");
+  const [mType, setMType] = useState("checking");
+  const [adding, setAdding] = useState(false);
+
   const active = s.bankAccounts.filter((b) => b.status === "active");
+
+  async function addManual() {
+    if (adding) return;
+    setError(""); setNote("");
+    setAdding(true);
+    const res = await addManualBankAccount({ name: mName, institution: mInst, mask: mMask, type: mType });
+    setAdding(false);
+    if (!res.ok) return setError(res.error);
+    s.setLedger(res.ledger);
+    s.setBankAccounts(res.bankAccounts);
+    s.audit(`Accounting: added the ${mName.trim()} account`);
+    setNote(`Added ${mName.trim()}. You can now pick it on a ledger entry.`);
+    setManualOpen(false);
+    setMName(""); setMInst(""); setMMask(""); setMType("checking");
+  }
 
   async function connect() {
     if (busy) return;
@@ -2119,10 +2154,37 @@ function BankCard() {
         {active.length ? (
           <TextButton onClick={sync}>{busy === "sync" ? "Syncing…" : "Sync now"}</TextButton>
         ) : null}
+        <TextButton onClick={() => { setManualOpen((v) => !v); setError(""); }}>
+          {manualOpen ? "Cancel" : "Add an account by hand"}
+        </TextButton>
         <span style={{ fontSize: 13, color: color.inkQuaternary }}>
           Credentials are entered with your bank through Plaid — they never touch Unity Grid.
         </span>
       </div>
+
+      {manualOpen ? (
+        <div style={{ padding: "18px 24px", borderBottom: `1px solid ${color.hairlineSoft}`, display: "grid", gap: 14, maxWidth: 720 }}>
+          <span style={{ fontSize: 14, color: color.inkTertiary }}>
+            An account without bank sync — its balance comes from the entries you post against it, not a live feed.
+          </span>
+          <FieldGrid>
+            <Field label="Account name"><Input value={mName} onChange={setMName} placeholder="e.g. Operating checking" /></Field>
+            <Field label="Bank (optional)"><Input value={mInst} onChange={setMInst} placeholder="e.g. Chase" /></Field>
+            <Field label="Last 4 (optional)"><Input value={mMask} onChange={setMMask} placeholder="1234" /></Field>
+            <Field label="Type">
+              <Select value={mType} onChange={setMType} options={[
+                { id: "checking", label: "Checking" },
+                { id: "savings", label: "Savings" },
+                { id: "reserve", label: "Reserve" },
+                { id: "money market", label: "Money market" },
+              ]} />
+            </Field>
+          </FieldGrid>
+          <Primary onClick={addManual} style={{ justifySelf: "start", opacity: adding ? 0.6 : 1 }}>
+            {adding ? "Adding…" : "Add account"}
+          </Primary>
+        </div>
+      ) : null}
 
       {note ? (
         <div style={{ padding: "12px 24px", borderBottom: `1px solid ${color.hairlineSoft}`, fontSize: 14, color: color.accent }}>{note}</div>
