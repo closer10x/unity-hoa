@@ -129,16 +129,16 @@ export function Tile({
   }[tone];
 
   /* A soft tone-tinted fill so a row of tiles reads with colour. Kept low in
-     chroma — a wash, not a highlight — so the number still leads. Neutral gets
-     a faint sage so the row is coloured end to end rather than white with gaps. */
+     chroma — a wash, not a highlight — so the number still leads. Neutral stays
+     white: colour is reserved for the tiles that carry a tone. */
   const fill = {
-    neutral: "oklch(0.975 0.012 150)",
+    neutral: color.surface,
     positive: "oklch(0.962 0.026 152)",
     attention: "oklch(0.955 0.032 110)",
     critical: "oklch(0.96 0.03 40)",
   }[tone];
   const edge = {
-    neutral: "oklch(0.92 0.014 150)",
+    neutral: color.hairline,
     positive: "oklch(0.88 0.04 152)",
     attention: "oklch(0.88 0.05 110)",
     critical: "oklch(0.89 0.05 40)",
