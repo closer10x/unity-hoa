@@ -131,7 +131,10 @@ export function Tile({
         background: color.surface,
         border: `1px solid ${color.hairline}`,
         borderRadius: radius.xl,
-        padding: "22px 22px 22px 24px",
+        /* Intrinsic rather than fixed: at 22px a tile on a 375px screen spends
+           a quarter of its width on padding. */
+        padding: "clamp(15px, 4.5vw, 22px)",
+        paddingLeft: "clamp(17px, 5vw, 24px)",
       }}
     >
       {accent ? (
@@ -145,7 +148,7 @@ export function Tile({
       ) : null}
       <p style={{ margin: "0 0 10px" }}><Eyebrow>{label}</Eyebrow></p>
       <p style={{
-        margin: "0 0 4px", fontSize: 30, fontWeight: 600,
+        margin: "0 0 4px", fontSize: "clamp(24px, 6.5vw, 30px)", fontWeight: 600,
         letterSpacing: "-0.025em", lineHeight: 1.05,
         color: accent && tone !== "positive" ? accent : color.ink,
         fontVariantNumeric: "tabular-nums",
@@ -187,7 +190,15 @@ export function TextButton({ children, onClick, tone = "accent" }: { children: R
   const map = { accent: "oklch(0.44 0.045 155)", muted: color.inkTertiary, destructive: color.destructive };
   return (
     <button type="button" onClick={onClick}
-      style={{ background: "none", border: "none", padding: "10px 8px", font: "inherit", fontSize: 14, color: map[tone], cursor: "pointer", whiteSpace: "nowrap" }}>
+      /* 44px minimum: this is the most-tapped control in both portals and it
+         sat at 39, which is under the size a thumb reliably hits. The height
+         comes from min-height rather than padding so the text keeps sitting
+         on the row's baseline. */
+      style={{
+        background: "none", border: "none", padding: "10px 10px",
+        minHeight: 44, font: "inherit", fontSize: 14, color: map[tone],
+        cursor: "pointer", whiteSpace: "nowrap",
+      }}>
       {children}
     </button>
   );
@@ -202,6 +213,9 @@ export function Chip({ children, on, onClick, size = "md" }: { children: React.R
         background: on ? color.chipOn : color.surfaceSunken,
         color: on ? color.chipOnText : color.inkTertiary,
         borderRadius: radius.pill, padding: size === "sm" ? "10px 14px" : "11px 18px",
+        /* Filter chips are the most-tapped thing on a phone — every list
+           leads with a row of them — and they sat at 42px. */
+        minHeight: 44,
         cursor: "pointer", whiteSpace: "nowrap",
       }}>
       {children}
@@ -396,7 +410,10 @@ export function DateInput({ value, onChange }: { value: string; onChange: (v: st
     <div style={{ position: "relative" }}>
       <button type="button"
         onClick={() => { setView((selected || todayIso).slice(0, 7)); setOpen((v) => !v); }}
-        style={{ ...inputStyle, fontFamily: font.mono, fontSize: 14, textAlign: "left", cursor: "pointer", color: display ? color.ink : color.inkQuaternary }}>
+        /* 16px, not 14: iOS Safari zooms the page whenever a control it can
+           focus is under 16px, and the user is then stranded scrolled-in on a
+           layout that has no horizontal room. Every input here is 16. */
+        style={{ ...inputStyle, fontFamily: font.mono, fontSize: 16, textAlign: "left", cursor: "pointer", color: display ? color.ink : color.inkQuaternary }}>
         {display || "Pick a date"}
       </button>
       {open ? (
@@ -707,7 +724,7 @@ export function FilterBar({
   return (
     <div style={{ padding: `16px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
       <input type="text" value={query} placeholder={placeholder} onChange={(e) => onQuery(e.target.value)}
-        style={{ ...inputStyle, flex: "1 1 220px", width: "auto", fontSize: 15, background: color.surfaceSunken, padding: "11px 14px" }} />
+        style={{ ...inputStyle, flex: "1 1 220px", width: "auto", background: color.surfaceSunken, padding: "12px 14px" }} />
       {extra}
       {sortOptions && sort !== undefined && onSort ? (
         <label style={{ display: "flex", alignItems: "center", gap: 8 }}>

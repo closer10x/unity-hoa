@@ -106,9 +106,10 @@ export default function Messages() {
             placeholder="Search messages…"
             onChange={(e) => setQuery(e.target.value)}
             style={{
-              flex: "1 1 200px", font: "inherit", fontSize: 15, color: color.ink,
+              /* 16px so iOS does not zoom the page when a resident taps it. */
+              flex: "1 1 200px", font: "inherit", fontSize: 16, color: color.ink,
               background: color.surfaceSunken, border: `1px solid ${color.borderInput}`,
-              borderRadius: 10, padding: "11px 14px",
+              borderRadius: 10, padding: "12px 14px",
             }}
           />
           {FILTERS.map((f) => (

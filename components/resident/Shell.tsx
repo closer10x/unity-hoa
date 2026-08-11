@@ -57,7 +57,13 @@ export default function Shell() {
         }}
       >
         {s.isMobile ? <MobileNav /> : <Sidebar />}
-        <main style={{ flex: "999 1 420px", minWidth: 0, display: "grid", gap: pad.gap, alignContent: "start" }}>
+        {/* Same reserve as the admin shell: the fixed assistant button would
+            otherwise sit on top of the last row of every list. */}
+        <main style={{
+          flex: "999 1 420px", minWidth: 0, display: "grid", gap: pad.gap,
+          alignContent: "start",
+          paddingBottom: s.isMobile ? 96 : 0,
+        }}>
           <Section />
         </main>
       </div>

@@ -161,12 +161,11 @@ export default function Dashboard() {
     <>
       <PageTitle title="Dashboard" lede={`What needs attention across ${s.scopeLabel}.`} />
 
-      {/* 170 rather than the handoff's 180 floor by a deliberate hair: at
-          typical widths that is the difference between five even tiles and
-          four plus one running the full width as a banner. They still render
-          around 178px, and Tiles fills the last row whatever the count, so
-          nothing is ever stranded. */}
-      <Tiles min={170}>
+      {/* 150 does double duty: two tiles side by side on a 375px phone
+          instead of one per screenful, and still five across the desk, since
+          flex-wrap grows them to fill either way. A single floor covers both
+          because the basis is a floor, not a width. */}
+      <Tiles min={150}>
         {s.metrics.map((m) => (
           <Tile key={m.label} label={m.label} value={m.value} note={m.note} tone={m.tone} />
         ))}

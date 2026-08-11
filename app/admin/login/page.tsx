@@ -106,9 +106,9 @@ export default async function AdminLoginPage({ searchParams }: PageProps) {
               </label>
 
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <label className="flex cursor-pointer select-none items-center gap-2.5 text-sm text-on-surface-variant">
+                <label className="flex min-h-11 cursor-pointer select-none items-center gap-2.5 text-sm text-on-surface-variant">
                   <input
-                    className="size-4 rounded border-outline-strong accent-secondary"
+                    className="size-5 rounded border-outline-strong accent-secondary"
                     type="checkbox"
                     name="remember"
                   />
@@ -129,7 +129,10 @@ export default async function AdminLoginPage({ searchParams }: PageProps) {
 
         <p className="mt-6 text-center text-sm text-on-surface-variant">
           Need help signing in?{" "}
-          <Link href="/contact" className="text-secondary hover:underline">
+          <Link
+            href="/contact"
+            className="-my-2 inline-flex min-h-11 items-center py-2 text-secondary hover:underline"
+          >
             Contact the office
           </Link>
         </p>

@@ -181,13 +181,13 @@ export default function Calendar() {
           <span style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <button type="button" aria-label="Previous month"
               onClick={() => { setMonth((m) => m === 0 ? 11 : m - 1); if (month === 0) setYear((y) => y - 1); setSelected(""); }}
-              style={{ font: "inherit", fontSize: 15, background: "none", border: `1px solid ${color.borderInput}`, borderRadius: 8, width: 32, height: 32, cursor: "pointer", color: color.inkSecondary }}>‹</button>
+              style={{ font: "inherit", fontSize: 15, background: "none", border: `1px solid ${color.borderInput}`, borderRadius: 8, width: 44, height: 44, cursor: "pointer", color: color.inkSecondary }}>‹</button>
             <span style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-0.015em", minWidth: "11ch", textAlign: "center" }}>
               {MONTH_NAMES[month]} {year}
             </span>
             <button type="button" aria-label="Next month"
               onClick={() => { setMonth((m) => m === 11 ? 0 : m + 1); if (month === 11) setYear((y) => y + 1); setSelected(""); }}
-              style={{ font: "inherit", fontSize: 15, background: "none", border: `1px solid ${color.borderInput}`, borderRadius: 8, width: 32, height: 32, cursor: "pointer", color: color.inkSecondary }}>›</button>
+              style={{ font: "inherit", fontSize: 15, background: "none", border: `1px solid ${color.borderInput}`, borderRadius: 8, width: 44, height: 44, cursor: "pointer", color: color.inkSecondary }}>›</button>
             <Pill style={{ padding: "8px 16px", fontSize: 14 }}
               onClick={() => { setMonth(now.getMonth()); setYear(now.getFullYear()); setSelected(""); }}>Today</Pill>
           </span>

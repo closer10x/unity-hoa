@@ -15,6 +15,12 @@ const ZONE = "America/Chicago";
 /* Built once: constructing an Intl formatter is the costly part, and these
    take no dynamic input. */
 const DAY_FMT = new Intl.DateTimeFormat("en-US", { weekday: "long", timeZone: ZONE });
+/* Phone-width date: "Mon, Aug 10". The long form — "Monday, August 10th,
+   2026" — is wider than a 375px viewport on its own, which pushed the header
+   into three stacked rows and cost a third of the screen before any content. */
+const SHORT_FMT = new Intl.DateTimeFormat("en-US", {
+  weekday: "short", month: "short", day: "numeric", timeZone: ZONE,
+});
 const MONTH_DAY_FMT = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", timeZone: ZONE });
 const YEAR_FMT = new Intl.DateTimeFormat("en-US", { year: "numeric", timeZone: ZONE });
 const DAY_NUM_FMT = new Intl.DateTimeFormat("en-US", { day: "numeric", timeZone: ZONE });
@@ -66,7 +72,7 @@ function weatherEmoji(w: Weather): string {
   return WEATHER_EMOJI[w.kind] ?? WEATHER_EMOJI.cloud;
 }
 
-export default function DateWeather() {
+export default function DateWeather({ compact = false }: { compact?: boolean }) {
   /* Rendered only after mount: the server and the browser would otherwise
      disagree about the current second and React would flag the mismatch. */
   const [now, setNow] = useState<Date | null>(null);
@@ -143,11 +149,17 @@ export default function DateWeather() {
       flexWrap: "wrap", minWidth: 0, flex: "1 1 auto",
     }}>
       <span style={{ fontSize: 14, color: color.ink }}>
-        {dayName}, {monthDay.replace(String(day), ordinal(day))}, {year}
+        {compact
+          ? SHORT_FMT.format(now)
+          : `${dayName}, ${monthDay.replace(String(day), ordinal(day))}, ${year}`}
       </span>
-      <span style={{ fontFamily: font.mono, fontSize: 12, color: color.inkTertiary }}>
-        {time}
-      </span>
+      {/* The phone puts the time in its own status bar an inch above this,
+          so repeating it costs a header row for nothing. */}
+      {compact ? null : (
+        <span style={{ fontFamily: font.mono, fontSize: 12, color: color.inkTertiary }}>
+          {time}
+        </span>
+      )}
       {weather ? (
         <>
           <span aria-hidden style={{ color: color.inkQuaternary, fontSize: 12 }}>&middot;</span>

@@ -51,7 +51,14 @@ export default function Shell() {
         maxWidth: 1520, marginInline: 0,
       }}>
         {s.isMobile ? <MobileNav /> : <Sidebar />}
-        <main style={{ flex: "999 1 420px", minWidth: 0, display: "grid", gap: pad.gap, alignContent: "start" }}>
+        {/* The assistant button is fixed to the bottom-right, so the last row
+            of a list would otherwise sit under it for good. The reserve is
+            only needed where the button overlaps the column — on a phone. */}
+        <main style={{
+          flex: "999 1 420px", minWidth: 0, display: "grid", gap: pad.gap,
+          alignContent: "start",
+          paddingBottom: s.isMobile ? 96 : 0,
+        }}>
           <Section />
         </main>
       </div>

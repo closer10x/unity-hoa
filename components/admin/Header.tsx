@@ -74,7 +74,7 @@ export default function Header() {
           />
         </span>
 
-        <DateWeather />
+        <DateWeather compact={s.isMobile} />
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "1 1 auto", minWidth: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
           <div style={{ position: "relative" }}>

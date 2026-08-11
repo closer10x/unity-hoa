@@ -22,7 +22,10 @@ export function ResidentForgotPasswordForm() {
         type="button"
         onClick={() => setOpen(true)}
         style={{
-          background: "none", border: "none", padding: 0, font: "inherit",
+          /* 44px tall: a resident reaching for this is already locked out,
+             and it was a 16px target. */
+          background: "none", border: "none", padding: "10px 0", font: "inherit",
+          minHeight: 44, display: "inline-flex", alignItems: "center",
           fontSize: 14, color: "oklch(0.44 0.045 155)", cursor: "pointer",
         }}
       >

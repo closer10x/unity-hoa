@@ -20,7 +20,7 @@ export function AdminForgotPasswordForm() {
     return (
       <button
         type="button"
-        className="text-xs font-semibold text-secondary hover:underline transition-all"
+        className="-my-2 inline-flex min-h-11 items-center py-2 text-xs font-semibold text-secondary transition-all hover:underline"
         onClick={() => setOpen(true)}
       >
         Forgot password?
