@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 
 import { color, font, radius } from "@/lib/admin-portal/tokens";
+import { useOnScreenPanel } from "./ui";
 
 /**
  * The date, the time and what it is doing outside, in the header. Times are
@@ -79,6 +80,8 @@ export default function DateWeather({ compact = false }: { compact?: boolean }) 
   const [weather, setWeather] = useState<Weather | null>(null);
   const [forecastOpen, setForecastOpen] = useState(false);
   const forecastRef = useRef<HTMLSpanElement>(null);
+  const forecastBtnRef = useRef<HTMLButtonElement>(null);
+  const forecastPanel = useOnScreenPanel(forecastOpen, forecastBtnRef);
 
   useEffect(() => {
     /* The clock shows minutes, so it wakes on the minute boundary rather than
@@ -179,6 +182,7 @@ export default function DateWeather({ compact = false }: { compact?: boolean }) 
             {forecast.length > 0 ? (
               <button
                 type="button"
+                ref={forecastBtnRef}
                 onClick={() => setForecastOpen((v) => !v)}
                 aria-haspopup="dialog"
                 aria-expanded={forecastOpen}
@@ -221,6 +225,7 @@ export default function DateWeather({ compact = false }: { compact?: boolean }) 
                 style={{
                   position: "absolute", top: "calc(100% + 10px)", left: 0, zIndex: 30,
                   minWidth: 250, padding: "10px 6px 6px",
+                  ...forecastPanel,
                   background: color.surface, border: `1px solid ${color.borderInput}`,
                   borderRadius: radius.lg,
                   boxShadow: "0 14px 36px oklch(0.4 0.02 150 / 0.12)",

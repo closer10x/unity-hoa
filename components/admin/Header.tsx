@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { signOutAdmin } from "@/app/admin/(dashboard)/sign-out-action";
 import { useStore } from "@/lib/admin-portal/store";
 import DateWeather from "./DateWeather";
+import { useOnScreenPanel } from "./ui";
 import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
 
 /** Two-letter initials from the account name for the profile chip. */
@@ -24,6 +25,10 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const scopeBtnRef = useRef<HTMLButtonElement>(null);
+  const profileBtnRef = useRef<HTMLButtonElement>(null);
+  const scopePanel = useOnScreenPanel(open, scopeBtnRef);
+  const profilePanel = useOnScreenPanel(profileOpen, profileBtnRef);
 
   // The account string is "Name · Role"; split for display.
   const [namePart, rolePart] = s.currentUser.split("·").map((x) => x.trim());
@@ -88,7 +93,7 @@ export default function Header() {
           minWidth: 0, flexWrap: "wrap", justifyContent: "flex-end",
         }}>
           <div style={{ position: "relative" }}>
-            <button type="button" onClick={() => setOpen(!open)}
+            <button type="button" ref={scopeBtnRef} onClick={() => setOpen(!open)}
               style={{
                 font: "inherit", fontSize: 14, fontWeight: 500, background: color.surfaceSunken,
                 border: `1px solid ${color.borderInput}`, borderRadius: 999,
@@ -105,6 +110,7 @@ export default function Header() {
                 borderRadius: 12, padding: 6, zIndex: 30,
                 boxShadow: "0 14px 36px oklch(0.4 0.02 150 / 0.12)",
                 display: "grid", gap: 2, maxHeight: 340, overflowY: "auto",
+                ...scopePanel,
               }}>
                 {options.map((o) => (
                   <button key={o.id} type="button"
@@ -122,7 +128,7 @@ export default function Header() {
             ) : null}
           </div>
           <div ref={profileRef} style={{ position: "relative" }}>
-            <button type="button" onClick={() => setProfileOpen((v) => !v)}
+            <button type="button" ref={profileBtnRef} onClick={() => setProfileOpen((v) => !v)}
               aria-haspopup="menu" aria-expanded={profileOpen}
               style={{
                 display: "flex", alignItems: "center", gap: 9, font: "inherit",
@@ -155,6 +161,7 @@ export default function Header() {
                 background: color.surface, border: `1px solid ${color.borderInput}`,
                 borderRadius: radius.lg, padding: 6, zIndex: 30,
                 boxShadow: "0 14px 36px oklch(0.4 0.02 150 / 0.12)",
+                ...profilePanel,
               }}>
                 <div style={{ padding: "10px 12px 12px", borderBottom: `1px solid ${color.hairlineSoft}` }}>
                   <div style={{ fontSize: 15, fontWeight: 600, color: color.ink }}>{namePart}</div>

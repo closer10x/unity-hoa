@@ -794,6 +794,56 @@ export function useIsNarrow(): boolean {
   return narrow;
 }
 
+/**
+ * Keeps a dropdown on screen.
+ *
+ * Menus in the headers are absolutely positioned with `right: 0`, which
+ * anchors them to their button's right edge and grows leftward. That is right
+ * on a wide header and wrong on a phone: a 280px menu hanging off a button
+ * whose right edge sits 190px in runs 90px off the left of the screen.
+ *
+ * On a narrow viewport the panel stops being anchored to the button and spans
+ * the viewport instead, pinned just below whatever opened it. Returns the
+ * style to spread over the panel; an empty object on a wide screen, where the
+ * original anchoring is correct.
+ */
+export function useOnScreenPanel(
+  open: boolean,
+  anchor: React.RefObject<HTMLElement | null>,
+): React.CSSProperties {
+  const narrow = useIsNarrow();
+  const [style, setStyle] = React.useState<React.CSSProperties>({});
+
+  React.useEffect(() => {
+    if (!open || !narrow) {
+      setStyle({});
+      return;
+    }
+    const place = () => {
+      const r = anchor.current?.getBoundingClientRect();
+      setStyle({
+        position: "fixed",
+        top: (r ? r.bottom : 64) + 8,
+        left: 16,
+        right: 16,
+        minWidth: 0,
+        maxWidth: "none",
+        maxHeight: "70vh",
+        overflowY: "auto",
+      });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open, narrow, anchor]);
+
+  return style;
+}
+
 /* ---------- structured address (product rule 6) ---------- */
 
 export function AddressFields({

@@ -48,7 +48,9 @@ export default function Overview() {
           : `${p.name} · ${p.address}`}
       />
 
-      <Tiles min={220}>
+      {/* Same 150 floor the admin dashboard uses: two cards side by side on
+          a phone rather than one filling the screen, still wide on a desk. */}
+      <Tiles min={150}>
         <LinkTile
           label={p.overdue ? "HOA fee past due" : "Next HOA fee"}
           value={p.balance || "—"}
