@@ -242,18 +242,41 @@ export default function Dashboard() {
             // the pills. The action text takes the flexible 1fr and shrinks
             // first, so these small tracks never collapse the way a data row's
             // would. The pill sits right of the prose but on a shared left edge.
-            <Row key={a.id} style={{ alignItems: "baseline", gridTemplateColumns: "minmax(0, 1fr) 150px 84px" }}>
+            <Row
+              key={a.id}
+              style={{
+                alignItems: "baseline",
+                /* 84px could not hold "Aug 10, 2:52 PM", so every timestamp
+                   broke after the comma onto a second line and the column
+                   read ragged. 118px holds it whole.
+
+                   Fixed tracks are a desktop idea: at 375px they leave the
+                   prose about seventy pixels, so a phone stacks instead —
+                   the sentence, then its attribution beneath. */
+                gridTemplateColumns: s.isMobile
+                  ? "minmax(0, 1fr)"
+                  : "minmax(0, 1fr) 150px 118px",
+                rowGap: s.isMobile ? 6 : undefined,
+              }}
+            >
               <span style={{ fontSize: 15, lineHeight: 1.5 }}>{a.text}</span>
               <span
                 style={{
                   justifySelf: "start", fontSize: 12.5, color: "oklch(0.4 0.04 155)",
                   background: color.accentTint, borderRadius: radius.pill,
                   padding: "3px 10px", whiteSpace: "nowrap",
+                  /* On a phone the two meta cells share one line under the
+                     text rather than each taking a row of their own. */
+                  ...(s.isMobile ? { gridRow: 2, justifySelf: "start" } : {}),
                 }}
               >
                 {a.who}
               </span>
-              <span style={{ justifySelf: "start", fontFamily: font.mono, fontSize: 12, color: color.inkQuaternary }}>
+              <span style={{
+                justifySelf: "start", fontFamily: font.mono, fontSize: 12,
+                color: color.inkQuaternary, whiteSpace: "nowrap",
+                ...(s.isMobile ? { gridRow: 2, justifySelf: "end" } : {}),
+              }}>
                 {a.time}
               </span>
             </Row>
