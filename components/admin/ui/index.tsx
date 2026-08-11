@@ -117,11 +117,14 @@ export function Tile({
   note?: string;
   tone?: "neutral" | "positive" | "attention" | "critical";
 }) {
+  /* Positive is the brand dark green; attention is an earthy ochre rather than
+     a bright yellow; critical a warm terracotta. The accent draws the edge bar
+     and (except positive) the number. */
   const accent = {
     neutral: null,
-    positive: "oklch(0.62 0.09 155)",
-    attention: "oklch(0.72 0.13 75)",
-    critical: "oklch(0.6 0.19 25)",
+    positive: "oklch(0.42 0.05 155)",
+    attention: "oklch(0.53 0.086 68)",
+    critical: "oklch(0.56 0.15 32)",
   }[tone];
 
   /* A soft tone-tinted fill so a row of tiles reads with colour. Kept low in
@@ -129,15 +132,15 @@ export function Tile({
      a faint sage so the row is coloured end to end rather than white with gaps. */
   const fill = {
     neutral: "oklch(0.975 0.012 150)",
-    positive: "oklch(0.955 0.038 155)",
-    attention: "oklch(0.965 0.05 85)",
-    critical: "oklch(0.96 0.042 28)",
+    positive: "oklch(0.955 0.032 152)",
+    attention: "oklch(0.955 0.04 74)",
+    critical: "oklch(0.955 0.04 34)",
   }[tone];
   const edge = {
     neutral: "oklch(0.92 0.014 150)",
-    positive: "oklch(0.88 0.05 155)",
-    attention: "oklch(0.89 0.06 85)",
-    critical: "oklch(0.88 0.05 28)",
+    positive: "oklch(0.87 0.045 152)",
+    attention: "oklch(0.88 0.05 72)",
+    critical: "oklch(0.88 0.05 34)",
   }[tone];
 
   return (
