@@ -124,12 +124,28 @@ export function Tile({
     critical: "oklch(0.6 0.19 25)",
   }[tone];
 
+  /* A soft tone-tinted fill so a row of tiles reads with colour. Kept low in
+     chroma — a wash, not a highlight — so the number still leads. Neutral gets
+     a faint sage so the row is coloured end to end rather than white with gaps. */
+  const fill = {
+    neutral: "oklch(0.975 0.012 150)",
+    positive: "oklch(0.955 0.038 155)",
+    attention: "oklch(0.965 0.05 85)",
+    critical: "oklch(0.96 0.042 28)",
+  }[tone];
+  const edge = {
+    neutral: "oklch(0.92 0.014 150)",
+    positive: "oklch(0.88 0.05 155)",
+    attention: "oklch(0.89 0.06 85)",
+    critical: "oklch(0.88 0.05 28)",
+  }[tone];
+
   return (
     <div
       style={{
         position: "relative", overflow: "hidden", height: "100%",
-        background: color.surface,
-        border: `1px solid ${color.hairline}`,
+        background: fill,
+        border: `1px solid ${edge}`,
         borderRadius: radius.xl,
         /* Intrinsic rather than fixed: at 22px a tile on a 375px screen spends
            a quarter of its width on padding. */
