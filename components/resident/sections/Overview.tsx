@@ -87,10 +87,43 @@ export default function Overview() {
           <Empty>No activity on your account yet. HOA fee postings and payments will appear here.</Empty>
         ) : (
           s.ledger.slice(0, 5).map((l) => (
-            <Row key={l.id}>
-              <Mono size={13} style={{ color: color.neutral }}>{l.date}</Mono>
-              <RowMain label={l.label} />
-              <Mono size={14} style={{ color: l.credit ? color.positive : color.ink, justifySelf: "end" }}>{l.amount}</Mono>
+            /* Placed explicitly rather than auto-flowed. Three cells against
+               the tracks auto-fit makes here, so `justify-self: end` alone
+               would park the amount mid-row with empty columns beyond it —
+               the last track is what reaches the edge. But pinning the amount
+               there also pushes an auto-placed sibling onto a second row, so
+               the description is given its column too.
+
+               A phone gets the shape a statement has: date and amount on the
+               top line, the description across the width beneath. */
+            <Row
+              key={l.id}
+              style={s.isMobile ? { gridTemplateColumns: "auto 1fr", rowGap: 2 } : undefined}
+            >
+              <Mono
+                size={13}
+                style={{
+                  color: color.neutral,
+                  ...(s.isMobile ? { gridRow: 1, gridColumn: 1 } : {}),
+                }}
+              >
+                {l.date}
+              </Mono>
+              <span style={s.isMobile ? { gridRow: 2, gridColumn: "1 / -1" } : { gridColumn: 2 }}>
+                <RowMain label={l.label} />
+              </span>
+              <Mono
+                size={14}
+                style={{
+                  color: l.credit ? color.positive : color.ink,
+                  justifySelf: "end",
+                  ...(s.isMobile
+                    ? { gridRow: 1, gridColumn: 2 }
+                    : { gridColumn: "-2 / -1" }),
+                }}
+              >
+                {l.amount}
+              </Mono>
             </Row>
           ))
         )}
