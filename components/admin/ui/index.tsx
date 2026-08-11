@@ -117,14 +117,15 @@ export function Tile({
   note?: string;
   tone?: "neutral" | "positive" | "attention" | "critical";
 }) {
-  /* Positive is the brand dark green; attention is an earthy ochre rather than
-     a bright yellow; critical a warm terracotta. The accent draws the edge bar
-     and (except positive) the number. */
+  /* All four tones sit near the association's sage rather than fighting it:
+     positive is the brand dark green, attention a muted olive (not a bright
+     yellow), critical a warm clay. The accent draws the edge bar and, except
+     for positive, the number. */
   const accent = {
     neutral: null,
     positive: "oklch(0.42 0.05 155)",
-    attention: "oklch(0.53 0.086 68)",
-    critical: "oklch(0.56 0.15 32)",
+    attention: "oklch(0.48 0.075 114)",
+    critical: "oklch(0.53 0.135 35)",
   }[tone];
 
   /* A soft tone-tinted fill so a row of tiles reads with colour. Kept low in
@@ -132,15 +133,15 @@ export function Tile({
      a faint sage so the row is coloured end to end rather than white with gaps. */
   const fill = {
     neutral: "oklch(0.975 0.012 150)",
-    positive: "oklch(0.955 0.032 152)",
-    attention: "oklch(0.955 0.04 74)",
-    critical: "oklch(0.955 0.04 34)",
+    positive: "oklch(0.962 0.026 152)",
+    attention: "oklch(0.955 0.032 110)",
+    critical: "oklch(0.96 0.03 40)",
   }[tone];
   const edge = {
     neutral: "oklch(0.92 0.014 150)",
-    positive: "oklch(0.87 0.045 152)",
-    attention: "oklch(0.88 0.05 72)",
-    critical: "oklch(0.88 0.05 34)",
+    positive: "oklch(0.88 0.04 152)",
+    attention: "oklch(0.88 0.05 110)",
+    critical: "oklch(0.89 0.05 40)",
   }[tone];
 
   return (
