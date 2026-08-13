@@ -83,8 +83,21 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-2 grid-rows-[200px_148px] gap-3.5">
-          <div className="relative col-span-2 overflow-hidden rounded-xl">
-            <Image src="/images/hero-neighborhood.png" alt="Aerial view of the community" fill sizes="(max-width:768px) 100vw, 640px" className="object-cover" priority />
+          <div className="relative col-span-2 overflow-hidden rounded-xl bg-stone">
+            {/* Drone footage over the community; muted + looping so it plays
+                inline as a silent backdrop. The still is the poster fallback
+                while it loads, or if autoplay is blocked. */}
+            <video
+              className="absolute inset-0 h-full w-full object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              poster="/images/hero-neighborhood.png"
+            >
+              <source src="/video/hero-drone.mp4" type="video/mp4" />
+            </video>
           </div>
           <div className="relative overflow-hidden rounded-xl">
             <Image src="/images/community-pool.webp" alt="Community pool" fill sizes="320px" className="object-cover" />
