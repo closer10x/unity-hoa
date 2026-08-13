@@ -9,7 +9,7 @@ import {
   assignWorkOrder, createWorkOrder, setWorkOrderStatus, updateWorkOrder,
 } from "@/lib/admin-portal/work-actions";
 import { usePrimaryAction } from "../SectionHead";
-import {
+import { Tag, TableRow, TableHead, Scroller, CellStack,
   DropZone,
   ActionSelect, AddDrawer, Card, Chip, ConfirmBar, DateInput, Empty, ErrorLine,
   Field, FieldGrid, FilterBar, Input, Mono, Primary, Row, RowMain,
@@ -17,6 +17,10 @@ import {
 } from "../ui";
 
 const FILTERS = ["All", "New", "Scheduled", "In progress", "Closed", "In-house", "Vendor"];
+
+/* Head and rows share one definition — see AGENTS.md on why a table's
+   columns cannot be allowed to drift from its head. */
+const WORK_COLS = "116px minmax(200px, 1.7fr) minmax(140px, 1fr) 120px minmax(180px, auto)";
 
 export default function WorkOrders() {
   const s = useStore();
@@ -160,26 +164,33 @@ export default function WorkOrders() {
 
         {flowError ? <div style={{ padding: `12px ${pad.card} 0` }}><ErrorLine>{flowError}</ErrorLine></div> : null}
 
-        {visible.length === 0 ? <Empty>No work orders match that.</Empty> : visible.map((w) => {
+        {visible.length === 0 ? <Empty>No work orders match that.</Empty> : (
+        <Scroller min={900}>
+        <TableHead
+          cols={WORK_COLS}
+          labels={["Ref", "Job", "Assigned to", "Status", ""]}
+          align={[3]}
+        />
+        {visible.map((w) => {
           const menu = buildActionMenu(WORK_STEPS, w.status, w.id, w.title, pending, setPending);
           return (
             <React.Fragment key={w.id}>
-              <Row>
+              <TableRow cols={WORK_COLS}>
                 <Mono size={13} style={{ color: color.neutral }}>{w.ref}</Mono>
-                <RowMain label={w.title} detail={w.detail} />
-                <span>
-                  <span style={{ display: "block", fontSize: 14, color: color.inkSecondary }}>{w.assignee}</span>
-                  <Mono size={11} style={{ color: color.inkQuaternary }}>
-                    {w.assignee === "Unassigned" ? "unassigned" : isStaff(w.assignee) ? "in-house" : "vendor"}
-                  </Mono>
+                <CellStack top={w.title} sub={w.detail} />
+                <CellStack
+                  top={w.assignee}
+                  sub={w.assignee === "Unassigned" ? "unassigned" : isStaff(w.assignee) ? "in-house" : "vendor"}
+                />
+                <span style={{ textAlign: "right" }}>
+                  <Tag tone={w.status === "Closed" ? "moss" : w.status === "New" ? "amber" : "grey"}>{w.status}</Tag>
                 </span>
-                <Status tone={w.status === "Closed" ? "positive" : w.status === "New" ? "attention" : "neutral"}>{w.status}</Status>
                 <span style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                   <ActionSelect options={menu.options} onChoose={menu.onChoose} />
                   <TextButton onClick={() => openEdit(w)}>{editing === w.id ? "Close" : "Edit"}</TextButton>
                   <TextButton onClick={() => setReassigning(reassigning === w.id ? "" : w.id)}>Reassign</TextButton>
                 </span>
-              </Row>
+              </TableRow>
 
               {editing === w.id ? (
                 <div style={{ padding: "0 24px 20px", borderBottom: `1px solid ${color.hairlineSoft}` }}>
@@ -251,6 +262,8 @@ export default function WorkOrders() {
             </React.Fragment>
           );
         })}
+        </Scroller>
+        )}
       </Card>
     </>
   );

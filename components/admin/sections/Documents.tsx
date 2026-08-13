@@ -5,12 +5,14 @@ import { setDocumentPublished } from "@/lib/admin-portal/document-actions";
 import { useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color } from "@/lib/admin-portal/tokens";
 import { usePrimaryAction } from "../SectionHead";
-import {
+import { Tag, TableRow, TableHead, Scroller, CellStack,
   AddDrawer, Card, Empty, ErrorLine, Field, FieldGrid, FilterBar, Input,
   Pill, Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
 
 const FILTERS = ["All", "Published", "Draft"];
+
+const DOC_COLS = "minmax(260px, 2.4fr) 130px minmax(210px, auto)";
 
 export default function Documents() {
   const s = useStore();
@@ -116,10 +118,15 @@ export default function Documents() {
         <FilterBar query={query} onQuery={setQuery} placeholder="Search documents…"
           filters={FILTERS} active={filter} onFilter={setFilter} />
         {rowError ? <div style={{ padding: "12px 24px" }}><ErrorLine>{rowError}</ErrorLine></div> : null}
-        {visible.length === 0 ? <Empty>No documents match that.</Empty> : visible.map((d) => (
-          <Row key={d.id}>
-            <RowMain label={d.title} detail={d.meta} />
-            <Status tone={d.published ? "positive" : "attention"}>{d.published ? "Published" : "Draft"}</Status>
+        {visible.length === 0 ? <Empty>No documents match that.</Empty> : (
+        <Scroller min={760}>
+        <TableHead cols={DOC_COLS} labels={["Document", "In the portal", ""]} align={[1]} />
+        {visible.map((d) => (
+          <TableRow key={d.id} cols={DOC_COLS}>
+            <CellStack top={d.title} sub={d.meta} />
+            <span style={{ textAlign: "right" }}>
+              <Tag tone={d.published ? "moss" : "amber"}>{d.published ? "Published" : "Draft"}</Tag>
+            </span>
             <span style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
               <TextButton onClick={() => window.open(`/api/documents/${d.id}/download`, "_blank", "noopener")}>
                 View
@@ -139,8 +146,10 @@ export default function Documents() {
                 {busyId === d.id ? "…" : d.published ? "Unpublish" : "Publish"}
               </Pill>
             </span>
-          </Row>
+          </TableRow>
         ))}
+        </Scroller>
+        )}
       </Card>
     </>
   );

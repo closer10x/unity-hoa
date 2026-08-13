@@ -828,7 +828,14 @@ export async function loadPortalData(): Promise<PortalData> {
       // never wraps mid-line. RowMain renders the newline (white-space).
       address: [street, cityLine].filter(Boolean).join("\n") || "No address recorded",
       contact: p?.phone?.trim() || "—",
-      // Per-account balances are not tracked yet — no ledger per lot.
+      /* What this home owes: its issued, uncollected invoices.
+         Invoices sit in front of the ledger — issuing bills the household and
+         writes nothing, and only collecting posts an entry — so what is owed
+         lives on the invoice, not on a per-lot ledger balance. Reading the
+         ledger here would report every home at zero while two of them are
+         two invoices deep. */
+      /* Filled in below from the invoices, which load in the batch after
+         this map runs. */
       balance: "—",
       status: p ? "Owner on file" : "No owner linked",
       scope: l.community ?? "all",
@@ -1041,8 +1048,38 @@ export async function loadPortalData(): Promise<PortalData> {
     },
   ];
 
+  /* What each home owes, from the invoices themselves.
+     Invoices sit in front of the ledger — issuing bills the household and
+     writes nothing, and only collecting posts an entry — so what is owed
+     lives on the invoice, not on a per-lot ledger balance. Reading the ledger
+     here would report every home at zero while two of them are an invoice
+     deep each.
+
+     Built as one pass keyed by lot rather than a scan per row: 390 lots
+     against every invoice is the nested loop that is fine today and quietly
+     is not at ten communities. */
+  const owedByLot = new Map<string, number>();
+  const overdueLots = new Set<string>();
+  for (const inv of invoices) {
+    if (inv.status !== "sent" || !inv.lotId) continue;
+    owedByLot.set(inv.lotId, (owedByLot.get(inv.lotId) ?? 0) + inv.totalCents);
+    if (inv.overdue) overdueLots.add(inv.lotId);
+  }
+
+  const ownersWithBalance: Owner[] = owners.map((o) => {
+    const owed = owedByLot.get(o.id);
+    if (!owed) return o;
+    return {
+      ...o,
+      balance: usdExact(owed),
+      /* Past due is a different state from merely owing — it is the one that
+         starts the collections ladder — and it outranks the tenant flag. */
+      flag: overdueLots.has(o.id) ? "delinquent" : o.flag,
+    };
+  });
+
   return {
-    owners,
+    owners: ownersWithBalance,
     work,
     docs,
     staff,

@@ -9,7 +9,7 @@ import { buildActionMenu, useSearchFilter, useStore } from "@/lib/admin-portal/s
 import { color, pad, radius, rowGrid } from "@/lib/admin-portal/tokens";
 import type { PendingConfirm, Violation, ViolationStatus } from "@/lib/admin-portal/types";
 import { usePrimaryAction } from "../SectionHead";
-import {
+import { Tag, TableRow, TableHead, Scroller, CellStack,
   ActionSelect, AddDrawer, Area, Card, ConfirmBar, DateInput, DropZone, Empty,
   ErrorLine, Eyebrow, Field, FieldGrid, FilterBar, Input, Mono, Pill,
   Primary, Row, RowMain, Select, Status, TextButton,
@@ -29,6 +29,8 @@ const CURE_DAYS = Array.from({ length: 30 }, (_, i) => {
   const n = i + 1;
   return { id: `${n} day${n === 1 ? "" : "s"}`, label: `${n} day${n === 1 ? "" : "s"}` };
 });
+
+const VIO_COLS = "116px minmax(220px, 2fr) 130px minmax(230px, auto)";
 
 export default function Violations() {
   const s = useStore();
@@ -132,22 +134,27 @@ export default function Violations() {
 
         {flowError ? <div style={{ padding: `12px ${pad.card} 0` }}><ErrorLine>{flowError}</ErrorLine></div> : null}
 
-        {visible.length === 0 ? <Empty>No violations match that.</Empty> : visible.map((v) => {
+        {visible.length === 0 ? <Empty>No violations match that.</Empty> : (
+        <Scroller min={860}>
+        <TableHead cols={VIO_COLS} labels={["Opened", "Finding", "Status", ""]} align={[2]} />
+        {visible.map((v) => {
           const menu = buildActionMenu(VIOLATION_STEPS, v.status, v.id, v.detail.split(" · ")[0], pending, setPending);
           const md = mailDrafts[v.id] ?? { kind: "Courtesy notice", method: "First-class mail", sent: "", tracking: "" };
           return (
             <React.Fragment key={v.id}>
-              <Row>
+              <TableRow cols={VIO_COLS}>
                 <Mono size={13} style={{ color: color.neutral }}>{v.date}</Mono>
-                <RowMain label={v.title} detail={v.detail} />
-                <Status tone={v.status === "Resolved" ? "positive" : v.status === "Hearing set" ? "critical" : "attention"}>{v.status}</Status>
+                <CellStack top={v.title} sub={v.detail} />
+                <span style={{ textAlign: "right" }}>
+                  <Tag tone={v.status === "Resolved" ? "moss" : v.status === "Hearing set" ? "red" : "amber"}>{v.status}</Tag>
+                </span>
                 <span style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                   <ActionSelect options={menu.options} onChoose={menu.onChoose} />
                   <TextButton onClick={() => setFileOpen(fileOpen === v.id ? "" : v.id)}>
                     {fileOpen === v.id ? "Close case file" : "Case file"}
                   </TextButton>
                 </span>
-              </Row>
+              </TableRow>
 
               {menu.confirming ? (
                 <ConfirmBar text={menu.confirmText} confirmLabel={menu.confirmLabel} onCancel={menu.cancel}
@@ -274,6 +281,8 @@ export default function Violations() {
             </React.Fragment>
           );
         })}
+        </Scroller>
+        )}
       </Card>
     </>
   );

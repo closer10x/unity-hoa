@@ -7,7 +7,7 @@ import { useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color, pad } from "@/lib/admin-portal/tokens";
 import type { Address } from "@/lib/admin-portal/types";
 import { usePrimaryAction } from "../SectionHead";
-import {
+import { Tag, TableRow, TableHead, Scroller, CellStack,
   ActionSelect, AddDrawer, AddressFields, Card, ConfirmBar, DateInput, DropZone,
   Empty, ErrorLine, Field, FieldGrid, FilterBar, Input, Mono, Primary,
   Row, RowMain, Select, Status,
@@ -21,6 +21,8 @@ const TRADES = [
 ];
 
 const DEACTIVATE = [{ id: "deactivate", label: "Deactivate vendor" }];
+
+const VENDOR_COLS = "minmax(180px, 1.5fr) minmax(150px, 1fr) 110px 150px minmax(170px, auto)";
 
 export default function Vendors() {
   const s = useStore();
@@ -102,19 +104,24 @@ export default function Vendors() {
 
         {flowError ? <div style={{ padding: `12px ${pad.card} 0` }}><ErrorLine>{flowError}</ErrorLine></div> : null}
 
-        {visible.length === 0 ? <Empty>No vendors match that.</Empty> : visible.map((v) => {
+        {visible.length === 0 ? <Empty>No vendors match that.</Empty> : (
+        <Scroller min={900}>
+        <TableHead cols={VENDOR_COLS} labels={["Vendor", "Contract", "Spend", "Insurance", ""]} align={[2, 3]} />
+        {visible.map((v) => {
           const off = deactivated.includes(v.id);
           return (
             <React.Fragment key={v.id}>
-              <Row>
-                <RowMain label={v.name} detail={v.trade} />
-                <span style={{ fontSize: 14, color: color.inkTertiary }}>{v.contract}</span>
-                <Mono size={14}>{v.spend}</Mono>
-                <Status tone={v.ok ? "positive" : "critical"}>{v.insurance}</Status>
+              <TableRow cols={VENDOR_COLS}>
+                <CellStack top={v.name} sub={v.trade} />
+                <span style={{ fontSize: 14, color: color.inkTertiary, minWidth: 0 }}>{v.contract}</span>
+                <Mono size={14} style={{ textAlign: "right" }}>{v.spend}</Mono>
+                <span style={{ textAlign: "right" }}>
+                  <Tag tone={v.ok ? "moss" : "red"}>{v.insurance}</Tag>
+                </span>
                 {off
                   ? <Status tone="critical">Deactivated</Status>
                   : <ActionSelect options={DEACTIVATE} onChoose={(id) => { if (id) setPending(v.id); }} />}
-              </Row>
+              </TableRow>
               {pending === v.id ? (
                 <ConfirmBar
                   text={`Deactivate ${v.name}? They stop counting as an approved vendor and can't be given new work. The record, its contract dates and its spend history all stay.`}
@@ -131,6 +138,8 @@ export default function Vendors() {
             </React.Fragment>
           );
         })}
+        </Scroller>
+        )}
       </Card>
     </>
   );
