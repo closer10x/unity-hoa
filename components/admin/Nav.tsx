@@ -44,6 +44,82 @@ function Badge({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Two-letter initials, so a missing photo is never a blank circle. */
+function initials(name: string): string {
+  const clean = name.split("\u00B7")[0].trim();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/**
+ * The scope switcher, on ink. A native select rather than the header's
+ * popover: inside a dark rail a floating panel has to re-theme itself, and
+ * the platform's own menu is better on a phone. Re-scoping changes what every
+ * list in the portal means, so it belongs with navigation.
+ */
+function ScopeSelect() {
+  const s = useStore();
+  return (
+    <select
+      value={s.scope}
+      onChange={(e) => s.setScope(e.target.value)}
+      aria-label="Which communities to show"
+      style={{
+        width: "100%", font: "inherit", fontSize: 14, minHeight: 44,
+        appearance: "none", cursor: "pointer",
+        background: "rgba(255,255,255,0.08)",
+        border: "1px solid rgba(255,255,255,0.2)",
+        borderRadius: radius.md, padding: "10px 12px", color: "#FFFFFF",
+      }}
+    >
+      <option value="all" style={{ color: color.ink }}>All communities</option>
+      {s.portfolios.map((p) => (
+        <option key={p.id} value={p.id} style={{ color: color.ink }}>{p.name}</option>
+      ))}
+      {s.communities.map((c) => (
+        <option key={c.id} value={c.id} style={{ color: color.ink }}>{c.name}</option>
+      ))}
+    </select>
+  );
+}
+
+/** Who is signed in, at the foot of the rail. */
+function AccountChip() {
+  const s = useStore();
+  const [namePart, rolePart] = s.currentUser.split("\u00B7").map((x) => x.trim());
+  const photo =
+    s.staff.find((p) => p.profileId && p.profileId === s.currentUserId)?.photoUrl ?? null;
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 11,
+      borderTop: "1px solid rgba(255,255,255,0.15)",
+      padding: "14px 10px 4px",
+    }}>
+      <span aria-hidden style={{
+        display: "grid", placeItems: "center", flex: "0 0 auto",
+        width: 34, height: 34, borderRadius: "50%", overflow: "hidden",
+        background: "#AEBB90", color: color.ink, fontSize: 13, fontWeight: 700,
+      }}>
+        {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : initials(s.currentUser)}
+      </span>
+      <span style={{ minWidth: 0 }}>
+        <span style={{
+          display: "block", fontSize: 14, fontWeight: 600, color: "#FFFFFF",
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>{namePart}</span>
+        <span style={{ display: "block", fontSize: 12, color: "rgba(255,255,255,0.55)" }}>
+          {rolePart || "Management office"}
+        </span>
+      </span>
+    </div>
+  );
+}
+
 /** Desktop rail. Sticky, natural width; the main column's grow factor keeps it there. */
 export function Sidebar() {
   const s = useStore();
@@ -57,7 +133,7 @@ export function Sidebar() {
        the moment the page first scrolls. */
     <aside style={{
       position: "sticky", top: `calc(88px + ${pad.shell})`, alignSelf: "flex-start",
-      flex: "0 1 236px", minWidth: 200, display: "grid", gap: 2,
+      flex: "0 1 248px", minWidth: 210, display: "flex", flexDirection: "column", gap: 2,
       /* The one heavy surface in the office portal, per the redesign: a dark
          ink rail against the paper page, so the eye starts at navigation
          rather than swimming in a field of white cards. */
@@ -68,6 +144,30 @@ export function Sidebar() {
       height: `calc(100dvh - 88px - ${pad.shell} * 2)`,
       overflowY: "auto",
     }}>
+      {/* The mark and what this portal is, so the rail identifies the product
+          and the header is free to carry the screen. */}
+      <div style={{ padding: "4px 10px 14px" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/images/unitylogo.png"
+          alt="Unity Grid Management"
+          style={{ display: "block", height: 24, width: "auto", filter: "brightness(0) invert(1)" }}
+        />
+        <div style={{
+          marginTop: 9, fontFamily: font.mono, fontSize: 10,
+          letterSpacing: "0.12em", textTransform: "uppercase",
+          color: "#AEBB90",
+        }}>
+          Management portal
+        </div>
+      </div>
+
+      {/* Scope lives with navigation, not in the page chrome: re-scoping is a
+          navigation act — it changes what every list on every screen means. */}
+      <div style={{ padding: "0 6px 14px" }}>
+        <ScopeSelect />
+      </div>
+
       {/* Grouped per the handoff: Today · Money · Property · People · Office.
           A group only renders when the role can reach something inside it.
           Kept tight on purpose so the whole nav fits without scrolling. */}
