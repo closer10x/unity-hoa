@@ -82,7 +82,7 @@ export default function Documents() {
   return (
     <>
       <Card>
-        <AddDrawer open={open} onOpen={() => { setOpen(true); setError(""); }}
+        <AddDrawer ownOpener={false} open={open} onOpen={() => { setOpen(true); setError(""); }}
           onCancel={() => { setOpen(false); setError(""); }}
           openLabel="Add a document" title="Add a document">
           <FieldGrid>

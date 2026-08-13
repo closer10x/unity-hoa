@@ -81,6 +81,7 @@ export default function Violations() {
     <>
       <Card>
         <AddDrawer
+          ownOpener={false}
           open={open} onOpen={() => { setOpen(true); setError(""); }} onCancel={() => { setOpen(false); setError(""); }}
           openLabel="Log a finding" title="Log an inspection finding"
           count={`${s.violations.length} on file`}>

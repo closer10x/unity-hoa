@@ -73,7 +73,7 @@ export default function Vendors() {
   return (
     <>
       <Card>
-        <AddDrawer open={open} onOpen={() => { setOpen(true); setError(""); }} onCancel={() => { setOpen(false); setError(""); }}
+        <AddDrawer ownOpener={false} open={open} onOpen={() => { setOpen(true); setError(""); }} onCancel={() => { setOpen(false); setError(""); }}
           openLabel="Add a vendor" title="Add a vendor">
           <FieldGrid>
             <Field label="Company"><Input value={name} onChange={setName} placeholder="Legal business name" /></Field>

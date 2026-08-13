@@ -17,6 +17,7 @@ import {
   Primary, Row, RowMain, Scroller, Select, Status, TableHead, TableRow, Tag,
   TextButton,
 } from "../ui";
+import { usePrimaryAction } from "../SectionHead";
 
 /* Built once: constructing a collator is the costly part, and it takes no
    dynamic input. */
@@ -71,6 +72,8 @@ export default function Owners() {
   }, [s.focusOwnerId]);
 
   const [open, setOpen] = useState(false);
+  /* The header's primary button opens this screen's add-form. */
+  usePrimaryAction(() => setOpen(true));
   const [error, setError] = useState("");
   const [name, setName] = useState("");
   const [coOwner, setCoOwner] = useState("");
@@ -334,12 +337,16 @@ export default function Owners() {
       {uninvited > 0 ? (
         <CallOut
           title={`${uninvited} of ${s.owners.length} homes still need an invitation`}
-          body="Owners without a portal account can't see documents, file a request or pay online. An invitation emails them a one-time link to choose a password."
-          action={<Primary onClick={() => { setOpen(true); setError(""); }}>Add a homeowner</Primary>}
+          body="Owners without a portal account can't see documents, file a request or pay online. Adding a homeowner to a lot emails them a one-time link to choose a password."
+          /* No button. Bulk invitations are not built — the mockup's "Send
+             invitations" would be a control that does nothing — and the one
+             action this screen does have is already in the header. A banner
+             that repeats it is a third copy of the same button. */
         />
       ) : null}
       <Card>
         <AddDrawer
+          ownOpener={false}
           open={open} onOpen={() => { setOpen(true); setError(""); }} onCancel={() => { setOpen(false); setError(""); }}
           openLabel="Add a homeowner" title="Add a homeowner"
           note="An email address gets the household portal access straight away, with a temporary password."

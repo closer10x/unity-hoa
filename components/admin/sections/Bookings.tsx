@@ -70,6 +70,7 @@ export default function Bookings() {
     <>
       <Card>
         <AddDrawer
+          ownOpener={false}
           open={open} onOpen={() => { setOpen(true); setError(""); }} onCancel={() => { setOpen(false); setError(""); }}
           openLabel="Book for a resident" title="Book for a resident">
           <p style={{ fontSize: 14, lineHeight: 1.6, color: color.inkTertiary }}>

@@ -674,15 +674,36 @@ export function DropZone({
 /* ---------- add-form drawer (product rule: always on top) ---------- */
 
 export function AddDrawer({
-  open, onOpen, onCancel, openLabel, title, note, count, children,
+  open, onOpen, onCancel, openLabel, title, note, count, ownOpener = true, children,
 }: {
   open: boolean; onOpen: () => void; onCancel: () => void;
   openLabel: string; title: string; note?: string;
   /** Right-aligned total, e.g. "101 homes". */
   count?: string;
+  /**
+   * Whether this drawer draws its own open button.
+   *
+   * False on screens whose header already carries the same action — the
+   * header button and this one open the identical form, and two of them on
+   * one screen is a choice the reader has to think about for nothing.
+   */
+  ownOpener?: boolean;
   children: React.ReactNode;
 }) {
   if (!open) {
+    if (!ownOpener) {
+      /* The header opens this. Keep the note and the count, which are the
+         only things in this strip the header does not say. */
+      if (!note && !count) return null;
+      return (
+        <div style={{ padding: pad.card, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
+          {note ? <span style={{ fontSize: 14, color: color.inkTertiary }}>{note}</span> : null}
+          {count ? (
+            <Mono size={13} style={{ color: color.neutral, marginLeft: "auto" }}>{count}</Mono>
+          ) : null}
+        </div>
+      );
+    }
     return (
       <div style={{ padding: pad.card, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
         {/* The one filled action per add-section: a solid accent pill, the same

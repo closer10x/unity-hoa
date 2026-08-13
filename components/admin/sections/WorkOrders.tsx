@@ -121,6 +121,7 @@ export default function WorkOrders() {
     <>
       <Card>
         <AddDrawer
+          ownOpener={false}
           open={open} onOpen={() => { setOpen(true); setError(""); }} onCancel={() => { setOpen(false); setError(""); }}
           openLabel="New work order" title="New internal work order"
           note={`Techs on duty: ${techsOnDuty || "none"}`}>

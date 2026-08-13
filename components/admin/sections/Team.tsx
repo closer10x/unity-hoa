@@ -378,7 +378,7 @@ export default function Team() {
       <Card>
         <CardHead title="Staff accounts"
           meta={`${s.staff.filter((p) => p.active).length} active · ${s.staff.length} accounts`} />
-        <AddDrawer open={open} onOpen={() => { setOpen(true); setError(""); }} onCancel={() => { setOpen(false); setError(""); }}
+        <AddDrawer ownOpener={false} open={open} onOpen={() => { setOpen(true); setError(""); }} onCancel={() => { setOpen(false); setError(""); }}
           openLabel="Invite a team member" title="Invite a team member">
           <FieldGrid>
             <Field label="Name"><Input value={name} onChange={setName} placeholder="First and last" /></Field>
