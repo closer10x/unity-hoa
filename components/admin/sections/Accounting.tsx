@@ -1242,6 +1242,13 @@ function LedgerCard() {
   const [desc, setDesc] = useState("");
   const [amount, setAmount] = useState("");
   const [bankAcct, setBankAcct] = useState("");
+  /* Whose books this row belongs to. Defaults to the company the section is
+     filtered to, so an office working one set of books is not asked the same
+     question on every entry. */
+  const scopedEntity = useEntityFilter();
+  const [entity, setEntity] = useState(
+    scopedEntity !== "all" && scopedEntity !== "unassigned" ? scopedEntity : "",
+  );
   const [ownerQuery, setOwnerQuery] = useState("");
   const [ownerPick, setOwnerPick] = useState<{ id: string; label: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -1285,6 +1292,7 @@ function LedgerCard() {
       date, kind, category, description: desc, amount,
       lotId: kind === "income" ? (ownerPick?.id ?? null) : null,
       bankAccountId: bankAcct || null,
+      entity: entity || null,
     });
     setSaving(false);
     if (!res.ok) return setError(res.error);
@@ -1349,6 +1357,21 @@ function LedgerCard() {
                 options={categories.map((c) => ({ id: c, label: c }))} />
             </Field>
             <Field label="Amount"><Input value={amount} onChange={setAmount} placeholder="$0.00" /></Field>
+            {/* Which company, on both income and expense: the association
+                levies HOA fees and fines, the management company sells
+                certificates and services, and each files its own return.
+                An invoice copies this forward on its own — a hand-entered
+                row has nothing behind it to infer from. */}
+            <Field
+              label={kind === "income" ? "Income belongs to" : "Expense belongs to"}
+              hint="Which company's books this lands in"
+            >
+              <Select value={entity} onChange={setEntity}
+                options={[
+                  { id: "", label: "Unassigned — in neither return" },
+                  ...s.entities.map((e) => ({ id: e.key, label: e.legalName })),
+                ]} />
+            </Field>
             <Field label={kind === "income" ? "Deposited to" : "Paid from"}
               hint={s.bankAccounts.length === 0 ? "Add an account in Bank accounts to track this." : undefined}>
               <Select value={bankAcct} onChange={setBankAcct}

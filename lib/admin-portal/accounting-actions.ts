@@ -76,6 +76,13 @@ export async function addLedgerEntry(input: {
   lotId?: string | null;
   /** The bank account this credits (income) or comes out of (expense). */
   bankAccountId?: string | null;
+  /**
+   * Which company's books this belongs to. Required on a hand-entered row:
+   * an invoice copies its company forward on its own, but nothing sits
+   * behind a manual entry to infer it from, and a row in neither set of
+   * books is invisible at return time.
+   */
+  entity?: string | null;
 }): Promise<Ok<Snapshot> | Fail> {
   try {
     const { db, actorName, actorId } = await adminContext();
@@ -109,6 +116,22 @@ export async function addLedgerEntry(input: {
       accountNote = ` ${kind === "income" ? "to" : "from"} ${acct.name}${acct.mask ? ` ····${acct.mask}` : ""}`;
     }
 
+    /* Validate against the table rather than trusting the client — this is
+       the field that decides which return the money lands in. */
+    let entityKey: string | null = null;
+    let entityNote = "";
+    const wanted = input.entity?.trim();
+    if (wanted) {
+      const { data: ent } = await db
+        .from("billing_entities")
+        .select("key, name")
+        .eq("key", wanted)
+        .maybeSingle();
+      if (!ent) return { ok: false, error: "Pick which company this belongs to." };
+      entityKey = ent.key as string;
+      entityNote = ` · ${ent.name}`;
+    }
+
     let ownerNote = "";
     if (input.lotId) {
       const { data: lot } = await db
@@ -129,6 +152,7 @@ export async function addLedgerEntry(input: {
       source: "manual",
       lot_id: input.lotId ?? null,
       bank_account_id: bankAccountId,
+      entity_key: entityKey,
       entered_by_user_id: actorId,
       entered_by_name: actorName,
     });
@@ -136,7 +160,7 @@ export async function addLedgerEntry(input: {
 
     await writeAudit(
       db,
-      `Ledger: recorded ${usd(cents)} ${kind} (${input.category.trim() || "Other"})${ownerNote}${accountNote} — ${description}`,
+      `Ledger: recorded ${usd(cents)} ${kind} (${input.category.trim() || "Other"})${entityNote}${ownerNote}${accountNote} — ${description}`,
       actorName,
       actorId,
     );
