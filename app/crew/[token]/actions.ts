@@ -53,11 +53,19 @@ async function authorize(
 
   const { data: emp } = await db
     .from("employees")
-    .select("name")
+    .select("name, active")
     .eq("id", link.employee_id)
     .maybeSingle();
 
-  return { db, link, wo, who: emp?.name ?? "Field crew" };
+  /* Switched off has to mean cannot act, not just cannot see. The board
+     stopped rendering for a disabled account long before this checked, so a
+     link that still resolved could go on closing jobs and posting notes
+     under that employee's name. */
+  if (!emp || emp.active === false) {
+    return { error: "This link has been switched off. Call the office." as const };
+  }
+
+  return { db, link, wo, who: emp.name ?? "Field crew" };
 }
 
 export async function addFieldNote(

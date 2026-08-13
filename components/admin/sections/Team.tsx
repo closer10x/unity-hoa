@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { issueCrewLink, revokeCrewLink } from "@/app/admin/(dashboard)/crew-link-actions";
 import { ROLE_HINTS } from "@/lib/admin-portal/actions";
+import { crewLinkNote } from "@/lib/admin-portal/crew-link";
 import { NAV } from "@/lib/admin-portal/fixtures";
 import { ALL_SECTIONS, SECTION_ACCESS } from "@/lib/admin-portal/permissions";
 import {
@@ -10,9 +12,10 @@ import {
 import { useStore } from "@/lib/admin-portal/store";
 import { color, font, pad } from "@/lib/admin-portal/tokens";
 import type { Staff, StaffRole } from "@/lib/admin-portal/types";
+import { isFieldRole } from "@/lib/crew/roles";
 import { usePrimaryAction } from "../SectionHead";
 import {
-  ConfirmBar,
+  ConfirmBar, CopyLine,
   AddDrawer, Card, CardHead, Chip, Empty, ErrorLine, Field, FieldGrid, FilterBar,
   Input, Mono, Pill, Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
@@ -180,6 +183,34 @@ export default function Team() {
   const [resending, setResending] = useState<string | null>(null);
   const [resendNote, setResendNote] = useState("");
 
+  /* ----- job-board links (field roles only) ----- */
+  const [crewConfirm, setCrewConfirm] = useState<{ id: string; kind: "issue" | "revoke" } | null>(null);
+
+  async function changeCrewLink(p: Staff, kind: "issue" | "revoke") {
+    if (rowBusy || !p.employeeId) return;
+    setRowBusy(p.id);
+    setRowError("");
+    setResendNote("");
+    const res = kind === "issue"
+      ? await issueCrewLink(p.employeeId)
+      : await revokeCrewLink(p.employeeId);
+    setRowBusy(null);
+    setCrewConfirm(null);
+    if ("error" in res) return setRowError(res.error);
+
+    const url = ("url" in res ? res.url : null) as string | null;
+    /* The old link is dead either way, so the row must stop showing it —
+       an office that can still copy a revoked URL will send one. */
+    s.setStaff((prev) => prev.map((x) =>
+      x.id === p.id ? { ...x, crewUrl: url, crewLinkLastUsed: null } : x));
+    setResendNote(kind === "issue"
+      ? `${p.name} has a new job-board link. Text or email it to them — the old one no longer opens.`
+      : `${p.name}'s job-board link is revoked. They cannot see their jobs until a new one is issued.`);
+    s.audit(kind === "issue"
+      ? `Issued a new job-board link for ${p.name}`
+      : `Revoked the job-board link for ${p.name}`);
+  }
+
   async function uploadPhoto(p: Staff, file: File) {
     if (!p.profileId) {
       return setRowError("This person has no sign-in account yet, so there is nowhere to keep a photo. Send them an invite first.");
@@ -305,7 +336,11 @@ export default function Team() {
           sections, communities: comms,
         }),
       });
-      const data = (await res.json()) as { ok?: boolean; error?: string; emailError?: string; smsError?: string };
+      const data = (await res.json()) as {
+        ok?: boolean; error?: string; emailError?: string; smsError?: string;
+        /* Present for field roles: their job board, minted with the account. */
+        crewUrl?: string;
+      };
       if (!res.ok || !data.ok) {
         setError(data.error ?? "The invite could not be sent.");
         return;
@@ -317,6 +352,9 @@ export default function Team() {
            the next load, so it carries no ids and the role default applies.
            New field staff start view-only; grant scheduling in their edit. */
         employeeId: null, profileId: null, sections: null, canEditSchedule: false, photoUrl: null,
+        /* Field roles come back with a job board already minted; showing it
+           now means the office can hand it over in the same breath. */
+        crewUrl: data.crewUrl ?? null, crewLinkLastUsed: null,
       };
       s.setStaff((prev) => [...prev, p]);
       const delivery = data.emailError
@@ -424,9 +462,10 @@ export default function Team() {
         ) : null}
 
         {s.staff.map((p) => (
-          /* Tight vertical rhythm: when the action cluster wraps under the
-             name at narrower widths, the row shouldn't balloon. */
-          <Row key={p.id} style={{ padding: `10px ${pad.card}`, rowGap: 4, alignItems: "center" }}>
+          <React.Fragment key={p.id}>
+          {/* Tight vertical rhythm: when the action cluster wraps under the
+              name at narrower widths, the row shouldn't balloon. */}
+          <Row style={{ padding: `10px ${pad.card}`, rowGap: 4, alignItems: "center" }}>
             <span style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
               <Avatar name={p.name} url={p.photoUrl} />
               <RowMain label={p.name} detail={p.email} detailSize={12.5} />
@@ -492,6 +531,55 @@ export default function Team() {
               )}
             </span>
           </Row>
+
+          {/* Product rule: a field employee always has a job board. It is
+              shown here, whole, because handing the URL over is the common
+              act — the welcome text is the only other place it appears, and
+              a tech who lost that text has no way back in. Everyone else has
+              a password and a sign-in page, so no strip. */}
+          {isFieldRole(p.role) ? (
+            <div style={{ padding: `0 ${pad.card} 14px`, display: "grid", gap: 8, minWidth: 0 }}>
+              {p.crewUrl ? (
+                <CopyLine value={p.crewUrl} note={crewLinkNote(p)}>
+                  {s.isAdministrator && p.employeeId ? (
+                    <>
+                      <TextButton onClick={() => { setRowError(""); setResendNote(""); setCrewConfirm({ id: p.id, kind: "issue" }); }}>
+                        Reissue
+                      </TextButton>
+                      <TextButton tone="destructive" onClick={() => { setRowError(""); setResendNote(""); setCrewConfirm({ id: p.id, kind: "revoke" }); }}>
+                        Revoke
+                      </TextButton>
+                    </>
+                  ) : null}
+                </CopyLine>
+              ) : (
+                <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                  <Mono size={12.5} style={{ color: color.attention }}>
+                    No job board link — they cannot see their work.
+                  </Mono>
+                  {s.isAdministrator && p.employeeId ? (
+                    <TextButton onClick={() => { setRowError(""); setResendNote(""); setCrewConfirm({ id: p.id, kind: "issue" }); }}>
+                      Issue one
+                    </TextButton>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {crewConfirm?.id === p.id ? (
+            <ConfirmBar
+              text={crewConfirm.kind === "issue"
+                ? `Issue a new job-board link for ${p.name}? Any link they already have stops working straight away, so send them the new one. Their jobs and history are untouched.`
+                : `Revoke ${p.name}'s job-board link? The link stops working immediately and they will not be able to see or close their jobs until a new one is issued.`}
+              confirmLabel={rowBusy === p.id
+                ? "Working…"
+                : crewConfirm.kind === "issue" ? "Yes, issue a new link" : "Yes, revoke the link"}
+              onCancel={() => setCrewConfirm(null)}
+              onConfirm={() => changeCrewLink(p, crewConfirm.kind)}
+            />
+          ) : null}
+          </React.Fragment>
         ))}
         {s.staff.map((p) =>
           editing === p.id ? (

@@ -46,6 +46,21 @@ export type CrewJob = {
   photos: { id: string; url: string; at: string }[];
 };
 
+/**
+ * What a valid token found at the other end.
+ *
+ * "Switched off" is kept apart from "gone" because the two need different
+ * answers. A tech holding a real link whose account was switched off used to
+ * get the same 404 as somebody guessing tokens — so the tech reads it as a
+ * broken link, calls the office, and the office reissues a link that 404s in
+ * exactly the same way. Telling the holder of an already-valid token that
+ * their account is off gives nothing away and ends that loop.
+ */
+export type CrewBoardResult =
+  | { state: "ok"; board: CrewBoard }
+  | { state: "switched-off"; name: string }
+  | { state: "gone" };
+
 export type CrewBoard = {
   employee: {
     id: string;
@@ -68,15 +83,10 @@ export function newCrewToken(): string {
   return randomBytes(32).toString("base64url");
 }
 
-/**
- * Roles that work off a job board rather than the admin portal. These are the
- * accounts that get a crew link the moment they exist.
- */
-export const FIELD_ROLES = ["Maintenance tech", "Inspector"] as const;
-
-export function isFieldRole(role: string | null | undefined): boolean {
-  return (FIELD_ROLES as readonly string[]).includes((role ?? "").trim());
-}
+/* The roles that get a crew link the moment they exist. Defined in a
+   client-safe module so the office screens can ask the same question, and
+   re-exported here for everything that already imports it from the crew. */
+export { FIELD_ROLES, isFieldRole } from "./roles";
 
 /**
  * Product rule: a field employee always has a job board.
@@ -188,8 +198,8 @@ async function employeePhotoUrl(
 }
 
 /** The board for a resolved link: the employee plus their open jobs. */
-export async function loadCrewBoard(employeeId: string): Promise<CrewBoard | null> {
-  if (!isSupabaseConfigured()) return null;
+export async function loadCrewBoard(employeeId: string): Promise<CrewBoardResult> {
+  if (!isSupabaseConfigured()) return { state: "gone" };
   const db = createServiceClient();
 
   const { data: emp } = await db
@@ -197,7 +207,8 @@ export async function loadCrewBoard(employeeId: string): Promise<CrewBoard | nul
     .select("id, name, role, email, active")
     .eq("id", employeeId)
     .maybeSingle();
-  if (!emp || emp.active === false) return null;
+  if (!emp) return { state: "gone" };
+  if (emp.active === false) return { state: "switched-off", name: emp.name ?? "" };
 
   const { data: rows } = await db
     .from("work_orders")
@@ -301,6 +312,8 @@ export async function loadCrewBoard(employeeId: string): Promise<CrewBoard | nul
   }
 
   return {
+    state: "ok",
+    board: {
     employee: {
       id: emp.id,
       name: emp.name,
@@ -327,5 +340,6 @@ export async function loadCrewBoard(employeeId: string): Promise<CrewBoard | nul
       photos: photosBy.get(w.id) ?? [],
       photoCount: (photosBy.get(w.id) ?? []).length,
     })),
+    },
   };
 }

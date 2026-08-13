@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getEmailBaseUrl } from "@/lib/email/link-base-url";
 import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { loadInvoiceMemos, loadInvoices } from "./invoice-actions";
 
@@ -253,6 +254,8 @@ export async function loadStaff(
       sections: linked?.section_access ?? null,
       canEditSchedule: Boolean(linked?.can_edit_schedule),
       photoUrl: null,
+      crewUrl: null,
+      crewLinkLastUsed: null,
     };
   });
 
@@ -272,7 +275,38 @@ export async function loadStaff(
       sections: p.section_access ?? null,
       canEditSchedule: Boolean(p.can_edit_schedule),
       photoUrl: null,
+      /* A sign-in with no employees row has nothing to hang a crew link on. */
+      crewUrl: null,
+      crewLinkLastUsed: null,
     });
+  }
+
+  /* The job-board link, whole. Read for everyone who has a live one rather
+     than for field roles only: a tech promoted to manager keeps a working
+     link until somebody revokes it, and a link the office cannot see is a
+     link the office cannot pull. The base is the mailing base, never
+     NEXT_PUBLIC_SITE_URL — this URL is copied into a text message, and a
+     localhost link on a tech's phone is a dead one. */
+  const employeeIds = staff
+    .map((p) => p.employeeId)
+    .filter((id): id is string => Boolean(id));
+  if (employeeIds.length > 0) {
+    const { data: links } = await db
+      .from("crew_links")
+      .select("employee_id, token, last_used_at")
+      .in("employee_id", employeeIds)
+      .is("revoked_at", null);
+    const base = getEmailBaseUrl();
+    const byEmployee = new Map(
+      ((links ?? []) as { employee_id: string; token: string; last_used_at: string | null }[])
+        .map((l) => [l.employee_id, l] as const),
+    );
+    for (const person of staff) {
+      const link = person.employeeId ? byEmployee.get(person.employeeId) : undefined;
+      if (!link) continue;
+      person.crewUrl = `${base}/crew/${link.token}`;
+      person.crewLinkLastUsed = link.last_used_at;
+    }
   }
 
   /* The avatar bucket is private, so each photo is handed over as a short

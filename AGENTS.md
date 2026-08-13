@@ -47,7 +47,15 @@ session gets wrong:
   (`ensureCrewLink`), and the link goes out in their welcome text. A tech must
   never exist without somewhere to see their work, and nobody should have to
   remember a second step. The helper is idempotent, so call it freely from any
-  new path that creates field staff.
+  new path that creates field staff — *including a role change*, which is a
+  way into the field too and was missing the call for months.
+
+  The office also has to be able to hand the link over again, so it is shown
+  whole and copy-ready wherever the crew is listed — Work orders and Team —
+  never hidden behind a menu. A tech who lost the welcome text has no other
+  way in. `crewLinkNote` writes the small print, including the part that is
+  easy to forget: a board answers only for an employee whose account is on, so
+  a link copied while they are switched off is a dead link.
 
 - **Every dollar belongs to a company.** The office keeps books for two legal
   entities: the HOA fee and fines are **Sofi Lakes Residential Association

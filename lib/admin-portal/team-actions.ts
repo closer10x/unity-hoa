@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import { requireAdminUser } from "@/lib/auth/require-admin";
+import { ensureCrewLink } from "@/lib/crew/links";
+import { isFieldRole } from "@/lib/crew/roles";
 import { requireServiceSupabase } from "@/lib/supabase/service";
 
 import {
@@ -247,6 +249,17 @@ export async function updateStaffAccount(input: {
           .update({ name, email, role, communities })
           .eq("id", input.employeeId);
         if (upErr) throw new Error(upErr.message);
+      }
+
+      /* Product rule: a field employee always has a job board. Being made a
+         tech in the edit panel is as much a way into the field as being
+         invited as one, and this path used to leave them with no board at
+         all. Idempotent, so someone who already has a link keeps it. */
+      if (isFieldRole(role)) {
+        const link = await ensureCrewLink(input.employeeId, actorId);
+        if (link && before && !isFieldRole(before.role)) {
+          changes.push("job-board link issued");
+        }
       }
     }
 

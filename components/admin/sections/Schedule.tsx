@@ -2,9 +2,11 @@
 
 import React, { useMemo, useState } from "react";
 
+import { localDayIso } from "@/lib/admin-portal/day";
 import { useStore } from "@/lib/admin-portal/store";
 import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
 import type { WorkOrder } from "@/lib/admin-portal/types";
+import { isFieldRole } from "@/lib/crew/roles";
 import { assignWorkOrder } from "@/lib/admin-portal/work-actions";
 import {
   AddDrawer, Card, CardHead, Chip, DateInput, Field, FieldGrid, Mono, Pill,
@@ -27,9 +29,6 @@ import {
  * trail, so the board survives a refresh.
  */
 
-/** Roles that do physical work and therefore belong on the board. */
-const FIELD_ROLES = ["Maintenance tech", "Inspector"];
-
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function startOfWeek(d: Date): Date {
@@ -45,7 +44,9 @@ function addDays(d: Date, n: number): Date {
   return out;
 }
 
-const iso = (d: Date) => d.toISOString().slice(0, 10);
+/* Local, not UTC — see localDayIso. A board that highlights tomorrow from
+   7pm onwards is a board the crew stops trusting. */
+const iso = (d: Date) => localDayIso(d);
 
 const PRIORITY_TONE: Record<string, string> = {
   urgent: color.critical,
@@ -96,7 +97,7 @@ export default function Schedule() {
 
   const crew = useMemo(() => {
     const active = s.staff.filter((m) => m.active);
-    return showAllStaff ? active : active.filter((m) => FIELD_ROLES.includes(m.role));
+    return showAllStaff ? active : active.filter((m) => isFieldRole(m.role));
   }, [s.staff, showAllStaff]);
 
   /** Scheduled = has a tech and a due date. */

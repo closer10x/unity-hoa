@@ -1147,6 +1147,96 @@ export function CellStack({ top, sub }: { top: string; sub?: string }) {
 }
 
 /**
+ * A URL the office hands to somebody else, laid out to be taken away.
+ *
+ * The value sits in a read-only input rather than a `<span>` for one reason:
+ * a URL is useless on screen. Focusing it selects the whole thing, so ⌘C
+ * works even when the clipboard API doesn't — which is the case on any
+ * origin that isn't secure, and the point at which a Copy button that
+ * silently does nothing is worse than no button.
+ *
+ * `children` is for the actions that only some callers have — reissue,
+ * revoke — so the strip stays one row of controls rather than two.
+ */
+export function CopyLine({
+  value, note, children,
+}: {
+  value: string;
+  /** Small print under the field: what the link is, when it was last opened. */
+  note?: string;
+  children?: React.ReactNode;
+}) {
+  const [said, setSaid] = React.useState("");
+  const ref = React.useRef<HTMLInputElement>(null);
+
+  async function copy() {
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(value);
+      ok = true;
+    } catch {
+      /* Insecure origin, or clipboard-write refused. */
+    }
+    if (!ok) {
+      /* The old command still works where the modern API is blocked, and it
+         needs the text selected anyway — which is also the fallback when
+         even that fails, so the shortcut is left as the way out. */
+      ref.current?.focus();
+      ref.current?.select();
+      try {
+        ok = document.execCommand("copy");
+      } catch {
+        ok = false;
+      }
+    }
+    setSaid(ok ? "Copied" : "Selected — press ⌘C");
+    window.setTimeout(() => setSaid(""), 2400);
+  }
+
+  return (
+    <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", minWidth: 0 }}>
+        <input
+          ref={ref}
+          readOnly
+          value={value}
+          onFocus={(e) => e.currentTarget.select()}
+          onClick={(e) => e.currentTarget.select()}
+          aria-label="Link"
+          style={{
+            flex: "1 1 260px", minWidth: 0,
+            font: "inherit", fontFamily: font.mono, fontSize: 12.5,
+            color: color.inkSecondary, background: color.surfaceSunken,
+            border: `1px solid ${color.hairline}`, borderRadius: radius.sm,
+            padding: "10px 12px", minHeight: 40,
+          }}
+        />
+        <Pill style={{ padding: "10px 14px", fontSize: 12.5 }} onClick={copy}>
+          {said || "Copy"}
+        </Pill>
+        <a
+          href={value}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            font: "inherit", fontSize: 12.5, fontWeight: 500,
+            color: color.accent, textDecoration: "none",
+            padding: "10px 6px", minHeight: 40,
+            display: "inline-flex", alignItems: "center", whiteSpace: "nowrap",
+          }}
+        >
+          Open
+        </a>
+        {children}
+      </div>
+      {note ? (
+        <span style={{ fontSize: 12.5, lineHeight: 1.5, color: color.inkQuaternary }}>{note}</span>
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * The banner the redesign puts above a list when the whole list is telling
  * you one thing — 388 of 390 homes with nobody to sign in. Tinted, with the
  * action that fixes it.

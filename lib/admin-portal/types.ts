@@ -116,6 +116,14 @@ export interface Staff {
   canEditSchedule: boolean;
   /** Signed URL for the profile photo; null when none is on file. */
   photoUrl: string | null;
+  /**
+   * Their job-board link, whole and ready to paste into a text — the office
+   * hands this over far more often than it types a URL. Null when the person
+   * has no live link: everyone but a field employee, who always has one.
+   */
+  crewUrl: string | null;
+  /** When they last opened it. A link never opened is a link never received. */
+  crewLinkLastUsed: string | null;
 }
 export type StaffRole =
   | "Owner" | "Administrator" | "Community manager" | "Assistant manager"
