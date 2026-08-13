@@ -4,12 +4,40 @@ import React from "react";
 
 import { NAV, NAV_GROUPS } from "@/lib/resident-portal/nav";
 import { useResident } from "@/lib/resident-portal/store";
-import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
-import { NavIcon } from "@/components/admin/ui/NavIcon";
 
-function Badge({ children }: { children: React.ReactNode }) {
+/**
+ * The resident's rail.
+ *
+ * Dark ink against the paper page, the way the redesign has it: the portal's
+ * one heavy surface, so the eye starts at the lot it belongs to rather than
+ * at a list of links. The lot card sits above the nav for the same reason —
+ * a resident who owns in two communities should never have to wonder which
+ * one they are looking at.
+ *
+ * No icons, per the house rule. The current item is a solid white chip, which
+ * reads from across a room without one.
+ */
+
+/** Initials for the account chip, so a photo is never required. */
+function initials(name: string): string {
   return (
-    <span style={{ fontFamily: font.mono, fontSize: 11, background: color.chipOn, color: "oklch(0.38 0.05 155)", borderRadius: 999, padding: "2px 8px" }}>
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? "")
+      .join("") || "—"
+  );
+}
+
+function Badge({ children, dark = false }: { children: React.ReactNode; dark?: boolean }) {
+  return (
+    <span
+      className={
+        "rounded-full px-2 py-0.5 text-[11px] font-bold " +
+        (dark ? "bg-white/15 text-white" : "bg-tint text-moss")
+      }
+    >
       {children}
     </span>
   );
@@ -21,62 +49,101 @@ function useBadges(): Record<string, number> {
   return { maintenance: s.openRequestCount, messages: s.unreadCount };
 }
 
-/** Desktop rail: grouped, mono group eyebrows, tinted current item. */
+/** The lot this portal is scoped to. */
+function LotCard() {
+  const s = useResident();
+  return (
+    <div className="rounded-xl border border-white/15 bg-white/[0.07] px-[18px] py-4">
+      <div className="mb-2 text-[11px] font-bold tracking-[0.08em] text-sage uppercase">
+        Your home
+      </div>
+      <div className="font-display text-[18px] leading-[1.25] font-semibold tracking-[-0.02em]">
+        {s.property.address}
+      </div>
+      <div className="mt-1 text-[13px] text-white/60">
+        {[s.property.name, s.property.account && `Acct ${s.property.account}`]
+          .filter(Boolean)
+          .join(" · ") || "No account number yet"}
+      </div>
+    </div>
+  );
+}
+
+function AccountChip() {
+  const s = useResident();
+  return (
+    <div className="flex items-center gap-[11px] border-t border-white/15 px-3 pt-3.5">
+      <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-sage text-[13px] font-bold text-ink">
+        {initials(s.residentName)}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-semibold">{s.residentName}</span>
+        <span className="block text-xs text-white/55">Owner</span>
+      </span>
+    </div>
+  );
+}
+
+/** Desktop rail. */
 export function Sidebar() {
   const s = useResident();
   const badges = useBadges();
+
   return (
     <aside
-      style={{
-        /* The sticky offset includes the shell's own top padding, or the rail
-           jumps up by that much the first time the page scrolls. */
-        position: "sticky", top: `calc(88px + ${pad.shell})`, alignSelf: "flex-start",
-        flex: "0 1 236px", minWidth: 200, display: "grid", gap: 2,
-        background: color.surface,
-        border: `1px solid ${color.hairline}`,
-        borderRadius: radius.card,
-        padding: 8,
-        height: `calc(100dvh - 88px - ${pad.shell} * 2)`,
-        overflowY: "auto",
-      }}
+      className="sticky flex flex-[0_1_268px] flex-col gap-7 self-start overflow-y-auto rounded-2xl bg-ink px-5 py-[26px] text-white"
+      /* The sticky offset includes the shell's own top padding, or the rail
+         jumps by that much the first time the page scrolls. */
+      style={{ top: 24, maxHeight: "calc(100dvh - 48px)", minWidth: 232 }}
     >
-      {NAV_GROUPS.map((group) => (
-        <div key={group} style={{ display: "grid", gap: 2, paddingBottom: 4 }}>
-          <span style={{ fontFamily: font.mono, fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "oklch(0.6 0.015 150)", padding: "8px 8px 4px" }}>
-            {group}
-          </span>
-          {NAV.filter((n) => n.group === group).map((n) => {
-            const on = n.id === s.view;
-            const badge = badges[n.id] || 0;
-            return (
-              <button
-                key={n.id}
-                type="button"
-                onClick={() => s.setView(n.id)}
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-                  width: "100%", textAlign: "left", font: "inherit", fontSize: 14.5,
-                  border: `1px solid ${on ? color.accentTintBorder : "transparent"}`,
-                  background: on ? color.accentTint : "transparent",
-                  color: on ? "oklch(0.28 0.03 152)" : "oklch(0.32 0.014 150)",
-                  borderRadius: radius.md, padding: "7px 12px", cursor: "pointer",
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                  <NavIcon id={n.id} />
-                  <span style={{ fontWeight: on ? 600 : 400 }}>{n.label}</span>
-                </span>
-                {badge ? <Badge>{badge}</Badge> : null}
-              </button>
-            );
-          })}
-        </div>
-      ))}
+      <LotCard />
+
+      <nav className="grid gap-4">
+        {NAV_GROUPS.map((group) => (
+          <div key={group} className="grid gap-1">
+            <span className="px-3.5 pb-1 text-[10px] font-bold tracking-[0.14em] text-white/40 uppercase">
+              {group}
+            </span>
+            {NAV.filter((n) => n.group === group).map((n) => {
+              const on = n.id === s.view;
+              const badge = badges[n.id] || 0;
+              return (
+                <button
+                  key={n.id}
+                  type="button"
+                  onClick={() => s.setView(n.id)}
+                  aria-current={on ? "page" : undefined}
+                  className={
+                    "flex min-h-11 w-full items-center justify-between gap-3 rounded-[10px] px-3.5 py-3 text-left text-[15px] transition-colors " +
+                    (on
+                      ? "bg-white font-semibold text-ink"
+                      : "font-medium text-white/[0.78] hover:bg-white/10")
+                  }
+                >
+                  <span className="min-w-0 truncate">{n.label}</span>
+                  {badge ? <Badge dark={!on}>{badge}</Badge> : null}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+
+      <div className="mt-auto grid gap-3">
+        <button
+          type="button"
+          onClick={() => s.setView("messages")}
+          className="min-h-11 px-3 text-left text-sm text-white/70 transition-colors hover:text-white"
+        >
+          Message the office →
+        </button>
+        <AccountChip />
+      </div>
     </aside>
   );
 }
 
-/** Mobile nav sheet: group + section on the toggle, grouped sheet below. */
+/** Mobile: the section on a toggle, the grouped sheet beneath it. */
 export function MobileNav() {
   const s = useResident();
   const badges = useBadges();
@@ -84,40 +151,34 @@ export function MobileNav() {
   const openTotal = Object.values(badges).reduce((t, n) => t + n, 0);
 
   return (
-    <div style={{ flex: "1 1 100%", display: "grid", gap: 10 }}>
+    <div className="grid flex-[1_1_100%] gap-2.5">
       <button
         type="button"
         onClick={() => s.setNavOpen(!s.navOpen)}
-        style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-          width: "100%", font: "inherit", textAlign: "left", background: color.surface,
-          border: `1px solid ${color.borderInput}`, borderRadius: radius.lg,
-          padding: "13px 16px", cursor: "pointer", color: color.ink,
-        }}
+        aria-expanded={s.navOpen}
+        className="flex w-full items-center justify-between gap-3 rounded-xl bg-ink px-4 py-3.5 text-left text-white"
       >
-        <span style={{ display: "grid", gap: 2, minWidth: 0 }}>
-          <span style={{ fontFamily: font.mono, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: color.inkQuaternary }}>
+        <span className="grid min-w-0 gap-0.5">
+          <span className="text-[10px] font-bold tracking-[0.12em] text-sage uppercase">
             {current.group}
           </span>
-          <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: "-0.01em" }}>{current.label}</span>
+          <span className="truncate font-display text-[17px] font-semibold tracking-[-0.02em]">
+            {current.label}
+          </span>
         </span>
-        <span style={{ display: "flex", alignItems: "center", gap: 9, flex: "0 0 auto" }}>
-          {openTotal ? <Badge>{openTotal} open</Badge> : null}
-          <span style={{ fontSize: 13, fontWeight: 500, color: "oklch(0.44 0.045 155)" }}>{s.navOpen ? "Close" : "Menu"}</span>
+        <span className="flex shrink-0 items-center gap-2.5">
+          {openTotal ? <Badge dark>{openTotal} open</Badge> : null}
+          <span className="text-[13px] font-semibold text-white/80">
+            {s.navOpen ? "Close" : "Menu"}
+          </span>
         </span>
       </button>
 
       {s.navOpen ? (
-        <div
-          style={{
-            background: color.surface, border: `1px solid ${color.hairline}`,
-            borderRadius: radius.xl, padding: 6, maxHeight: "66vh", overflowY: "auto",
-            boxShadow: "0 12px 32px oklch(0.4 0.02 150 / 0.1)",
-          }}
-        >
+        <div className="max-h-[66vh] overflow-y-auto rounded-2xl border border-line bg-white p-1.5 shadow-[0_12px_32px_rgba(51,61,38,0.10)]">
           {NAV_GROUPS.map((group) => (
-            <div key={group} style={{ display: "grid", gap: 2, padding: "8px 6px 10px" }}>
-              <span style={{ fontFamily: font.mono, fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "oklch(0.6 0.015 150)", padding: "0 8px 6px" }}>
+            <div key={group} className="grid gap-0.5 px-1.5 pt-2 pb-2.5">
+              <span className="px-2 pb-1.5 text-[10px] font-bold tracking-[0.14em] text-faint uppercase">
                 {group}
               </span>
               {NAV.filter((n) => n.group === group).map((n) => {
@@ -128,21 +189,20 @@ export function MobileNav() {
                     key={n.id}
                     type="button"
                     onClick={() => s.setView(n.id)}
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-                      width: "100%", textAlign: "left", font: "inherit", fontSize: 16, border: "none",
-                      background: on ? color.accentTint : "transparent",
-                      color: on ? "oklch(0.28 0.03 152)" : "oklch(0.32 0.014 150)",
-                      borderRadius: radius.md, padding: "13px 14px", cursor: "pointer",
-                    }}
+                    aria-current={on ? "page" : undefined}
+                    className={
+                      "flex min-h-11 w-full items-center justify-between gap-3 rounded-[10px] px-3.5 py-3 text-left text-[16px] transition-colors " +
+                      (on ? "bg-tint font-semibold text-ink" : "text-body hover:bg-paper")
+                    }
                   >
-                    <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                      <NavIcon id={n.id} />
-                      <span style={{ fontWeight: on ? 600 : 400 }}>{n.label}</span>
-                    </span>
-                    <span style={{ display: "flex", alignItems: "center", gap: 8, flex: "0 0 auto" }}>
+                    <span className="min-w-0 truncate">{n.label}</span>
+                    <span className="flex shrink-0 items-center gap-2">
                       {badge ? <Badge>{badge}</Badge> : null}
-                      {on ? <span style={{ fontFamily: font.mono, fontSize: 12, color: "oklch(0.5 0.04 155)" }}>viewing</span> : null}
+                      {on ? (
+                        <span className="text-[11px] font-bold tracking-[0.06em] text-moss uppercase">
+                          Viewing
+                        </span>
+                      ) : null}
                     </span>
                   </button>
                 );

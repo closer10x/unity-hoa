@@ -3,11 +3,11 @@
 import React, { useMemo, useState } from "react";
 
 import { useResident, useSearchFilter } from "@/lib/resident-portal/store";
-import { color, font, pad } from "@/lib/admin-portal/tokens";
 import type { DocItem } from "@/lib/resident-portal/types";
 import {
-  Card, Empty, FilterBar, Mono, PageTitle, Row, RowMain, TextButton,
-} from "@/components/admin/ui";
+  Card, Empty, FilterBar, Mono, Row, RowMain, TextButton,
+} from "../ui";
+import { color, font, pad } from "../ui";
 
 export default function Documents() {
   const s = useResident();
@@ -37,10 +37,6 @@ export default function Documents() {
 
   return (
     <>
-      <PageTitle
-        title="Documents"
-        lede="Governing documents, financials, meeting minutes and your own statements."
-      />
 
       <Card>
         <FilterBar query={query} onQuery={setQuery} placeholder="Search documents…"

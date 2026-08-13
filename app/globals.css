@@ -122,11 +122,15 @@
   /* Labels, reference codes and amounts are mono */
   --font-label: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, monospace;
 
-  /* --- Public marketing site only ---------------------------------------
-     The redesigned public site uses its own olive palette and a display
-     font. These tokens are consumed only under the (marketing) layout, which
-     sets the paper background and body font on its own wrapper — the admin and
-     resident portals never reference them, so their surfaces stay untouched. */
+  /* --- Public site and the resident portal ------------------------------
+     The olive palette and display font of the redesigned public site, now
+     also the resident portal's: a homeowner moves between the two and should
+     not cross a visual seam. Both set the paper background and their own body
+     font on their own wrapper.
+
+     The admin portal never references these — an office tool and a homeowner
+     tool are different products, and the staff surfaces stay on the sage
+     token set above. */
   --color-ink: #333d26;
   --color-moss: #5a6b3c;
   --color-body: #4f5645;

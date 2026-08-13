@@ -4,8 +4,9 @@ import React from "react";
 
 import Header from "./Header";
 import { MobileNav, Sidebar } from "./Nav";
+import { PageHead, SECTION_COPY } from "./PageHead";
+import { primaryBtn, secondaryBtn } from "./ui";
 import { useResident } from "@/lib/resident-portal/store";
-import { color, pad } from "@/lib/admin-portal/tokens";
 
 import Overview from "./sections/Overview";
 import Payments from "./sections/Payments";
@@ -29,44 +30,50 @@ const SECTIONS: Record<string, React.ComponentType> = {
 export default function Shell() {
   const s = useResident();
   const Section = SECTIONS[s.view] ?? Overview;
+  const copy = SECTION_COPY[s.view] ?? SECTION_COPY.overview;
+
+  /* The two things a resident came to do, on every screen. Paying leads
+     because it is the one with a deadline; both jump to the section that
+     actually does the work rather than opening a second surface. */
+  const actions = (
+    <>
+      <button type="button" className={secondaryBtn} onClick={() => s.setView("maintenance")}>
+        File a request
+      </button>
+      <button type="button" className={primaryBtn} onClick={() => s.setView("payments")}>
+        {s.property.balance ? `Pay ${s.property.balance}` : "Pay HOA fees"}
+      </button>
+    </>
+  );
 
   return (
-    <>
+    <div className="min-h-dvh bg-paper font-marketing text-ink">
       <Header />
+
       {s.property.alert ? (
-        <div
-          style={{
-            padding: `12px ${pad.shell}`,
-            background: "oklch(0.96 0.035 70)",
-            borderBottom: `1px solid ${color.hairline}`,
-            fontSize: 14,
-            lineHeight: 1.55,
-            color: "oklch(0.4 0.07 60)",
-          }}
-        >
+        <div className="border-b border-line bg-[#F2E9D6] px-[clamp(16px,4vw,44px)] py-3 text-sm leading-[1.55] text-[#8A6A2F]">
           {s.property.alert}
         </div>
       ) : null}
+
       {/* Left-aligned, not centred — centring made the shell shift with the
           scrollbar; see the admin Shell for the history. */}
       <div
-        style={{
-          display: "flex", flexWrap: "wrap", alignItems: "flex-start",
-          gap: "clamp(20px, 3vw, 40px)", padding: pad.shell,
-          maxWidth: 1440, marginInline: 0,
-        }}
+        className="flex flex-wrap items-start gap-[clamp(16px,2.5vw,28px)] p-[clamp(16px,2.5vw,24px)]"
+        style={{ maxWidth: 1520 }}
       >
         {s.isMobile ? <MobileNav /> : <Sidebar />}
-        {/* Same reserve as the admin shell: the fixed assistant button would
-            otherwise sit on top of the last row of every list. */}
-        <main style={{
-          flex: "999 1 420px", minWidth: 0, display: "grid", gap: pad.gap,
-          alignContent: "start",
-          paddingBottom: s.isMobile ? 96 : 0,
-        }}>
+
+        {/* The reserve at the bottom keeps the fixed assistant button off the
+            last row of every list. */}
+        <main
+          className="grid min-w-0 flex-[999_1_420px] content-start gap-4"
+          style={{ paddingBottom: s.isMobile ? 96 : 0 }}
+        >
+          <PageHead title={copy.title} sub={copy.sub} actions={s.isMobile ? null : actions} />
           <Section />
         </main>
       </div>
-    </>
+    </div>
   );
 }

@@ -3,12 +3,12 @@
 import React, { useState } from "react";
 
 import { useResident } from "@/lib/resident-portal/store";
-import { color, pad } from "@/lib/admin-portal/tokens";
 import type { Reservation } from "@/lib/resident-portal/types";
 import {
-  AddDrawer, Area, Card, CardHead, Chip, DateInput, Empty, ErrorLine, Field,
-  FieldGrid, Mono, PageTitle, Primary, Row, RowMain, Select, Status,
-} from "@/components/admin/ui";
+  AddDrawer, Area, Card, CardHeadMeta as CardHead, Chip, DateInput, Empty, ErrorLine, Field,
+  FieldGrid, Mono, Primary, Row, RowMain, Select, Status,
+} from "../ui";
+import { color, pad } from "../ui";
 
 /** The community's reservable spaces — the same catalogue the office books from. */
 const AMENITIES = ["Great Hall", "Pool cabana 1", "Pool cabana 2", "Clubhouse Annex", "Tennis court"];
@@ -74,7 +74,6 @@ export default function Amenities() {
 
   return (
     <>
-      <PageTitle title="Amenities" lede="Reserve a space, follow your reservations, and know the house rules." />
 
       {confirmed ? (
         <Card>

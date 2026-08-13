@@ -3,32 +3,15 @@
 import React, { useState } from "react";
 
 import { useResident } from "@/lib/resident-portal/store";
-import { color, font, pad } from "@/lib/admin-portal/tokens";
 import {
-  Card, CardHead, Empty, ErrorLine, Eyebrow, Field, FieldGrid, Input, Mono,
-  PageTitle, Primary, Row, RowMain, Select, Status, TextButton,
-} from "@/components/admin/ui";
+  Card, CardHead, Empty, ErrorLine, Field, FieldRow, ListRow, PAGE, Pill,
+  StatCard, StatRow, inputCls, primaryBtn, quietBtn,
+} from "../ui";
 
 const CARD_FEE_RATE = 0.0295;
 
 const usd = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD" });
-
-/**
- * The four-column ledger from the handoff. The floors use min() so they can
- * collapse below their own width: fixed tracks added up to 454px, and the card
- * clips rather than scrolls, so on a phone the amount was cut in half and the
- * running balance was invisible with nothing to swipe.
- */
-const ledgerGrid: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns:
-    "repeat(auto-fit, minmax(min(120px, 100%), 1fr))",
-  gap: "8px 18px",
-  alignItems: "baseline",
-  padding: `14px ${pad.card}`,
-  borderBottom: `1px solid ${color.hairlineSoft}`,
-};
 
 export default function Payments() {
   const s = useResident();
@@ -40,9 +23,7 @@ export default function Payments() {
   const [error, setError] = useState("");
 
   const baseCents =
-    choice === "custom"
-      ? Math.round(parseFloat(custom || "0") * 100)
-      : p.balanceCents ?? 0;
+    choice === "custom" ? Math.round(parseFloat(custom || "0") * 100) : p.balanceCents ?? 0;
   const feeCents = method === "card" ? Math.round(baseCents * CARD_FEE_RATE) : 0;
   const totalCents = baseCents + feeCents;
 
@@ -57,149 +38,168 @@ export default function Payments() {
   }
 
   return (
-    <>
-      <PageTitle title="Payments" lede="Your balance, ways to pay, and the full account ledger." />
+    <div className={PAGE} style={{ paddingInline: 0, paddingTop: 0 }}>
+      <StatRow>
+        <StatCard
+          tone="ink"
+          label={p.overdue ? "Past due" : "Balance due"}
+          value={p.balance || "—"}
+          note={
+            p.balanceCents == null
+              ? "No billing on file yet"
+              : p.overdue
+                ? `Was due ${p.due}`
+                : p.due
+                  ? `Due ${p.due}`
+                  : "Due date to be announced"
+          }
+        />
+        <StatCard
+          label="HOA fee"
+          value={p.balance || "—"}
+          note={p.cadence ? `${p.cadence} billing` : "Schedule not set yet"}
+        />
+        <StatCard
+          label="Autopay"
+          value={s.autopay ? "On" : "Off"}
+          note={
+            s.autopay
+              ? "Drafts three days before each due date"
+              : "You get an email reminder ten days before"
+          }
+          action={
+            <button type="button" className={quietBtn} onClick={() => s.setAutopay(!s.autopay)}>
+              {s.autopay ? "Turn autopay off →" : "Turn autopay on →"}
+            </button>
+          }
+        />
+      </StatRow>
 
-      <Card>
-        <CardHead title="Your HOA fee" meta={p.cadence ? `${p.cadence} billing` : undefined} />
-        <div style={{ padding: pad.card, display: "grid", gap: 6 }}>
-          {p.balanceCents != null ? (
-            <>
-              <Eyebrow>{p.overdue ? "HOA fee past due" : "Next HOA fee"}</Eyebrow>
-              <span style={{ fontFamily: font.mono, fontSize: 34, fontWeight: 400, letterSpacing: "-0.01em", color: p.overdue ? color.critical : undefined }}>
-                {p.balance}
-              </span>
-              <span style={{ fontSize: 15, color: p.overdue ? color.critical : color.inkTertiary }}>
-                {p.overdue
-                  ? `Was due ${p.due} — pay now to avoid late fees`
-                  : `${p.due ? `Due ${p.due}` : "Due date to be announced"}${p.cadence ? ` · ${p.cadence} HOA fee` : ""}`}
-              </span>
-            </>
-          ) : (
-            <span style={{ fontSize: 15, lineHeight: 1.6, color: color.inkTertiary }}>
-              No billing is configured on your account yet. Once the office posts
-              your HOA fee schedule it will appear here.
-            </span>
-          )}
-        </div>
-      </Card>
-
-      <Card>
+      <Card className="px-[clamp(18px,3vw,30px)] py-7">
         <CardHead title="Make a payment" />
-        <div style={{ padding: pad.card, display: "grid", gap: 18 }}>
-          <FieldGrid>
+        <div className="mt-4 grid gap-[18px]">
+          <FieldRow>
             <Field label="Amount">
-              <Select
+              <select
                 value={choice}
-                onChange={setChoice}
-                options={[
-                  { id: "full", label: p.balance ? `Full HOA fee — ${p.balance}` : "Full HOA fee" },
-                  { id: "custom", label: "Another amount" },
-                ]}
-              />
+                onChange={(e) => setChoice(e.target.value)}
+                className={inputCls}
+              >
+                <option value="full">
+                  {p.balance ? `Full HOA fee — ${p.balance}` : "Full HOA fee"}
+                </option>
+                <option value="custom">Another amount</option>
+              </select>
             </Field>
             {choice === "custom" ? (
               <Field label="Custom amount" hint="Dollars and cents, e.g. 285.00">
-                <Input value={custom} onChange={setCustom} placeholder="0.00" mono />
+                <input
+                  value={custom}
+                  onChange={(e) => setCustom(e.target.value)}
+                  placeholder="0.00"
+                  inputMode="decimal"
+                  className={inputCls}
+                />
               </Field>
             ) : null}
             <Field label="Method">
-              <Select
+              <select
                 value={method}
-                onChange={setMethod}
-                options={[
-                  { id: "ach", label: "Bank transfer — no fee" },
-                  { id: "card", label: "Card — 2.95% processor fee" },
-                ]}
-              />
+                onChange={(e) => setMethod(e.target.value)}
+                className={inputCls}
+              >
+                <option value="ach">Bank transfer — no fee</option>
+                <option value="card">Card — 2.95% processor fee</option>
+              </select>
             </Field>
-          </FieldGrid>
+          </FieldRow>
 
-          <div style={{ display: "grid", gap: 4 }}>
+          <div className="grid gap-1.5">
             {method === "card" && baseCents > 0 ? (
-              <Mono size={13} style={{ color: color.attention }}>
-                {usd(baseCents / 100)} + {usd(feeCents / 100)} card fee = {usd(totalCents / 100)}
-              </Mono>
+              <span className="text-[14px] font-semibold text-[#8A6A2F]">
+                {usd(baseCents / 100)} + {usd(feeCents / 100)} card fee ={" "}
+                {usd(totalCents / 100)}
+              </span>
             ) : null}
-            <span style={{ fontSize: 13, lineHeight: 1.55, color: color.inkQuaternary }}>
-              Card payments carry a 2.95% processor fee. Bank transfers and
-              checks carry no fee. You’ll confirm on the secure payment page
-              before anything is charged.
+            <span className="text-[13px] leading-[1.55] text-faint">
+              Card payments carry a 2.95% processor fee. Bank transfers and checks carry
+              none. You&rsquo;ll confirm on the secure payment page before anything is charged.
             </span>
           </div>
 
           {error ? <ErrorLine>{error}</ErrorLine> : null}
-          <Primary onClick={payNow} style={{ justifySelf: "start" }}>
+          <button type="button" onClick={payNow} className={`${primaryBtn} justify-self-start`}>
             Continue to secure payment
-          </Primary>
+          </button>
         </div>
       </Card>
 
-      <Card>
-        <CardHead title="Autopay" />
-        <div style={{ padding: pad.card, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 15, lineHeight: 1.6, color: color.inkSecondary, flex: "1 1 320px" }}>
-            {s.autopay
-              ? "On — the full HOA fee drafts from your bank account three days before each due date."
-              : "Off — you'll get an email reminder ten days before each due date."}
-          </span>
-          <TextButton onClick={() => s.setAutopay(!s.autopay)}>
-            {s.autopay ? "Turn autopay off" : "Turn autopay on"}
-          </TextButton>
-        </div>
-      </Card>
-
-      <Card>
-        <CardHead title="Portal payments" meta="What you've paid online" />
-        {s.payments.length === 0 ? (
-          <Empty>No portal payments yet. Payments you make here will be listed with their receipt status.</Empty>
-        ) : (
-          s.payments.map((r) => (
-            <Row key={r.id}>
-              <Mono size={13} style={{ color: color.neutral }}>{r.date}</Mono>
-              <RowMain label={r.label} />
-              <Mono size={14} style={{ justifySelf: "end" }}>{r.amount}</Mono>
-              <Status tone={r.status === "paid" ? "positive" : r.status === "failed" ? "critical" : "attention"}>
-                {r.status}
-              </Status>
-            </Row>
-          ))
-        )}
-      </Card>
-
-      <Card>
-        <CardHead title="Ledger" meta="Charges and payments on your account" />
+      <Card className="px-[clamp(18px,3vw,30px)] py-7">
+        <CardHead title="Account ledger" />
         {s.ledger.length === 0 ? (
-          <Empty>Nothing on your ledger yet. HOA fee postings and payments will appear here.</Empty>
+          <Empty>
+            Nothing on your ledger yet. HOA fee postings and payments appear here as they
+            happen.
+          </Empty>
         ) : (
           <>
-            <div style={{ ...ledgerGrid, background: color.surfaceMuted }}>
-              {["Date", "Description", "Amount", "Balance"].map((h, i) => (
-                <span
-                  key={h}
-                  style={{
-                    fontFamily: font.mono, fontSize: 10, letterSpacing: "0.12em",
-                    textTransform: "uppercase", color: color.inkQuaternary,
-                    justifySelf: i >= 2 ? "end" : "start",
-                  }}
-                >
-                  {h}
-                </span>
-              ))}
+            {/* Four columns where there is room; the head hides once they
+                stack, because a column head over stacked rows is a lie. */}
+            <div className="mt-4 hidden border-b border-ink py-3 text-xs font-bold tracking-[0.06em] text-faint uppercase sm:grid sm:grid-cols-[110px_1fr_120px_120px] sm:gap-[18px]">
+              <span>Date</span>
+              <span>Description</span>
+              <span className="text-right">Amount</span>
+              <span className="text-right">Balance</span>
             </div>
-            {s.ledger.map((l) => (
-              <div key={l.id} style={ledgerGrid}>
-                <Mono size={13} style={{ color: color.neutral }}>{l.date}</Mono>
-                <span style={{ fontSize: 15, minWidth: 0 }}>{l.label}</span>
-                <Mono size={14} style={{ justifySelf: "end", color: l.credit ? color.positive : color.ink }}>
+            {s.ledger.map((l, i, arr) => (
+              <div
+                key={l.id}
+                className={
+                  "grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 py-4 text-[15px] sm:grid-cols-[110px_1fr_120px_120px] sm:gap-[18px] " +
+                  (i < arr.length - 1 ? "border-b border-line" : "")
+                }
+              >
+                <span className="text-faint">{l.date}</span>
+                <span className="order-3 col-span-2 min-w-0 text-ink sm:order-none sm:col-span-1">
+                  {l.label}
+                </span>
+                <span
+                  className={`text-right font-semibold ${l.credit ? "text-moss" : "text-body"}`}
+                >
                   {l.amount}
-                </Mono>
-                <Mono size={14} style={{ justifySelf: "end", color: color.inkTertiary }}>{l.balance}</Mono>
+                </span>
+                <span className="order-4 hidden text-right text-muted sm:order-none sm:block">
+                  {l.balance}
+                </span>
               </div>
             ))}
           </>
         )}
       </Card>
-    </>
+
+      <Card className="px-[clamp(18px,3vw,30px)] py-7">
+        <CardHead title="Portal payments" />
+        {s.payments.length === 0 ? (
+          <Empty>
+            No portal payments yet. Anything you pay here is listed with its receipt.
+          </Empty>
+        ) : (
+          s.payments.map((r, i, arr) => (
+            <ListRow key={r.id} last={i === arr.length - 1}>
+              <span className="flex min-w-0 flex-[1_1_200px] items-baseline gap-4">
+                <span className="w-[74px] shrink-0 text-sm text-faint">{r.date}</span>
+                <span className="min-w-0 text-[15px] text-body">{r.label}</span>
+              </span>
+              <span className="flex shrink-0 items-center gap-3">
+                <span className="text-[15px] font-semibold text-ink">{r.amount}</span>
+                <Pill tone={r.status === "paid" ? "moss" : r.status === "failed" ? "rose" : "amber"}>
+                  {r.status}
+                </Pill>
+              </span>
+            </ListRow>
+          ))
+        )}
+      </Card>
+    </div>
   );
 }

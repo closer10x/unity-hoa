@@ -21,14 +21,8 @@ export default function Header() {
 
   return (
     <header
-      style={{
-        background: color.surface,
-        padding: `14px ${pad.shell}`,
-        borderBottom: `1px solid ${color.hairline}`,
-        position: "sticky",
-        top: 0,
-        zIndex: 20,
-      }}
+      className="sticky top-0 z-20 border-b border-line bg-paper/95 backdrop-blur-[10px]"
+      style={{ padding: `14px clamp(16px, 4vw, 44px)` }}
     >
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -54,16 +48,11 @@ export default function Header() {
               type="button"
               ref={switcherRef}
               onClick={() => setOpen(!open)}
+              className="min-h-11 overflow-hidden rounded-lg border border-line bg-white text-[14px] font-semibold text-ink text-ellipsis whitespace-nowrap transition-colors hover:border-ink"
               style={{
-                font: "inherit", fontSize: 14, fontWeight: 500,
-                background: color.surfaceSunken,
-                border: `1px solid ${color.borderInput}`,
-                borderRadius: 999,
                 padding: s.isMobile ? "9px 12px" : "10px 18px",
-                minHeight: 44, cursor: "pointer",
-                color: color.ink, whiteSpace: "nowrap",
                 maxWidth: s.isMobile ? 150 : 320,
-                overflow: "hidden", textOverflow: "ellipsis",
+                cursor: "pointer",
               }}
             >
               {s.property.name} ▾
@@ -99,18 +88,13 @@ export default function Header() {
             ) : null}
           </div>
           {s.isMobile ? null : (
-            <span style={{ fontSize: 14, color: color.inkTertiary, whiteSpace: "nowrap" }}>{s.residentName}</span>
+            <span className="text-[14px] whitespace-nowrap text-muted">{s.residentName}</span>
           )}
           <form action={signOutResident} style={{ display: "contents" }}>
             <button
               type="submit"
-              style={{
-                font: "inherit", fontSize: 14, background: "none",
-                border: `1px solid ${color.borderInput}`, borderRadius: 999,
-                padding: s.isMobile ? "9px 12px" : "9px 16px",
-                minHeight: 44, cursor: "pointer", color: color.inkSecondary,
-                whiteSpace: "nowrap",
-              }}
+              className="min-h-11 rounded-lg border border-line bg-white text-[14px] font-semibold text-muted whitespace-nowrap transition-colors hover:border-ink hover:text-ink"
+              style={{ padding: s.isMobile ? "9px 12px" : "9px 16px", cursor: "pointer" }}
             >
               Sign out
             </button>

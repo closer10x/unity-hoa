@@ -3,178 +3,226 @@
 import React from "react";
 
 import { useResident } from "@/lib/resident-portal/store";
-import { color, font } from "@/lib/admin-portal/tokens";
 import {
-  Card, CardHead, Empty, Eyebrow, Mono, PageTitle, Row, RowMain,
-  TextButton, Tiles,
-} from "@/components/admin/ui";
+  Card, CardHead, Empty, Eyebrow, ListRow, PAGE, Pill, StatCard, StatRow,
+  quietBtn, secondaryBtn,
+} from "../ui";
 
-/** A clickable summary tile that routes into its full section. */
-function LinkTile({
-  label, value, note, onGo, action, critical = false,
-}: {
-  label: string; value: string; note?: string; onGo: () => void; action: string;
-  /** Past due — the figure and note render in the critical red. */
-  critical?: boolean;
-}) {
-  return (
-    <div style={{ background: color.surface, border: `1px solid ${critical ? "oklch(0.85 0.06 30)" : color.hairline}`, borderRadius: 14, padding: 22, display: "grid", gap: 4, alignContent: "start" }}>
-      <p style={{ margin: "0 0 6px" }}><Eyebrow>{label}</Eyebrow></p>
-      <p style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: "-0.02em", fontFamily: value.startsWith("$") ? font.mono : undefined, color: critical ? color.critical : undefined }}>
-        {value}
-      </p>
-      {note ? <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: critical ? color.critical : color.inkTertiary }}>{note}</p> : null}
-      <span style={{ marginTop: 6 }}>
-        <TextButton onClick={onGo}>{action}</TextButton>
-      </span>
-    </div>
-  );
-}
-
+/**
+ * What a homeowner came to find out: what they owe, what is waiting on them,
+ * and whether anything is wrong with their property. Three figures, then the
+ * detail behind them.
+ */
 export default function Overview() {
   const s = useResident();
   const p = s.property;
   const firstName = s.residentName.split(" ")[0] || s.residentName;
 
   const openNotices = s.notices.filter((n) => !n.ok);
-  const standing = openNotices.length === 0 ? "Good standing" : `${openNotices.length} open notice${openNotices.length === 1 ? "" : "s"}`;
+  const standing =
+    openNotices.length === 0
+      ? "Clear"
+      : `${openNotices.length} open`;
+
+  const nextEvent = s.events[0];
 
   return (
-    <>
-      <PageTitle
-        title={`Welcome home, ${firstName}`}
-        lede={p.id === "none"
-          ? "The office hasn't linked your account to a property yet — reach out and we'll get you set up."
-          : `${p.name} · ${p.address}`}
-      />
-
-      {/* Same 150 floor the admin dashboard uses: two cards side by side on
-          a phone rather than one filling the screen, still wide on a desk. */}
-      <Tiles min={150}>
-        <LinkTile
-          label={p.overdue ? "HOA fee past due" : "Next HOA fee"}
+    <div className={PAGE} style={{ paddingInline: 0, paddingTop: 0 }}>
+      {/* The balance is the one figure with a deadline, so it is the one dark
+          card on the screen. */}
+      <StatRow>
+        <StatCard
+          tone="ink"
+          label={p.overdue ? "Past due" : "Balance"}
           value={p.balance || "—"}
           note={
             p.overdue
               ? `Was due ${p.due} — pay now to avoid late fees`
               : p.due
-                ? `Due ${p.due}${p.cadence ? ` · ${p.cadence} HOA fee` : ""}`
+                ? `${p.cadence ? `${p.cadence} HOA fee` : "HOA fee"} · due ${p.due}`
                 : "No billing on file yet"
           }
-          onGo={() => s.setView("payments")}
-          action="Pay now"
-          critical={p.overdue}
+          action={
+            <button
+              type="button"
+              onClick={() => s.setView("payments")}
+              className="min-h-11 w-full rounded-lg bg-white py-[13px] text-[15px] font-semibold text-ink transition-colors hover:bg-cream"
+            >
+              {p.balance ? "Pay now" : "View ledger"}
+            </button>
+          }
         />
-        <LinkTile
+        <StatCard
           label="Open requests"
           value={String(s.openRequestCount)}
           note={s.requests.find((r) => r.open)?.title ?? "Nothing waiting on the office"}
-          onGo={() => s.setView("maintenance")}
-          action="Maintenance"
+          action={
+            <button
+              type="button"
+              onClick={() => s.setView("maintenance")}
+              className={`${secondaryBtn} w-full bg-paper`}
+            >
+              View requests
+            </button>
+          }
         />
-        <LinkTile
+        <StatCard
+          tone="tint"
           label="Standing"
           value={standing}
           note={openNotices[0]?.title ?? "No open violations on your property"}
-          onGo={() => s.setView("compliance")}
-          action="Compliance"
-        />
-      </Tiles>
-
-      <Card>
-        <CardHead title="Recent activity" meta="Your account ledger" />
-        {s.ledger.length === 0 ? (
-          <Empty>No activity on your account yet. HOA fee postings and payments will appear here.</Empty>
-        ) : (
-          s.ledger.slice(0, 5).map((l) => (
-            /* Placed explicitly rather than auto-flowed. Three cells against
-               the tracks auto-fit makes here, so `justify-self: end` alone
-               would park the amount mid-row with empty columns beyond it —
-               the last track is what reaches the edge. But pinning the amount
-               there also pushes an auto-placed sibling onto a second row, so
-               the description is given its column too.
-
-               A phone gets the shape a statement has: date and amount on the
-               top line, the description across the width beneath. */
-            <Row
-              key={l.id}
-              style={s.isMobile ? { gridTemplateColumns: "auto 1fr", rowGap: 2 } : undefined}
+          action={
+            <button
+              type="button"
+              onClick={() => s.setView("compliance")}
+              className="min-h-11 w-full rounded-lg bg-white py-[13px] text-[15px] font-semibold text-ink transition-colors hover:bg-field"
             >
-              <Mono
-                size={13}
-                style={{
-                  color: color.neutral,
-                  ...(s.isMobile ? { gridRow: 1, gridColumn: 1 } : {}),
-                }}
-              >
-                {l.date}
-              </Mono>
-              <span style={s.isMobile ? { gridRow: 2, gridColumn: "1 / -1" } : { gridColumn: 2 }}>
-                <RowMain label={l.label} />
+              {openNotices.length ? "See what's open" : "Compliance"}
+            </button>
+          }
+        />
+      </StatRow>
+
+      {/* Wide first, narrow second — and both drop to full width when the
+          column cannot hold them side by side. */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-start gap-4">
+        <Card className="px-[clamp(18px,3vw,30px)] py-7">
+          <CardHead
+            title="Recent activity"
+            action={
+              <button type="button" className={quietBtn} onClick={() => s.setView("payments")}>
+                Full ledger →
+              </button>
+            }
+          />
+          {s.ledger.length === 0 ? (
+            <Empty>
+              No activity on your account yet. HOA fee postings and payments appear here as
+              they happen.
+            </Empty>
+          ) : (
+            s.ledger.slice(0, 5).map((l, i, arr) => (
+              <ListRow key={l.id} last={i === arr.length - 1}>
+                <span className="flex min-w-0 flex-[1_1_200px] items-baseline gap-4">
+                  <span className="w-[74px] shrink-0 text-sm text-faint">{l.date}</span>
+                  <span className="min-w-0 text-[15px] text-body">{l.label}</span>
+                </span>
+                <span
+                  className={`shrink-0 text-[15px] font-semibold ${l.credit ? "text-moss" : "text-ink"}`}
+                >
+                  {l.amount}
+                </span>
+              </ListRow>
+            ))
+          )}
+        </Card>
+
+        <div className="grid content-start gap-4">
+          <Card className="px-[clamp(18px,3vw,30px)] py-7">
+            <CardHead title="Quick actions" />
+            <div className="mt-4 grid gap-2">
+              {[
+                { id: "maintenance", label: "File a maintenance request" },
+                { id: "architectural", label: "Submit an architectural application" },
+                { id: "amenities", label: "Book an amenity" },
+                { id: "documents", label: "Read the governing documents" },
+              ].map((q) => (
+                <button
+                  key={q.id}
+                  type="button"
+                  onClick={() => s.setView(q.id)}
+                  className="min-h-11 rounded-[10px] border border-line bg-paper px-4 py-3.5 text-left text-[15px] font-semibold text-ink transition-colors hover:border-ink"
+                >
+                  {q.label}
+                </button>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="px-[clamp(18px,3vw,30px)] py-7">
+            <Eyebrow>{nextEvent ? "Next in the community" : "From the office"}</Eyebrow>
+            {nextEvent ? (
+              <>
+                <p className="mt-3 font-display text-[18px] leading-[1.3] font-semibold tracking-[-0.02em]">
+                  {nextEvent.title}
+                </p>
+                <p className="mt-1.5 mb-3.5 text-[15px] leading-[1.6] text-body">
+                  {nextEvent.detail}
+                </p>
+                <span className="text-[13px] text-faint">{nextEvent.date}</span>
+              </>
+            ) : s.announcements[0] ? (
+              <>
+                <p className="mt-3 font-display text-[18px] leading-[1.3] font-semibold tracking-[-0.02em]">
+                  {s.announcements[0].title}
+                </p>
+                <p className="mt-1.5 mb-3.5 text-[15px] leading-[1.6] text-body">
+                  {s.announcements[0].body}
+                </p>
+                <span className="text-[13px] text-faint">{s.announcements[0].meta}</span>
+              </>
+            ) : (
+              <Empty>Nothing posted yet. Events and notices from the office appear here.</Empty>
+            )}
+            <div className="mt-4 flex flex-wrap gap-4">
+              <button type="button" className={quietBtn} onClick={() => s.setView("community")}>
+                Community →
+              </button>
+              <button type="button" className={quietBtn} onClick={() => s.setView("messages")}>
+                Message the office →
+              </button>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {s.announcements.length > 0 ? (
+        <Card className="px-[clamp(18px,3vw,30px)] py-7">
+          <CardHead
+            title="Recent notices"
+            action={
+              <button type="button" className={quietBtn} onClick={() => s.setView("community")}>
+                All notices →
+              </button>
+            }
+          />
+          {s.announcements.slice(0, 3).map((a, i, arr) => (
+            <ListRow key={a.id} last={i === arr.length - 1}>
+              <span className="min-w-0 flex-[1_1_240px]">
+                <span className="block text-[15px] font-semibold text-ink">{a.title}</span>
+                <span className="mt-1 block text-[15px] leading-[1.6] text-body">{a.body}</span>
               </span>
-              <Mono
-                size={14}
-                style={{
-                  color: l.credit ? color.positive : color.ink,
-                  justifySelf: "end",
-                  ...(s.isMobile
-                    ? { gridRow: 1, gridColumn: 2 }
-                    : { gridColumn: "-2 / -1" }),
-                }}
-              >
-                {l.amount}
-              </Mono>
-            </Row>
-          ))
-        )}
-        <div style={{ padding: "12px 24px" }}>
-          <TextButton onClick={() => s.setView("payments")}>Full ledger and payments</TextButton>
-        </div>
-      </Card>
-
-      <Card>
-        <CardHead title="Coming up" meta="Community calendar" />
-        {s.events.length === 0 ? (
-          <Empty>Nothing scheduled right now. Community events and meetings will appear here.</Empty>
-        ) : (
-          s.events.slice(0, 4).map((e) => (
-            <Row key={e.id}>
-              <Mono size={13} style={{ color: color.neutral }}>{e.date}</Mono>
-              <RowMain label={e.title} detail={e.detail} />
-            </Row>
-          ))
-        )}
-        <div style={{ padding: "12px 24px" }}>
-          <TextButton onClick={() => s.setView("community")}>Events, ballots and announcements</TextButton>
-        </div>
-      </Card>
-
-      <Card>
-        <CardHead title="Recent notices" meta="From the office" />
-        {s.announcements.length === 0 ? (
-          <Empty>No announcements yet.</Empty>
-        ) : (
-          s.announcements.slice(0, 3).map((a) => (
-            <Row key={a.id}>
-              <Mono size={13} style={{ color: color.neutral }}>{a.meta}</Mono>
-              <RowMain label={a.title} detail={a.body} />
-            </Row>
-          ))
-        )}
-        <div style={{ padding: "12px 24px", display: "flex", gap: 14, flexWrap: "wrap" }}>
-          <TextButton onClick={() => s.setView("documents")}>Documents</TextButton>
-          <TextButton onClick={() => s.setView("messages")}>Message the office</TextButton>
-        </div>
-      </Card>
-
-      {p.id === "none" ? (
-        <Card>
-          <Empty>
-            Once the office links your account to your lot, your balance, ledger,
-            requests and documents will all appear here automatically.
-          </Empty>
+              <span className="shrink-0 text-[13px] text-faint">{a.meta}</span>
+            </ListRow>
+          ))}
         </Card>
       ) : null}
-    </>
+
+      {p.id === "none" ? (
+        <Card className="px-[clamp(18px,3vw,30px)] py-7">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <CardTitleless />
+            <Pill tone="amber">Not linked</Pill>
+          </div>
+          <p className="mt-2 text-[15px] leading-[1.6] text-body">
+            The office hasn&rsquo;t linked your account to a property yet, {firstName}. Once
+            they do, your balance, ledger, requests and documents all appear here on their
+            own — there is nothing for you to set up.
+          </p>
+          <button type="button" className={`${quietBtn} mt-3`} onClick={() => s.setView("messages")}>
+            Ask the office →
+          </button>
+        </Card>
+      ) : null}
+    </div>
+  );
+}
+
+/** The unlinked card's heading, kept out of the ternary above for legibility. */
+function CardTitleless() {
+  return (
+    <h2 className="font-display text-xl font-semibold tracking-[-0.02em]">
+      Your account isn&rsquo;t linked to a home yet
+    </h2>
   );
 }

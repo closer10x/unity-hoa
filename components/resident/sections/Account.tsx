@@ -7,15 +7,15 @@ import {
   addHouseholdMember, getHousehold, removeHouseholdMember,
 } from "@/lib/resident-portal/household-actions";
 import { useResident } from "@/lib/resident-portal/store";
-import { color, pad } from "@/lib/admin-portal/tokens";
 import type { Address } from "@/lib/admin-portal/types";
 import type { HouseholdMember, Lease, Pet } from "@/lib/resident-portal/types";
 import { NOTIFY_TYPES } from "@/lib/resident-portal/types";
 import {
-  AddDrawer, Card, CardHead, Chip, Empty, ErrorLine, Field, FieldGrid, Input,
-  MailingAddress, Mono, PageTitle, PhotoSlot, Primary, Row, RowMain, Select,
+  AddDrawer, Card, CardHeadMeta as CardHead, Chip, Empty, ErrorLine, Field, FieldGrid, Input,
+  MailingAddress, Mono, PhotoSlot, Primary, Row, RowMain, Select,
   Status, TextButton,
-} from "@/components/admin/ui";
+} from "../ui";
+import { color, pad } from "../ui";
 
 const EMPTY_ADDRESS: Address = { streetNo: "", street: "", unit: "", city: "", state: "Texas", zip: "" };
 
@@ -189,7 +189,6 @@ export default function Account() {
 
   return (
     <>
-      <PageTitle title="Account" lede="Contact details, notifications, your household, pets and leases." />
 
       {/* ─── Contact information ─────────────────────────────────────── */}
       <Card>

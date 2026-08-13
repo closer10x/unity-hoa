@@ -3,12 +3,11 @@
 import React, { useState } from "react";
 
 import { useResident, useSearchFilter } from "@/lib/resident-portal/store";
-import { color } from "@/lib/admin-portal/tokens";
 import type { MaintReq } from "@/lib/resident-portal/types";
 import {
-  AddDrawer, Area, Card, DropZone, Empty, ErrorLine, Field, FieldGrid,
-  FilterBar, Mono, PageTitle, Primary, Row, RowMain, Select, Status,
-} from "@/components/admin/ui";
+  Card, CardHead, Empty, ErrorLine, Field, FieldRow, NoteLine, PAGE, Pill,
+  Progress, inputCls, primaryBtn,
+} from "../ui";
 
 const LOCATIONS = [
   "My home", "Front yard or easement", "Street or sidewalk", "Common area",
@@ -28,12 +27,26 @@ const URGENCY = [
 
 const FILTERS = ["All", "Open", "Closed"];
 
+/** Where a request has got to, as a share of the three steps a job has. */
+function progressOf(r: MaintReq): { pct: number; step: string } {
+  if (!r.open || r.status === "Closed") return { pct: 100, step: "Done" };
+  if (r.status === "In progress" || r.status === "Scheduled") {
+    return { pct: 66, step: "Step 2 of 3" };
+  }
+  return { pct: 33, step: "Step 1 of 3" };
+}
+
+function toneOf(r: MaintReq): "moss" | "amber" | "grey" {
+  if (!r.open || r.status === "Closed") return "grey";
+  if (r.status === "In progress" || r.status === "Scheduled") return "moss";
+  return "amber";
+}
+
 export default function Maintenance() {
   const s = useResident();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
 
-  const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [location, setLocation] = useState("");
   const [category, setCategory] = useState("");
@@ -60,78 +73,135 @@ export default function Maintenance() {
     };
     s.setRequests((prev) => [req, ...prev]);
     setSentRef(ref);
-    setOpen(false);
     setError(""); setLocation(""); setCategory(""); setUrgency("routine"); setDetail("");
   }
 
   return (
-    <>
-      <PageTitle title="Maintenance" lede="Report a problem and follow every request you've filed." />
+    <div className={PAGE} style={{ paddingInline: 0, paddingTop: 0 }}>
+      {/* The form beside the list where there is room, above it where there
+          is not — the request you are filing is the reason you opened this. */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(310px,1fr))] items-start gap-4">
+        <Card className="px-[clamp(18px,3vw,30px)] py-7">
+          <CardHead title="Your requests" />
 
-      {sentRef ? (
-        <Card>
-          <div style={{ padding: 24, display: "grid", gap: 8 }}>
-            <Mono size={13} style={{ color: color.positive }}>Request {sentRef} received</Mono>
-            <span style={{ fontSize: 15, lineHeight: 1.6, color: color.inkSecondary }}>
-              The office reviews new requests each business morning. You’ll hear
-              back here and by email once it’s assigned.
-            </span>
+          <div className="mt-4 flex flex-wrap items-center gap-2.5">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search your requests…"
+              className={`${inputCls} min-w-0 flex-[1_1_180px]`}
+            />
+            {FILTERS.map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFilter(f)}
+                className={
+                  "min-h-11 rounded-full px-4 text-[13px] font-bold tracking-[0.06em] uppercase transition-colors " +
+                  (f === filter
+                    ? "bg-ink text-white"
+                    : "border border-line bg-white text-muted hover:border-ink")
+                }
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4 grid gap-3">
+            {visible.length === 0 ? (
+              <Empty>
+                {s.requests.length === 0
+                  ? "You haven't filed a request yet. When something needs fixing, use the form."
+                  : "No requests match that."}
+              </Empty>
+            ) : (
+              visible.map((r) => {
+                const prog = progressOf(r);
+                const closed = !r.open || r.status === "Closed";
+                return (
+                  <div
+                    key={r.id}
+                    className={
+                      "rounded-xl border border-line px-[clamp(16px,2.5vw,22px)] py-5 " +
+                      (closed ? "opacity-75" : "")
+                    }
+                  >
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                      <span className="min-w-0 text-[17px] font-semibold text-ink">{r.title}</span>
+                      <Pill tone={toneOf(r)}>{r.status}</Pill>
+                    </div>
+                    <p className="mb-3 text-[15px] leading-[1.55] text-muted">
+                      {r.ref} · {r.detail}
+                    </p>
+                    {closed ? null : <Progress pct={prog.pct} step={prog.step} />}
+                  </div>
+                );
+              })
+            )}
           </div>
         </Card>
-      ) : null}
 
-      <Card>
-        <AddDrawer
-          open={open}
-          onOpen={() => { setOpen(true); setError(""); setSentRef(""); }}
-          onCancel={() => { setOpen(false); setError(""); }}
-          openLabel="Report a problem"
-          title="Report a problem"
-          count={s.requests.length ? `${s.requests.length} request${s.requests.length === 1 ? "" : "s"}` : undefined}
-        >
-          <FieldGrid>
+        <Card className="px-[clamp(18px,3vw,30px)] py-7">
+          <CardHead title="New request" />
+          {sentRef ? (
+            <div className="mt-4">
+              <NoteLine>
+                Request {sentRef} received. The office reviews new requests each business
+                morning — you&rsquo;ll hear back here and by email once it&rsquo;s assigned.
+              </NoteLine>
+            </div>
+          ) : null}
+          <div className="mt-4 grid gap-4">
             <Field label="Where is it?">
-              <Select value={location} onChange={setLocation} placeholder="Pick a location…"
-                options={LOCATIONS.map((l) => ({ id: l, label: l }))} />
+              <select
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className={inputCls}
+              >
+                <option value="">Pick a location…</option>
+                {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
+              </select>
             </Field>
-            <Field label="Category">
-              <Select value={category} onChange={setCategory} placeholder="Pick a category…"
-                options={CATEGORIES.map((c) => ({ id: c, label: c }))} />
+            <FieldRow>
+              <Field label="Category">
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className={inputCls}
+                >
+                  <option value="">Pick a category…</option>
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </Field>
+              <Field label="How urgent?">
+                <select
+                  value={urgency}
+                  onChange={(e) => setUrgency(e.target.value)}
+                  className={inputCls}
+                >
+                  {URGENCY.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}
+                </select>
+              </Field>
+            </FieldRow>
+            <Field
+              label="What's wrong?"
+              hint="What you see, since when, and anything the crew should know before they arrive."
+            >
+              <textarea
+                value={detail}
+                onChange={(e) => setDetail(e.target.value)}
+                rows={4}
+                className="w-full resize-y rounded-lg border border-[#D8D4C6] bg-field px-3.5 py-3 text-[16px] leading-[1.55] text-ink"
+              />
             </Field>
-            <Field label="How urgent?">
-              <Select value={urgency} onChange={setUrgency} options={URGENCY} />
-            </Field>
-          </FieldGrid>
-          <Field label="What's wrong?">
-            <Area value={detail} onChange={setDetail} rows={3}
-              placeholder="What you see, since when, and anything the crew should know before they arrive." />
-          </Field>
-          <DropZone camera>Drag photos here, or take one</DropZone>
-          {error ? <ErrorLine>{error}</ErrorLine> : null}
-          <Primary onClick={submit} style={{ justifySelf: "start" }}>Send request</Primary>
-        </AddDrawer>
-
-        <FilterBar query={query} onQuery={setQuery} placeholder="Search your requests…"
-          filters={FILTERS} active={filter} onFilter={setFilter} />
-
-        {visible.length === 0 ? (
-          <Empty>
-            {s.requests.length === 0
-              ? "You haven't filed a request yet. When something needs fixing, report it above."
-              : "No requests match that."}
-          </Empty>
-        ) : (
-          visible.map((r) => (
-            <Row key={r.id}>
-              <Mono size={13} style={{ color: color.neutral }}>{r.ref}</Mono>
-              <RowMain label={r.title} detail={r.detail} />
-              <Status tone={r.status === "Closed" ? "neutral" : r.status === "In progress" ? "positive" : "attention"}>
-                {r.status}
-              </Status>
-            </Row>
-          ))
-        )}
-      </Card>
-    </>
+            {error ? <ErrorLine>{error}</ErrorLine> : null}
+            <button type="button" onClick={submit} className={`${primaryBtn} justify-self-start`}>
+              Send request
+            </button>
+          </div>
+        </Card>
+      </div>
+    </div>
   );
 }

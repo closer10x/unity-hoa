@@ -6,12 +6,12 @@ import {
   markResidentThreadRead, replyAsResident, startResidentThread,
 } from "@/lib/resident-portal/message-actions";
 import { useResident } from "@/lib/resident-portal/store";
-import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
 import type { Thread } from "@/lib/resident-portal/types";
 import {
-  Area, Card, CardHead, Chip, Empty, ErrorLine, Field, FieldGrid, Input, Mono,
-  PageTitle, Pill, Primary, Select, Status, TextButton,
-} from "@/components/admin/ui";
+  Area, Card, CardHeadMeta as CardHead, Chip, Empty, ErrorLine, Field, FieldGrid, Input, Mono,
+  Pill, Primary, Select, Status, TextButton,
+} from "../ui";
+import { color, font, pad, radius } from "../ui";
 
 const FILTERS = ["All", "Unread", "Office", "Committees"];
 
@@ -95,7 +95,6 @@ export default function Messages() {
 
   return (
     <>
-      <PageTitle title="Messages" lede="Threaded conversations with the office, billing and the committees." />
 
       <Card>
         <div style={{ padding: `16px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>

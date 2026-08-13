@@ -3,13 +3,13 @@
 import React, { useState } from "react";
 
 import { useResident, useSearchFilter } from "@/lib/resident-portal/store";
-import { color } from "@/lib/admin-portal/tokens";
 import type { ResArcApp } from "@/lib/resident-portal/types";
 import {
   AddDrawer, Area, Card, DateInput, DropZone, Empty, ErrorLine, Field,
-  FieldGrid, FilterBar, Input, Mono, PageTitle, Primary, Row, RowMain, Select,
+  FieldGrid, FilterBar, Input, Mono, Primary, Row, RowMain, Select,
   Status,
-} from "@/components/admin/ui";
+} from "../ui";
+import { color } from "../ui";
 
 const PROJECT_TYPES = [
   "Fence or gate", "Patio, pergola or deck", "Exterior paint", "Roof",
@@ -58,10 +58,6 @@ export default function Architectural() {
 
   return (
     <>
-      <PageTitle
-        title="Architectural"
-        lede="Apply before you build. The committee answers within 30 days of a complete application."
-      />
 
       {submitted ? (
         <Card>

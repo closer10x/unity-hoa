@@ -3,13 +3,13 @@
 import React, { useState } from "react";
 
 import { useResident, useSearchFilter } from "@/lib/resident-portal/store";
-import { color } from "@/lib/admin-portal/tokens";
 import type { ComplianceNotice } from "@/lib/resident-portal/types";
 import {
-  AddDrawer, Area, Card, CardHead, Chip, DropZone, Empty, ErrorLine, Field,
-  FieldGrid, FilterBar, Input, Mono, PageTitle, Primary, Row, RowMain, Select,
+  AddDrawer, Area, Card, CardHeadMeta as CardHead, Chip, DropZone, Empty, ErrorLine, Field,
+  FieldGrid, FilterBar, Input, Mono, Primary, Row, RowMain, Select,
   Status,
-} from "@/components/admin/ui";
+} from "../ui";
+import { color } from "../ui";
 
 const CONCERN_TYPES = [
   "Lawn or landscaping", "Trash bins or debris", "Parking or vehicles",
@@ -47,10 +47,6 @@ export default function Compliance() {
 
   return (
     <>
-      <PageTitle
-        title="Compliance"
-        lede="Notices on your property, their cure deadlines, and a way to report a concern."
-      />
 
       <Card>
         <CardHead title="Your property" meta={s.property.address} />

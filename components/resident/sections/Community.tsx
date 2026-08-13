@@ -3,10 +3,10 @@
 import React, { useState } from "react";
 
 import { useResident } from "@/lib/resident-portal/store";
-import { color, pad, radius } from "@/lib/admin-portal/tokens";
 import {
-  Card, CardHead, Chip, Empty, Mono, PageTitle, Row, RowMain, TextButton,
-} from "@/components/admin/ui";
+  Card, CardHeadMeta as CardHead, Chip, Empty, Mono, Row, RowMain, TextButton,
+} from "../ui";
+import { color, pad, radius } from "../ui";
 
 export default function Community() {
   const s = useResident();
@@ -15,7 +15,6 @@ export default function Community() {
 
   return (
     <>
-      <PageTitle title="Community" lede="Events, elections, your neighbors, and news from the association." />
 
       <Card>
         <CardHead title="Events" meta="RSVP so the office can plan" />

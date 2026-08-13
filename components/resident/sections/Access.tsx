@@ -3,12 +3,12 @@
 import React, { useState } from "react";
 
 import { useResident } from "@/lib/resident-portal/store";
-import { color, font, pad } from "@/lib/admin-portal/tokens";
 import type { GuestPass, Vehicle } from "@/lib/resident-portal/types";
 import {
-  AddDrawer, Card, CardHead, ConfirmBar, Empty, ErrorLine, Field, FieldGrid,
-  Input, Mono, PageTitle, Primary, Row, RowMain, TextButton,
-} from "@/components/admin/ui";
+  AddDrawer, Card, CardHeadMeta as CardHead, ConfirmBar, Empty, ErrorLine, Field, FieldGrid,
+  Input, Mono, Primary, Row, RowMain, TextButton,
+} from "../ui";
+import { color, font, pad } from "../ui";
 
 export default function Access() {
   const s = useResident();
@@ -55,7 +55,6 @@ export default function Access() {
 
   return (
     <>
-      <PageTitle title="Access & guests" lede="Your gate code, guest passes, and registered vehicles." />
 
       {s.gateCodesAllowed ? (
       <Card>
