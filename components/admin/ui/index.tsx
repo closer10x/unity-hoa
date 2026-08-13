@@ -123,9 +123,9 @@ export function Tile({
      for positive, the number. */
   const accent = {
     neutral: null,
-    positive: "oklch(0.42 0.05 155)",
-    attention: "oklch(0.48 0.075 114)",
-    critical: "oklch(0.53 0.135 35)",
+    positive: "#5A6B3C",
+    attention: "#8A6A2F",
+    critical: "#A3452F",
   }[tone];
 
   /* A soft tone-tinted fill so a row of tiles reads with colour. Kept low in
@@ -133,15 +133,15 @@ export function Tile({
      white: colour is reserved for the tiles that carry a tone. */
   const fill = {
     neutral: color.surface,
-    positive: "oklch(0.962 0.026 152)",
-    attention: "oklch(0.955 0.032 110)",
-    critical: "oklch(0.96 0.03 40)",
+    positive: "#E9EBDD",
+    attention: "#F2E9D6",
+    critical: "#F6E3DC",
   }[tone];
   const edge = {
     neutral: color.hairline,
-    positive: "oklch(0.88 0.04 152)",
-    attention: "oklch(0.88 0.05 110)",
-    critical: "oklch(0.89 0.05 40)",
+    positive: "#DDE3C6",
+    attention: "#E8DAB8",
+    critical: "#EFD4C9",
   }[tone];
 
   return (
@@ -168,7 +168,8 @@ export function Tile({
       ) : null}
       <p style={{ margin: "0 0 10px" }}><Eyebrow>{label}</Eyebrow></p>
       <p style={{
-        margin: "0 0 4px", fontSize: "clamp(24px, 6.5vw, 30px)", fontWeight: 600,
+        margin: "0 0 4px", fontFamily: font.display,
+        fontSize: "clamp(24px, 6.5vw, 32px)", fontWeight: 600,
         letterSpacing: "-0.025em", lineHeight: 1.05,
         /* The number stays ink; colour lives in the wash and the edge bar. */
         color: color.ink,

@@ -58,10 +58,13 @@ export function Sidebar() {
     <aside style={{
       position: "sticky", top: `calc(88px + ${pad.shell})`, alignSelf: "flex-start",
       flex: "0 1 236px", minWidth: 200, display: "grid", gap: 2,
-      background: color.surface,
-      border: `1px solid ${color.hairline}`,
+      /* The one heavy surface in the office portal, per the redesign: a dark
+         ink rail against the paper page, so the eye starts at navigation
+         rather than swimming in a field of white cards. */
+      background: color.ink,
+      color: "#FFFFFF",
       borderRadius: radius.card,
-      padding: 8,
+      padding: 10,
       height: `calc(100dvh - 88px - ${pad.shell} * 2)`,
       overflowY: "auto",
     }}>
@@ -72,7 +75,7 @@ export function Sidebar() {
         <React.Fragment key={group}>
           <span style={{
             fontFamily: font.mono, fontSize: 10.5, letterSpacing: "0.14em",
-            textTransform: "uppercase", color: color.inkQuaternary,
+            textTransform: "uppercase", color: "rgba(255,255,255,0.42)",
             padding: "8px 12px 2px",
           }}>
             {group}
@@ -84,9 +87,10 @@ export function Sidebar() {
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
                   width: "100%", textAlign: "left", font: "inherit", fontSize: 14.5,
-                  border: `1px solid ${on ? color.accentTintBorder : "transparent"}`,
-                  background: on ? color.accentTint : "transparent",
-                  color: on ? "oklch(0.28 0.03 152)" : "oklch(0.32 0.014 150)",
+                  border: "1px solid transparent",
+                  background: on ? "#FFFFFF" : "transparent",
+                  color: on ? color.ink : "rgba(255,255,255,0.78)",
+                  fontWeight: on ? 600 : 500,
                   borderRadius: radius.md, padding: "7px 12px", cursor: "pointer",
                 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
