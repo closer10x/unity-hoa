@@ -7,7 +7,7 @@ import { MOBILE_BREAKPOINT } from "./tokens";
 import type {
   BillingEntity,
   MetricTone,
-  AddressSuggestion, ArcApp, AuditEntry, BankAccount, Booking, CalEvent, Community, Delinquent, Director, Doc, Fee, Invoice, LedgerEntry, LegalCase, Meeting, Owner, Payment, PendingConfirm, Portfolio, ResidentThread, SignInEvent, Staff, StaffRole, Vendor, Violation, WorkOrder,
+  AddressSuggestion, ArcApp, AuditEntry, BankAccount, Booking, CalEvent, Community, Delinquent, Director, Doc, Fee, Invoice, LedgerEntry, LegalCase, Meeting, Owner, Payment, PendingConfirm, Portfolio, ResidentSignup, ResidentThread, SignInEvent, Staff, StaffRole, Vendor, Violation, WorkOrder,
 } from "./types";
 
 /**
@@ -79,6 +79,11 @@ interface Store {
   setStaff: React.Dispatch<React.SetStateAction<Staff[]>>;
   residentThreads: ResidentThread[];
   setResidentThreads: React.Dispatch<React.SetStateAction<ResidentThread[]>>;
+  /** Households waiting on approval from the public sign-up form. */
+  signups: ResidentSignup[];
+  setSignups: React.Dispatch<React.SetStateAction<ResidentSignup[]>>;
+  /** The public sign-up link the office hands out. */
+  joinUrl: string;
   customEvents: CalEvent[];
   setCustomEvents: React.Dispatch<React.SetStateAction<CalEvent[]>>;
   ledger: LedgerEntry[];
@@ -179,6 +184,8 @@ export function StoreProvider({
     directors: Director[];
     portfolios: Portfolio[];
     residentThreads: ResidentThread[];
+    signups: ResidentSignup[];
+    joinUrl: string;
   }>;
 }) {
   const allowed = allowedSections ?? [...ALL_SECTIONS];
@@ -214,6 +221,7 @@ export function StoreProvider({
   const [portfolios, setPortfolios] = useState<Portfolio[]>(initialData?.portfolios ?? []);
   const [staff, setStaff] = useState<Staff[]>(initialData?.staff ?? []);
   const [residentThreads, setResidentThreads] = useState<ResidentThread[]>(initialData?.residentThreads ?? []);
+  const [signups, setSignups] = useState<ResidentSignup[]>(initialData?.signups ?? []);
   const metrics = initialData?.metrics ?? [];
   const addressBook = initialData?.addressBook ?? [];
   const signIns = initialData?.signIns ?? [];
@@ -270,7 +278,8 @@ export function StoreProvider({
     bookings, setBookings, meetings, setMeetings, directors, setDirectors,
     legalCases, setLegalCases, vendors, setVendors, docs, setDocs,
     communities, setCommunities, portfolios, setPortfolios, staff, setStaff,
-    residentThreads, setResidentThreads,
+    residentThreads, setResidentThreads, signups, setSignups,
+    joinUrl: initialData?.joinUrl ?? "",
     customEvents, setCustomEvents,
     ledger, setLedger, bankAccounts, setBankAccounts,
     invoices, setInvoices, invoiceMemos: initialData?.invoiceMemos ?? [],

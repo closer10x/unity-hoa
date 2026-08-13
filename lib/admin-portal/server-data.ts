@@ -32,6 +32,7 @@ import type {
   Mailing,
   Owner,
   Payment,
+  ResidentSignup,
   ResidentThread,
   ResidentThreadMsg,
   Staff,
@@ -83,6 +84,14 @@ export type PortalData = {
   metrics: { label: string; value: string; note: string; tone?: MetricTone }[];
   /** Resident conversations, answered from Communications. */
   residentThreads: ResidentThread[];
+  /** Households waiting on approval from the public sign-up form. */
+  signups: ResidentSignup[];
+  /**
+   * The public sign-up link, whole, for the office to hand out. Resolved on
+   * the server for the same reason the crew link is: it gets pasted into a
+   * letter or a text, and a localhost URL there is a dead one.
+   */
+  joinUrl: string;
 };
 
 const EMPTY: PortalData = {
@@ -112,6 +121,8 @@ const EMPTY: PortalData = {
   entities: [],
   metrics: [],
   residentThreads: [],
+  signups: [],
+  joinUrl: "",
 };
 
 const usd = (cents: number) =>
@@ -336,6 +347,77 @@ export async function loadStaff(
   }
 
   return staff;
+}
+
+/* ─── Sign-up requests waiting on the office ───────────────────────── */
+
+/**
+ * The pending queue from the public /join form.
+ *
+ * Exported so an approve or a decline can hand back a fresh list rather than
+ * make the screen guess what the server did. Only pending rows: a decided
+ * request belongs to the audit trail, not to a to-do list.
+ */
+export async function loadPendingSignups(
+  db: SupabaseClient,
+  /* loadPortalData has already read the roster; a standalone caller has not. */
+  prefetchedLots?: LotRow[],
+): Promise<ResidentSignup[]> {
+  const [{ data }, lots] = await Promise.all([
+    db
+      .from("resident_signups")
+      .select("*")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(200),
+    prefetchedLots
+      ? Promise.resolve(prefetchedLots)
+      : db
+          .from("lots")
+          .select("*")
+          .limit(1000)
+          .then((r) => (r.data ?? []) as LotRow[]),
+  ]);
+
+  const byLot = new Map(lots.map((l) => [l.id, l] as const));
+
+  return ((data ?? []) as {
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    sms_opt_in: boolean | null;
+    lot_id: string | null;
+    community: string | null;
+    note: string | null;
+    created_at: string;
+  }[]).map((r) => {
+    const lot = r.lot_id ? byLot.get(r.lot_id) : undefined;
+    const street = lot
+      ? [lot.street_number, lot.street_name].filter(Boolean).join(" ")
+      : "";
+    return {
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      phone: r.phone ?? "—",
+      smsOptIn: Boolean(r.sms_opt_in),
+      home:
+        [street, lot?.lot_number ? `Lot ${lot.lot_number}` : ""]
+          .filter(Boolean)
+          .join(" · ") || "Home no longer on the roster",
+      lotId: r.lot_id,
+      community: r.community,
+      note: r.note ?? "",
+      at: new Date(r.created_at).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+      homeTaken: Boolean(lot?.owner_profile_id),
+    };
+  });
 }
 
 /* ─── Accounting: ledger, bank accounts, audit trail ───────────────── */
@@ -829,6 +911,9 @@ export async function loadPortalData(): Promise<PortalData> {
       db
         .from("documents")
         .select("*, document_categories(name)")
+        /* Grounding documents are not library rows — they exist for the
+           assistant to read and appear on no shelf, including the office's. */
+        .eq("assistant_only", false)
         .order("uploaded_at", { ascending: false }),
       db.from("employees").select("*").order("name", { ascending: true }),
       db.from("community_events").select("*").order("starts_at", { ascending: true }),
@@ -914,14 +999,16 @@ export async function loadPortalData(): Promise<PortalData> {
 
   /* These four are independent of one another and of everything computed
      below, so they go out together rather than in series. */
-  const [staff, rest, signIns, residentThreads, invoices, invoiceMemos] = await Promise.all([
-    loadStaff(db, { employees: empRes.data ?? undefined, profiles: profiles }),
-    loadRemainingDomains(db),
-    loadSignIns(db),
-    loadResidentThreads(db, profiles),
-    loadInvoices(db),
-    loadInvoiceMemos(db),
-  ]);
+  const [staff, rest, signIns, residentThreads, invoices, invoiceMemos, signups] =
+    await Promise.all([
+      loadStaff(db, { employees: empRes.data ?? undefined, profiles: profiles }),
+      loadRemainingDomains(db),
+      loadSignIns(db),
+      loadResidentThreads(db, profiles),
+      loadInvoices(db),
+      loadInvoiceMemos(db),
+      loadPendingSignups(db, lots),
+    ]);
 
   const calendar: CalEvent[] = (eventsRes.data ?? []).map((e) => ({
     id: e.id,
@@ -1132,6 +1219,8 @@ export async function loadPortalData(): Promise<PortalData> {
     entities,
     metrics,
     residentThreads,
+    signups,
+    joinUrl: `${getEmailBaseUrl()}/join`,
   };
 }
 

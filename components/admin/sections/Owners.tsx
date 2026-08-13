@@ -13,11 +13,12 @@ import { color, radius } from "@/lib/admin-portal/tokens";
 import type { Address, Owner } from "@/lib/admin-portal/types";
 import {
   AddDrawer, AddressFields, Card, Chip, ConfirmBar, DateInput, Empty, ErrorLine,
-  CallOut, CellStack, Field, FieldGrid, FilterBar, Input, MailingAddress, Mono,
-  Primary, Row, RowMain, Scroller, Select, Status, TableHead, TableRow, Tag,
+  CellStack, Field, FieldGrid, FilterBar, Input, MailingAddress, Mono,
+  Primary, Scroller, Select, TableHead, TableRow, Tag,
   TextButton,
 } from "../ui";
 import { usePrimaryAction } from "../SectionHead";
+import { SignupQueue } from "./SignupQueue";
 
 /* Built once: constructing a collator is the costly part, and it takes no
    dynamic input. */
@@ -50,9 +51,12 @@ const OWNER_COLS =
 
 export default function Owners() {
   const s = useStore();
-  /* Homes with nobody who can sign in — the number the office is actually
-     working through. */
-  const uninvited = s.owners.filter((o) => o.name === "Unassigned lot").length;
+  /* A lot with no owner profile behind it carries the "Unassigned lot"
+     sentinel, so this is the count of homes that actually have somebody on
+     the deed. Not `flag === "current"` — that flag is overwritten with
+     "delinquent" the moment a home falls behind, so an owner who owes money
+     stopped being counted as an owner at all. */
+  const withOwner = s.owners.filter((o) => o.name !== "Unassigned lot").length;
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
   const [community, setCommunity] = useState("all");
@@ -75,7 +79,12 @@ export default function Owners() {
   /* The header's primary button opens this screen's add-form. */
   usePrimaryAction(() => setOpen(true));
   const [error, setError] = useState("");
-  const [name, setName] = useState("");
+  /* First and last in their own boxes, like the public sign-up form. The
+     roster stores one composed name — that is what a notice prints — so the
+     join happens once, here, rather than in whatever writes the letter. */
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const name = [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
   const [coOwner, setCoOwner] = useState("");
   const [comm, setComm] = useState(s.communities[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
@@ -297,7 +306,7 @@ export default function Owners() {
 
   async function save() {
     if (saving) return;
-    if (!name.trim()) return setError("Add the name on the deed.");
+    if (!firstName.trim() || !lastName.trim()) return setError("Add the first and last name on the deed.");
     if (!comm) return setError("Pick the community this home belongs to.");
     if (!property.streetNo.trim() || !property.street.trim()) return setError("Add the street number and street name.");
     if (!property.city.trim() || !property.zip.trim()) return setError("Add the city and ZIP code.");
@@ -324,35 +333,27 @@ export default function Owners() {
     s.audit(`Added homeowner ${res.owner.name} \u00B7 ${res.owner.address}`);
     setAddNote(res.note);
     setQuery("");
-    setName(""); setCoOwner(""); setProperty(emptyAddress()); setMailing(emptyAddress());
+    setFirstName(""); setLastName(""); setCoOwner("");
+    setProperty(emptyAddress()); setMailing(emptyAddress());
     setAccountNo(""); setEmail(""); setPhone(""); setMoveIn(""); setBalance("");
   }
 
   return (
     <>
+      {/* Above the roster: a request is a household asking to be *in* the
+          list below, so it reads first and disappears once decided. */}
+      <SignupQueue />
 
-      {/* When the whole list is telling you one thing, the redesign says it
-          once at the top with the action that fixes it, rather than leaving
-          it to be inferred from a column of dashes. */}
-      {uninvited > 0 ? (
-        <CallOut
-          title={`${uninvited} of ${s.owners.length} homes still need an invitation`}
-          body="Owners without a portal account can't see documents, file a request or pay online. Adding a homeowner to a lot emails them a one-time link to choose a password."
-          /* No button. Bulk invitations are not built — the mockup's "Send
-             invitations" would be a control that does nothing — and the one
-             action this screen does have is already in the header. A banner
-             that repeats it is a third copy of the same button. */
-        />
-      ) : null}
       <Card>
         <AddDrawer
           ownOpener={false}
           open={open} onOpen={() => { setOpen(true); setError(""); }} onCancel={() => { setOpen(false); setError(""); }}
           openLabel="Add a homeowner" title="Add a homeowner"
           note="An email address gets the household portal access straight away, with a temporary password."
-          count={`${s.owners.length} ${s.owners.length === 1 ? "home" : "homes"} · ${s.owners.filter((o) => o.flag === "current").length} with an owner`}>
+          count={`${s.owners.length} ${s.owners.length === 1 ? "home" : "homes"} · ${withOwner} with an owner`}>
           <FieldGrid>
-            <Field label="Owner name"><Input value={name} onChange={setName} placeholder="Name on the deed" /></Field>
+            <Field label="First name"><Input value={firstName} onChange={setFirstName} placeholder="As it reads on the deed" /></Field>
+            <Field label="Last name"><Input value={lastName} onChange={setLastName} placeholder="As it reads on the deed" /></Field>
             <Field label="Co-owner"><Input value={coOwner} onChange={setCoOwner} placeholder="Optional" /></Field>
             <Field label="Community">
               <Select value={comm} onChange={setComm} options={s.communities.map((c) => ({ id: c.id, label: c.name }))} />

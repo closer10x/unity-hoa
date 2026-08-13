@@ -15,7 +15,7 @@ import type { Staff, StaffRole } from "@/lib/admin-portal/types";
 import { isFieldRole } from "@/lib/crew/roles";
 import { usePrimaryAction } from "../SectionHead";
 import {
-  ConfirmBar, CopyLine,
+  ConfirmBar, CopyLine, Chevron,
   AddDrawer, Card, CardHead, Chip, Empty, ErrorLine, Field, FieldGrid, FilterBar,
   Input, Mono, Pill, Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
@@ -82,34 +82,6 @@ function Avatar({ name, url, size = 34 }: { name: string; url: string | null; si
         <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
       ) : letters}
     </span>
-  );
-}
-
-/** Card-header collapse toggle — same chevron as the nav icons. */
-function Chevron({ open, onToggle, label }: { open: boolean; onToggle: () => void; label: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-expanded={open}
-      aria-label={`${open ? "Collapse" : "Expand"} ${label}`}
-      style={{
-        background: "none", border: "none", padding: "8px 12px",
-        minWidth: 44, minHeight: 44,
-        cursor: "pointer", color: "oklch(0.44 0.045 155)",
-        display: "inline-flex", alignItems: "center", justifyContent: "center",
-      }}
-    >
-      <svg
-        width={17} height={17} viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" strokeWidth={1.5}
-        strokeLinecap="round" strokeLinejoin="round"
-        aria-hidden focusable={false}
-        style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 140ms ease" }}
-      >
-        <path d="M6 9l6 6 6-6" />
-      </svg>
-    </button>
   );
 }
 

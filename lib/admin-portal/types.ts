@@ -129,6 +129,34 @@ export type StaffRole =
   | "Owner" | "Administrator" | "Community manager" | "Assistant manager"
   | "Maintenance tech" | "Inspector" | "Accounting" | "Front desk";
 
+/**
+ * A household asking to be let into the portal, from the public /join form.
+ *
+ * A request, not a record: nothing is linked and no account exists until the
+ * office approves it, so this only ever holds what somebody typed and which
+ * home they say is theirs.
+ */
+export interface ResidentSignup {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  smsOptIn: boolean;
+  /** The home they picked, as an address. */
+  home: string;
+  lotId: string | null;
+  community: string | null;
+  note: string;
+  /** "Aug 13, 9:04 AM" — when they sent it. */
+  at: string;
+  /**
+   * True when that home already has an owner linked. Not an error — a spouse
+   * or a new buyer is the common case — but the office should look before
+   * approving rather than after.
+   */
+  homeTaken: boolean;
+}
+
 export type CalKind = "Meeting" | "Inspection" | "Booking" | "Legal" | "Community";
 
 export interface CalEvent {
