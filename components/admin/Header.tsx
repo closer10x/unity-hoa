@@ -87,9 +87,13 @@ export default function Header() {
 
         <DateWeather compact={s.isMobile} />
 
+        {/* The rail carries the scope switcher and the account on a desktop.
+            A phone has no rail — the nav collapses to a sheet — so they stay
+            in the header there rather than becoming unreachable. */}
         <div style={{
-          display: "flex", alignItems: "center", gap: s.isMobile ? 8 : 10,
-          flex: s.isMobile ? "0 0 auto" : "1 1 auto",
+          display: s.isMobile ? "flex" : "none",
+          alignItems: "center", gap: 8,
+          flex: "0 0 auto",
           minWidth: 0, flexWrap: "wrap", justifyContent: "flex-end",
         }}>
           <div style={{ position: "relative" }}>

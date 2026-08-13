@@ -996,3 +996,162 @@ export function PhotoSlot({ label, ratio = "16 / 9", size }: { label: string; ra
     </div>
   );
 }
+
+/* ---------- tables ---------- */
+
+/**
+ * A wide table, scrolled rather than squeezed.
+ *
+ * The row grid elsewhere in this portal reflows: cells wrap to a second line
+ * as space runs out, which suits a record whose cells are independent. A
+ * table is not that — its columns line up *down* the page, and a cell that
+ * wraps breaks the alignment that makes it a table at all. So below its
+ * natural width this scrolls sideways and keeps its shape, which is the
+ * documented pattern for wide content.
+ */
+export function Scroller({ min, children }: { min: number; children: React.ReactNode }) {
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <div style={{ minWidth: min }}>{children}</div>
+    </div>
+  );
+}
+
+/**
+ * Column heads. `cols` is a grid-template-columns string shared with every
+ * TableRow beneath it — one definition, so a head and its column cannot drift
+ * apart. `align` marks the columns that read right (amounts, status).
+ */
+export function TableHead({
+  cols, labels, align = [],
+}: {
+  cols: string;
+  labels: string[];
+  /** Indices that right-align, matching their rows. */
+  align?: number[];
+}) {
+  return (
+    <div
+      style={{
+        display: "grid", gridTemplateColumns: cols, gap: 16,
+        borderBottom: `1px solid ${color.ink}`,
+        padding: `12px ${pad.card}`,
+      }}
+    >
+      {labels.map((l, i) => (
+        <span
+          key={l + i}
+          style={{
+            fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
+            textTransform: "uppercase", color: color.inkQuaternary,
+            textAlign: align.includes(i) ? "right" : "left",
+          }}
+        >
+          {l}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** One line of a table. Same `cols` as its head, or the columns will not line up. */
+export function TableRow({
+  cols, children, last = false, onClick,
+}: {
+  cols: string;
+  children: React.ReactNode;
+  last?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        display: "grid", gridTemplateColumns: cols, gap: 16,
+        alignItems: "center",
+        padding: `15px ${pad.card}`,
+        borderBottom: last ? "none" : `1px solid ${color.hairline}`,
+        fontSize: 15,
+        cursor: onClick ? "pointer" : undefined,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Status as plain coloured type rather than a filled chip.
+ *
+ * A table already has a lot of furniture — heads, rules, a scrollbar — and a
+ * column of filled pills reads as a second layout on top of the first. The
+ * portal's `Status` keeps its pill for card rows, where there is one.
+ */
+export function Tag({
+  children, tone = "moss",
+}: {
+  children: React.ReactNode;
+  tone?: "moss" | "amber" | "red" | "grey";
+}) {
+  const c = {
+    moss: color.positive,
+    amber: color.attention,
+    red: color.critical,
+    grey: color.inkQuaternary,
+  }[tone];
+  return (
+    <span style={{
+      fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
+      textTransform: "uppercase", whiteSpace: "nowrap", color: c,
+    }}>
+      {children}
+    </span>
+  );
+}
+
+/** A two-line table cell: the thing, then what qualifies it. */
+export function CellStack({ top, sub }: { top: string; sub?: string }) {
+  return (
+    <span style={{ minWidth: 0 }}>
+      <span style={{ display: "block", fontWeight: 600, color: color.ink, overflow: "hidden", textOverflow: "ellipsis" }}>
+        {top}
+      </span>
+      {sub ? (
+        <span style={{ display: "block", marginTop: 2, fontSize: 13, color: color.inkQuaternary }}>
+          {sub}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/**
+ * The banner the redesign puts above a list when the whole list is telling
+ * you one thing — 388 of 390 homes with nobody to sign in. Tinted, with the
+ * action that fixes it.
+ */
+export function CallOut({
+  title, body, action,
+}: {
+  title: string; body: string; action?: React.ReactNode;
+}) {
+  return (
+    <div style={{
+      display: "flex", flexWrap: "wrap", alignItems: "center",
+      justifyContent: "space-between", gap: "16px 24px", minWidth: 0,
+      background: color.accentTint, borderRadius: radius.card,
+      padding: `22px ${pad.card}`,
+    }}>
+      <div style={{ minWidth: 0, flex: "1 1 260px" }}>
+        <div style={{
+          marginBottom: 6, fontFamily: font.display, fontSize: 20,
+          fontWeight: 600, letterSpacing: "-0.02em", color: color.ink,
+        }}>
+          {title}
+        </div>
+        <div style={{ fontSize: 15, lineHeight: 1.55, color: color.inkSecondary }}>{body}</div>
+      </div>
+      {action}
+    </div>
+  );
+}

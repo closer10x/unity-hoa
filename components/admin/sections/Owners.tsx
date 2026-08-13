@@ -13,8 +13,9 @@ import { color, radius } from "@/lib/admin-portal/tokens";
 import type { Address, Owner } from "@/lib/admin-portal/types";
 import {
   AddDrawer, AddressFields, Card, Chip, ConfirmBar, DateInput, Empty, ErrorLine,
-  Field, FieldGrid, FilterBar, Input, MailingAddress, Mono, Primary,
-  Row, RowMain, Select, Status, TextButton,
+  CallOut, CellStack, Field, FieldGrid, FilterBar, Input, MailingAddress, Mono,
+  Primary, Row, RowMain, Scroller, Select, Status, TableHead, TableRow, Tag,
+  TextButton,
 } from "../ui";
 
 /* Built once: constructing a collator is the costly part, and it takes no
@@ -41,8 +42,16 @@ function ResendMark({ size = 15 }: { size?: number }) {
   );
 }
 
+/* One definition for the head and every row — a table whose head and columns
+   can drift apart is worse than no head at all. */
+const OWNER_COLS =
+  "minmax(200px, 1.6fr) minmax(140px, 1fr) 110px 110px 120px 72px";
+
 export default function Owners() {
   const s = useStore();
+  /* Homes with nobody who can sign in — the number the office is actually
+     working through. */
+  const uninvited = s.owners.filter((o) => o.name === "Unassigned lot").length;
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
   const [community, setCommunity] = useState("all");
@@ -318,6 +327,17 @@ export default function Owners() {
 
   return (
     <>
+
+      {/* When the whole list is telling you one thing, the redesign says it
+          once at the top with the action that fixes it, rather than leaving
+          it to be inferred from a column of dashes. */}
+      {uninvited > 0 ? (
+        <CallOut
+          title={`${uninvited} of ${s.owners.length} homes still need an invitation`}
+          body="Owners without a portal account can't see documents, file a request or pay online. An invitation emails them a one-time link to choose a password."
+          action={<Primary onClick={() => { setOpen(true); setError(""); }}>Add a homeowner</Primary>}
+        />
+      ) : null}
       <Card>
         <AddDrawer
           open={open} onOpen={() => { setOpen(true); setError(""); }} onCancel={() => { setOpen(false); setError(""); }}
@@ -388,18 +408,35 @@ export default function Owners() {
             </select>
           } />
 
-        {visible.length === 0 ? <Empty>No owners match that search.</Empty> : visible.map((o) => (
-          <React.Fragment key={o.id}>
-            <Row>
-              <RowMain label={o.name} detail={o.address} />
-              <span style={{ fontSize: 14, color: color.inkTertiary }}>{o.contact}</span>
-              <Mono size={15}>{o.balance}</Mono>
-              <Status tone={o.flag === "delinquent" ? "critical" : o.flag === "tenant" ? "attention" : "positive"}>{o.status}</Status>
-              <Mono size={12} style={{ color: color.inkQuaternary }}>#{o.account}</Mono>
-              <TextButton onClick={() => openEdit(o)}>{editId === o.id ? "Close" : "Edit"}</TextButton>
-            </Row>
+        {visible.length === 0 ? <Empty>No owners match that search.</Empty> : (
+          <Scroller min={860}>
+            <TableHead
+              cols={OWNER_COLS}
+              labels={["Street address", "Owner", "Lot", "Balance", "Status", ""]}
+              align={[3, 4]}
+            />
+            {visible.map((o) => (
+              <React.Fragment key={o.id}>
+                <TableRow cols={OWNER_COLS}>
+                  {/* The address leads: the roster is a list of homes, and the
+                      owner of one changes while the home does not. */}
+                  <CellStack top={o.address.split("\n")[0]} sub={o.address.split("\n")[1]} />
+                  <span style={{ minWidth: 0, color: o.name === "Unassigned lot" ? color.inkQuaternary : color.inkSecondary }}>
+                    {o.name === "Unassigned lot" ? "—" : o.name}
+                  </span>
+                  <Mono size={13} style={{ color: color.inkQuaternary }}>#{o.account}</Mono>
+                  <Mono size={15} style={{ textAlign: "right" }}>{o.balance}</Mono>
+                  <span style={{ textAlign: "right" }}>
+                    <Tag tone={o.flag === "delinquent" ? "red" : o.flag === "tenant" ? "amber" : o.name === "Unassigned lot" ? "grey" : "moss"}>
+                      {o.status}
+                    </Tag>
+                  </span>
+                  <span style={{ justifySelf: "end" }}>
+                    <TextButton onClick={() => openEdit(o)}>{editId === o.id ? "Close" : "Edit"}</TextButton>
+                  </span>
+                </TableRow>
 
-            {editId === o.id ? (
+                {editId === o.id ? (
               <div style={{ padding: `0 24px 20px`, borderBottom: `1px solid ${color.hairlineSoft}` }}>
                 <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: 22, display: "grid", gap: 16 }}>
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16 }}>
@@ -633,8 +670,10 @@ export default function Owners() {
               </div>
             ) : null}
 
-          </React.Fragment>
-        ))}
+              </React.Fragment>
+            ))}
+          </Scroller>
+        )}
         {sorted.length > visible.length ? (
           <div style={{ padding: `14px ${"clamp(16px, 2.4vw, 24px)"}`, fontSize: 14, color: color.inkTertiary }}>
             Showing the first {visible.length} of {sorted.length} homes. Search or filter to narrow it down.
