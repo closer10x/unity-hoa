@@ -84,7 +84,7 @@ export default async function GovernancePage() {
       {board.length ? (
         <section className="mx-auto mt-[90px] max-w-[1320px] px-6 md:px-11">
           <div className="mb-6 flex items-baseline justify-between border-b border-ink pb-3.5">
-            <h2 className="font-display text-[30px] font-semibold tracking-[-0.03em]">Your board</h2>
+            <h2 className="font-display text-[30px] font-semibold tracking-[-0.03em]">Sofi Lakes board</h2>
             <span className="text-[13px] font-semibold tracking-[0.06em] text-faint uppercase">Elected by owners</span>
           </div>
           <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
