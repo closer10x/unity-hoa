@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
-import { PageIntro, SECTION_COL, SECTION_PAD } from "@/components/site/PageIntro";
+import { PageHero } from "@/components/site/PageHero";
 import {
   formatEventTime,
   formatShortDate,
@@ -8,116 +9,112 @@ import {
   getUpcomingEvents,
 } from "@/lib/community/public-content";
 
-export const metadata: Metadata = { title: "Events & notices" };
+export const metadata: Metadata = { title: "Events" };
 
-/* Events and notices come from the database; re-render at most every
-   5 minutes so new posts appear without a redeploy. */
+/* Events and notices are read live; revalidate on a timer so new ones appear
+   without a redeploy. */
 export const revalidate = 300;
-
-function eventDetail(e: {
-  starts_at: string;
-  location: string | null;
-  description: string | null;
-}): string | null {
-  const parts: string[] = [];
-  const time = formatEventTime(e.starts_at);
-  if (time) parts.push(time);
-  if (e.location?.trim()) parts.push(e.location.trim());
-  if (e.description?.trim()) parts.push(e.description.trim());
-  if (parts.length === 0) return null;
-  return parts.join(" — ");
-}
 
 export default async function EventsPage() {
   const [events, notices] = await Promise.all([
-    getUpcomingEvents(6),
+    getUpcomingEvents(8),
     getPublishedAnnouncements(3),
   ]);
+  const [next, ...rest] = events;
 
   return (
     <main>
-      <PageIntro
-        eyebrow="Events & notices"
-        title="What's happening in the neighborhood."
-        lead="Meetings, closures, socials and service notices — posted here first and emailed to registered residents."
+      <PageHero
+        eyebrow="Events"
+        title="Meetings, deadlines and neighborhood dates."
+        intro="Board meetings are open to every owner. Agendas post before each session and minutes go up after. Dues deadlines are listed here too, so nothing arrives as a surprise."
       />
 
-      <section className={`${SECTION_PAD} pb-12 md:pb-20`}>
-        <div className={SECTION_COL}>
-          <h2 className="mb-6 text-[22px] font-semibold tracking-[-0.015em]">
-            Upcoming
-          </h2>
-          {events.length > 0 ? (
-            <div className="grid gap-px overflow-hidden rounded-[14px] border border-outline-variant bg-outline-variant">
-              {events.map((e) => (
-                <div
-                  key={e.id}
-                  className="grid grid-cols-[76px_minmax(0,1fr)] items-baseline gap-x-5 gap-y-2 bg-surface-container-lowest px-6 py-[22px]"
-                >
-                  <span className="font-label text-xs text-secondary-muted">
-                    {formatShortDate(e.starts_at)}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="font-semibold">{e.title}</span>
-                    {eventDetail(e) ? (
-                      <span className="block text-sm text-on-surface-variant">
-                        {eventDetail(e)}
-                      </span>
-                    ) : null}
-                  </span>
-                </div>
-              ))}
+      {/* Next up — the soonest event */}
+      {next ? (
+        <section className="mx-auto mt-[60px] max-w-[1320px] px-6 md:px-11">
+          <div className="grid items-center gap-8 rounded-2xl bg-ink px-6 py-9 text-white md:grid-cols-[200px_1fr_auto] md:gap-12 md:px-12 md:py-11">
+            <div>
+              <div className="mb-2.5 text-[13px] font-bold tracking-[0.08em] text-white/55 uppercase">Next up</div>
+              <div className="font-display text-[48px] leading-[0.9] font-semibold tracking-[-0.04em] md:text-[56px]">
+                {formatShortDate(next.starts_at) ?? "TBA"}
+              </div>
+              <div className="mt-2 text-[15px] text-white/70">{formatEventTime(next.starts_at) ?? ""}</div>
             </div>
-          ) : (
-            <div className="rounded-[14px] border border-outline-variant bg-surface-container-lowest px-6 py-10 md:px-10">
-              <p className="mb-2.5 font-label text-xs uppercase tracking-[0.12em] text-outline">
-                Nothing scheduled yet
-              </p>
-              <p className="max-w-[62ch] text-[17px] leading-relaxed text-on-surface-variant text-pretty">
-                Board meetings, socials and seasonal closures appear here as the
-                board and the office schedule them. Registered residents receive
-                an email reminder before each one.
-              </p>
+            <div>
+              <div className="mb-2.5 font-display text-[26px] font-semibold tracking-[-0.03em] md:text-[30px]">{next.title}</div>
+              {next.description ? (
+                <p className="max-w-[56ch] text-base leading-[1.6] text-white/70">{next.description}</p>
+              ) : null}
+              {next.location ? <p className="mt-2 text-[15px] text-white/55">{next.location}</p> : null}
             </div>
-          )}
+            <div className="grid gap-2.5">
+              <Link href="/portal/login" className="rounded-lg bg-white px-[22px] py-[13px] text-center text-[15px] font-semibold whitespace-nowrap text-ink transition-colors hover:bg-cream">
+                Meeting details
+              </Link>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {/* Coming up */}
+      <section className="mx-auto mt-[60px] max-w-[1320px] px-6 md:px-11">
+        <div className="mb-1 flex items-baseline justify-between border-b border-ink pb-3.5">
+          <h2 className="font-display text-[26px] font-semibold tracking-[-0.03em] md:text-[30px]">Coming up</h2>
+          <span className="text-[13px] font-semibold tracking-[0.06em] text-faint uppercase">Association calendar</span>
         </div>
+
+        {rest.length ? (
+          rest.map((e) => (
+            <div key={e.id} className="grid grid-cols-[100px_1fr] items-center gap-4 border-b border-line py-6 md:grid-cols-[130px_140px_1fr_auto] md:gap-7">
+              <span className="font-display text-[20px] font-semibold tracking-[-0.02em] md:text-[22px]">{formatShortDate(e.starts_at) ?? "TBA"}</span>
+              <span className="justify-self-start rounded-full bg-tint px-3 py-1.5 text-xs font-bold tracking-[0.06em] text-moss uppercase">{e.category}</span>
+              <span className="col-span-2 text-base leading-[1.55] text-body md:col-span-1">
+                <strong className="text-ink">{e.title}</strong>
+                {e.location ? <span className="text-muted"> — {e.location}</span> : null}
+              </span>
+              <Link href="/portal/login" className="hidden text-[15px] font-semibold whitespace-nowrap text-moss hover:text-ink md:block">Details →</Link>
+            </div>
+          ))
+        ) : next ? null : (
+          <p className="py-10 text-[17px] leading-[1.6] text-muted">
+            No upcoming events are posted right now. Meeting dates and dues deadlines appear here as
+            the office schedules them — registered residents also get them by email.
+          </p>
+        )}
       </section>
 
-      <section className={`border-t border-outline-variant ${SECTION_PAD} py-12 md:py-20`}>
-        <div className={SECTION_COL}>
-          <h2 className="mb-8 text-[22px] font-semibold tracking-[-0.015em]">
-            Recent notices
-          </h2>
-          {notices.length > 0 ? (
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-10">
-              {notices.map((n) => (
-                <div key={n.id}>
-                  <p className="mb-2.5 font-label text-xs text-outline">
-                    {formatShortDate(n.published_at) ?? "Notice"}
-                  </p>
-                  <p className="mb-1.5 text-[17px] leading-snug font-semibold">
-                    {n.title}
-                  </p>
-                  {n.body ? (
-                    <p className="text-[15px] leading-relaxed text-on-surface-variant">
-                      {n.body}
-                    </p>
-                  ) : null}
-                </div>
-              ))}
+      {/* Recent notices */}
+      {notices.length ? (
+        <section className="mx-auto mt-[70px] max-w-[1320px] px-6 md:px-11">
+          <div className="mb-6 flex items-baseline justify-between gap-8">
+            <h2 className="font-display text-[26px] font-semibold tracking-[-0.03em] md:text-[30px]">Recent notices</h2>
+            <Link href="/" className="text-[15px] font-semibold whitespace-nowrap text-moss hover:text-ink">Community news →</Link>
+          </div>
+          <div className="grid gap-3.5 md:grid-cols-3">
+            {notices.map((n) => (
+              <article key={n.id} className="rounded-[14px] border border-line bg-white px-7 py-7">
+                <div className="mb-2.5 text-[13px] font-bold tracking-[0.06em] text-moss uppercase">{formatShortDate(n.published_at) ?? "Notice"}</div>
+                <h3 className="mb-2 font-display text-[19px] leading-[1.25] font-semibold tracking-[-0.02em] text-balance">{n.title}</h3>
+                {n.body ? <p className="text-[15px] leading-[1.6] text-muted line-clamp-3">{n.body.split(/\n{2,}/)[0]}</p> : null}
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section className="mx-auto mt-20 max-w-[1320px] px-6 md:px-11">
+        <div className="flex flex-wrap items-center justify-between gap-8 rounded-2xl bg-tint px-6 py-9 md:px-12 md:py-10">
+          <div>
+            <div className="mb-2 font-display text-2xl font-semibold tracking-[-0.02em]">Want an event on this calendar?</div>
+            <div className="max-w-[62ch] text-base leading-[1.6] text-body">
+              The Social Committee reviews resident-hosted gatherings that use common areas. Send the
+              date and details to the management office.
             </div>
-          ) : (
-            <div className="rounded-[14px] border border-outline-variant bg-surface-container-lowest px-6 py-10 md:px-10">
-              <p className="mb-2.5 font-label text-xs uppercase tracking-[0.12em] text-outline">
-                No notices posted
-              </p>
-              <p className="max-w-[62ch] text-[17px] leading-relaxed text-on-surface-variant text-pretty">
-                Service notices — road work, water shutoffs, amenity maintenance
-                — are posted here and emailed to registered residents as they
-                are issued by the office.
-              </p>
-            </div>
-          )}
+          </div>
+          <Link href="/contact" className="rounded-lg bg-ink px-[26px] py-[15px] text-base font-semibold whitespace-nowrap text-white transition-colors hover:bg-moss">
+            Propose an event
+          </Link>
         </div>
       </section>
     </main>

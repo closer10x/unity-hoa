@@ -1,93 +1,85 @@
+import Image from "next/image";
 import Link from "next/link";
-
-const COLUMNS = [
-  {
-    heading: "Residents",
-    links: [
-      { href: "/payment", label: "Pay HOA fees" },
-      { href: "/admin/login", label: "Resident sign in" },
-    ],
-  },
-  {
-    heading: "Association",
-    links: [
-      { href: "/admin/login", label: "Governing documents" },
-      { href: "/admin/login", label: "Board & committees" },
-    ],
-  },
-  {
-    heading: "Company",
-    links: [
-      { href: "mailto:info@unitygridmanagement.com", label: "Contact" },
-      { href: "tel:7132083539", label: "713-208-3539" },
-    ],
-  },
-] as const;
 
 export function SiteFooter() {
   return (
-    <footer className="mt-auto bg-shell px-4 pt-10 pb-8 text-on-shell sm:px-6 md:px-8 md:pt-[72px]">
-      <div className="mx-auto flex max-w-[1200px] flex-wrap gap-8 md:gap-14">
-        <div className="min-w-0 max-w-[380px] flex-[1_1_300px]">
-          <div className="mb-3.5 flex items-baseline gap-2.5">
-            <span
-              aria-hidden
-              className="inline-block size-[11px] shrink-0 rounded-[2px] bg-shell-mark"
-            />
-            <span className="text-[17px] font-semibold text-on-shell-bright">
-              Unity Grid Management
-            </span>
-          </div>
-          <p className="mb-5 text-[15px] leading-relaxed text-on-shell-variant text-pretty">
-            Day-to-day management for homeowners associations across greater
-            Houston.
-          </p>
-          <div className="grid gap-[7px] text-[15px] leading-snug">
-            <span>7880 Morrison Road, Katy, Texas 77493</span>
-            <span>
-              <a href="tel:7132083539" className="text-shell-accent hover:underline">
-                713-208-3539
-              </a>
-            </span>
-            <span>
-              <a
-                href="mailto:info@unitygridmanagement.com"
-                className="text-shell-accent hover:underline"
-              >
-                info@unitygridmanagement.com
-              </a>
-            </span>
-            <span className="text-on-shell-variant">Mon–Fri, 9AM–5PM</span>
+    <footer className="mt-[90px] border-t border-line bg-white pt-[60px]">
+      <div className="mx-auto grid max-w-[1320px] gap-12 px-6 md:grid-cols-[1.6fr_1fr_1fr_1fr] md:gap-14 md:px-11">
+        <div>
+          <Image
+            src="/images/unitylogo.png"
+            alt="Unity Grid Management"
+            width={300}
+            height={60}
+            className="mb-4 h-[30px] w-auto"
+          />
+          <div className="text-[15px] leading-[1.9] text-body">
+            7880 Morrison Road, Katy, Texas 77493
+            <br />
+            <a href="tel:7132083539" className="text-moss hover:text-ink">
+              713-208-3539
+            </a>
+            <br />
+            <a
+              href="mailto:info@unitygridmanagement.com"
+              className="text-moss hover:text-ink"
+            >
+              info@unitygridmanagement.com
+            </a>
+            <br />
+            <span className="text-faint">Mon–Fri, 9AM–5PM</span>
           </div>
         </div>
 
-        <div className="grid min-w-0 flex-[2_1_420px] grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-8">
-          {COLUMNS.map((col) => (
-            <div key={col.heading} className="grid content-start gap-1.5">
-              <p className="mb-3.5 font-label text-[11px] uppercase tracking-[0.12em] text-on-shell-variant">
-                {col.heading}
-              </p>
-              {col.links.map((link) => (
-                <Link
-                  key={`${col.heading}-${link.label}`}
-                  href={link.href}
-                  className="py-3 text-[15px] leading-tight text-on-shell transition-colors hover:text-on-shell-bright"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          ))}
-        </div>
+        <FooterCol
+          title="Residents"
+          links={[
+            { href: "/portal", label: "Pay HOA fees" },
+            { href: "/portal/login", label: "Resident sign in" },
+          ]}
+        />
+        <FooterCol
+          title="Association"
+          links={[
+            { href: "/governance", label: "Governing documents" },
+            { href: "/about", label: "Board & committees" },
+          ]}
+        />
+        <FooterCol
+          title="Company"
+          links={[
+            { href: "/contact", label: "Contact" },
+            { href: "/events", label: "Events" },
+          ]}
+        />
       </div>
 
-      <div className="mx-auto mt-8 flex max-w-[1200px] flex-wrap items-baseline justify-between gap-x-6 gap-y-3 border-t border-shell-outline pt-[22px] text-[13px] leading-normal text-on-shell-variant md:mt-12">
-        <span>© 2026 Unity Grid Management. All rights reserved.</span>
-        <span className="flex flex-wrap gap-5">
-          <span>Terms of service</span>
-          <span>Accessibility</span>
-        </span>
+      <div className="mx-auto mt-12 max-w-[1320px] border-t border-line px-6 pt-[22px] pb-[30px] text-sm text-faint md:px-11">
+        © 2026 Unity Grid Management. All rights reserved.
       </div>
     </footer>
+  );
+}
+
+function FooterCol({
+  title,
+  links,
+}: {
+  title: string;
+  links: { href: string; label: string }[];
+}) {
+  return (
+    <div>
+      <div className="mb-4 text-[13px] font-bold tracking-[0.06em] text-faint uppercase">
+        {title}
+      </div>
+      <div className="grid gap-[10px] text-[15px]">
+        {links.map((l) => (
+          <Link key={l.label} href={l.href} className="text-body hover:text-ink">
+            {l.label}
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }

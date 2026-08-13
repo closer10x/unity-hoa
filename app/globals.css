@@ -121,6 +121,26 @@
   --font-body: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
   /* Labels, reference codes and amounts are mono */
   --font-label: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, monospace;
+
+  /* --- Public marketing site only ---------------------------------------
+     The redesigned public site uses its own olive palette and a display
+     font. These tokens are consumed only under the (marketing) layout, which
+     sets the paper background and body font on its own wrapper — the admin and
+     resident portals never reference them, so their surfaces stay untouched. */
+  --color-ink: #333d26;
+  --color-moss: #5a6b3c;
+  --color-body: #4f5645;
+  --color-muted: #7c8272;
+  --color-faint: #9ba091;
+  --color-paper: #f4f3ee;
+  --color-line: #e3e0d5;
+  --color-field: #faf9f5;
+  --color-tint: #e9ebdd;
+  --color-sage: #aebb90;
+  --color-cream: #dde3c6;
+  --color-stone: #e0ded2;
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-marketing: var(--font-franklin), ui-sans-serif, system-ui, sans-serif;
 }
 
 .material-symbols-outlined {

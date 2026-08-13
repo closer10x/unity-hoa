@@ -1,146 +1,116 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { BoardRoster } from "@/components/site/BoardRoster";
-import { PageIntro, SECTION_COL, SECTION_PAD } from "@/components/site/PageIntro";
+import { PageHero } from "@/components/site/PageHero";
 import { loadBoard } from "@/lib/site/board";
+
+const DOCS = [
+  { title: "Declaration of Covenants, Conditions & Restrictions", body: "The recorded CC&Rs that run with every lot", date: "Mar 2026" },
+  { title: "Bylaws", body: "How the association is organized, elected and run", date: "Mar 2026" },
+  { title: "Architectural guidelines", body: "Standards for exterior changes, fences, paint and additions", date: "Apr 2026" },
+  { title: "Community rules & regulations", body: "Pool, parking, trash, pets and amenity use", date: "Jun 2026" },
+  { title: "Collection & enforcement policy", body: "Notice steps, deadlines and fees before any action", date: "Jun 2026" },
+  { title: "Annual budget & assessment schedule", body: "What dues cover this year, line by line", date: "Jan 2026" },
+];
+
+const STEPS = [
+  { step: "STEP 1", title: "Observation", body: "Found on inspection or reported by a neighbor, then verified by staff." },
+  { step: "STEP 2", title: "Courtesy notice", body: "A written heads-up naming the rule and a reasonable window to fix it." },
+  { step: "STEP 3", title: "Formal notice", body: "Sent per the enforcement policy, with the owner's right to be heard." },
+  { step: "STEP 4", title: "Board hearing", body: "Unresolved matters go to the board — most never get this far." },
+];
 
 export const metadata: Metadata = { title: "Governance" };
 
-/* The roster is read from the directors the office seats, so the page has to
-   re-render when a seat changes — but it is a public marketing page that
-   should stay fast, so it revalidates on a timer rather than per request. */
+/* The board roster is read from the directors the office seats; revalidate on a
+   timer so a seat change appears without a redeploy. */
 export const revalidate = 300;
-
-const DOCUMENTS = [
-  { title: "Declaration of Covenants, Conditions & Restrictions", meta: "PDF" },
-  { title: "Bylaws", meta: "PDF" },
-  { title: "Architectural guidelines", meta: "PDF" },
-  { title: "Community rules & regulations", meta: "PDF" },
-  { title: "Annual budget", meta: "PDF" },
-  { title: "Reserve study", meta: "PDF" },
-] as const;
-
-const ARC_STEPS = [
-  { n: "01", label: "Submit", detail: "plans, materials, colors and a site sketch. Photos help." },
-  { n: "02", label: "Review", detail: "the Architectural Committee meets twice monthly." },
-  { n: "03", label: "Decision", detail: "written approval, conditions, or the reason for denial." },
-  { n: "04", label: "Close out", detail: "tell us when work finishes so the file can be closed." },
-] as const;
 
 export default async function GovernancePage() {
   const board = await loadBoard();
+
   return (
     <main>
-      <PageIntro
+      <PageHero
         eyebrow="Governance"
-        title="The rules, the record, and who decides."
-        lead="Every governing document for your community, the process for changing your home's exterior, and the neighbors who vote on it."
+        title="Bylaws, CC&Rs and rules."
+        intro="Every governing document, current and downloadable. If a rule affects your lot, it is on this page — no request form, no waiting on a callback."
       />
 
-      <section className={`${SECTION_PAD} pb-12 md:pb-20`}>
-        <div className={SECTION_COL}>
-          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-4">
-            <h2 className="text-[22px] font-semibold tracking-[-0.015em]">
-              Document library
-            </h2>
-            <span className="font-label text-[11px] uppercase tracking-[0.12em] text-outline">
-              Sign-in required
-            </span>
+      <section className="mx-auto mt-[60px] grid max-w-[1320px] items-start gap-10 px-6 md:grid-cols-[1fr_320px] md:gap-14 md:px-11">
+        <div>
+          <div className="mb-1 flex items-baseline justify-between border-b border-ink pb-3.5">
+            <h2 className="font-display text-2xl font-semibold tracking-[-0.02em]">Governing documents</h2>
+            <span className="text-[13px] font-semibold tracking-[0.06em] text-faint uppercase">Updated</span>
           </div>
 
-          <p className="mb-6 max-w-[62ch] text-[15px] leading-relaxed text-on-surface-variant text-pretty">
-            Governing documents are available to registered residents. Sign in
-            with your resident account to download them, or{" "}
-            <Link href="/contact" className="text-secondary hover:underline">
-              ask the office
-            </Link>{" "}
-            for a copy.
-          </p>
-
-          <div className="grid gap-px overflow-hidden rounded-[14px] border border-outline-variant bg-outline-variant">
-            {DOCUMENTS.map((d) => (
-              <div
-                key={d.title}
-                className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] items-baseline justify-items-start gap-x-[18px] gap-y-2 bg-surface-container-lowest px-6 py-5"
-              >
-                <span className="text-base font-medium">{d.title}</span>
-                <span className="font-label text-xs text-status-neutral">
-                  {d.meta}
-                </span>
-                {/* Downloads stay gated until resident auth exists. */}
-                <span
-                  aria-disabled
-                  title="Resident sign-in isn’t available yet"
-                  className="cursor-not-allowed font-label text-xs uppercase tracking-[0.12em] text-outline"
-                >
-                  Sign in to download
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className={`border-y border-outline-variant bg-surface-container-highest ${SECTION_PAD} py-12 md:py-20`}>
-        <div className={`${SECTION_COL} grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-start gap-[72px]`}>
-          <div>
-            <h2 className="mb-5 text-[clamp(26px,2.6vw,34px)] leading-[1.12] font-semibold tracking-[-0.025em] text-balance">
-              Changing something outside your home
-            </h2>
-            <p className="mb-6 max-w-[46ch] text-[17px] leading-relaxed text-on-surface-variant text-pretty">
-              Paint, fences, roofs, patios, pools, solar and anything else
-              visible from the street needs written approval before work starts.
-              Applications are answered within 30 days.
-            </p>
+          {DOCS.map((d) => (
             <Link
-              href="/contact"
-              className="inline-block rounded-[10px] bg-secondary px-5 py-3 text-base font-medium text-on-secondary hover:bg-secondary-hover"
+              key={d.title}
+              href="/portal/login"
+              className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-line py-[22px] text-ink transition-colors hover:text-moss md:grid-cols-[1fr_120px_96px] md:gap-6"
             >
-              Start an application
+              <span>
+                <span className="mb-1 block text-[17px] font-semibold md:text-[18px]">{d.title}</span>
+                <span className="text-[15px] text-muted">{d.body}</span>
+              </span>
+              <span className="hidden text-[15px] text-muted md:block">{d.date}</span>
+              <span className="text-right text-[15px] font-semibold whitespace-nowrap text-moss">Open →</span>
+            </Link>
+          ))}
+        </div>
+
+        <aside className="grid gap-3.5 md:sticky md:top-[104px]">
+          <div className="rounded-[14px] bg-tint p-7">
+            <div className="mb-2 font-display text-xl font-semibold tracking-[-0.02em]">Planning an exterior change?</div>
+            <p className="mb-[18px] text-[15px] leading-[1.6] text-body">
+              Fences, paint, roofing, sheds and additions need an approved application before work starts.
+            </p>
+            <Link href="/portal/login" className="inline-block rounded-lg bg-ink px-5 py-[13px] text-[15px] font-semibold text-white transition-colors hover:bg-moss">
+              Submit an application
             </Link>
           </div>
+          <div className="rounded-[14px] border border-line bg-white p-7">
+            <div className="mb-2 font-display text-xl font-semibold tracking-[-0.02em]">Need a resale certificate?</div>
+            <p className="mb-[18px] text-[15px] leading-[1.6] text-body">
+              Title companies and closing agents can request association documents from the management office.
+            </p>
+            <Link href="/contact" className="text-[15px] font-semibold text-moss hover:text-ink">Contact the office →</Link>
+          </div>
+        </aside>
+      </section>
 
-          <div className="grid gap-4">
-            {ARC_STEPS.map((s) => (
-              <div key={s.n} className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                <span className="flex-none font-label text-xs text-secondary-muted">
-                  {s.n}
-                </span>
-                <span className="min-w-0 flex-[1_1_220px] text-[15px] leading-relaxed text-on-surface-variant">
-                  <strong className="font-semibold text-on-surface">
-                    {s.label}
-                  </strong>{" "}
-                  — {s.detail}
-                </span>
+      {/* Real board roster */}
+      {board.length ? (
+        <section className="mx-auto mt-[90px] max-w-[1320px] px-6 md:px-11">
+          <div className="mb-6 flex items-baseline justify-between border-b border-ink pb-3.5">
+            <h2 className="font-display text-[30px] font-semibold tracking-[-0.03em]">Your board</h2>
+            <span className="text-[13px] font-semibold tracking-[0.06em] text-faint uppercase">Elected by owners</span>
+          </div>
+          <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+            {board.map((m) => (
+              <div key={`${m.name}-${m.role}`} className="rounded-[14px] border border-line bg-white px-7 py-6">
+                <div className="mb-2 text-xs font-bold tracking-[0.08em] text-moss uppercase">{m.role}</div>
+                <div className="font-display text-xl font-semibold tracking-[-0.02em]">{m.name}</div>
+                {m.termThrough ? (
+                  <div className="mt-1.5 text-sm text-muted">Term through {m.termThrough}</div>
+                ) : null}
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
-      <section className={`${SECTION_PAD} py-12 md:py-20`}>
-        <div className={SECTION_COL}>
-          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-4">
-            <h2 className="text-[22px] font-semibold tracking-[-0.015em]">
-              Your board
-            </h2>
-            <span className="font-label text-xs text-outline">
-              Elected every five years · terms run through the annual meeting
-            </span>
-          </div>
-
-          <BoardRoster community="Sofi Lakes" members={board} />
-
-          <p className="max-w-[70ch] text-[15px] leading-relaxed text-on-surface-variant text-pretty">
-            The board meets monthly; the schedule and location are posted with
-            each agenda. Owners may speak during the open forum at the start of
-            each meeting.{" "}
-            <Link href="/contact" className="text-secondary hover:underline">
-              Ask to be on the agenda
-            </Link>
-            .
-          </p>
+      <section className="mx-auto mt-[90px] max-w-[1320px] px-6 md:px-11">
+        <h2 className="mb-7 font-display text-[32px] font-semibold tracking-[-0.03em] md:text-4xl">How enforcement works</h2>
+        <div className="grid gap-px overflow-hidden rounded-[14px] border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
+          {STEPS.map((s) => (
+            <div key={s.step} className="bg-white px-[26px] pt-[30px] pb-[34px]">
+              <div className="mb-5 text-[13px] font-bold text-faint">{s.step}</div>
+              <div className="mb-2 font-display text-[19px] font-semibold tracking-[-0.02em]">{s.title}</div>
+              <div className="text-[15px] leading-[1.6] text-muted">{s.body}</div>
+            </div>
+          ))}
         </div>
       </section>
     </main>

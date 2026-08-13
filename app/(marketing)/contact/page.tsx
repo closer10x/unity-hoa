@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { ContactForm } from "@/components/site/ContactForm";
-import { PageIntro, SECTION_COL, SECTION_PAD } from "@/components/site/PageIntro";
+import { PageHero } from "@/components/site/PageHero";
 
 export const metadata: Metadata = { title: "Contact" };
-
-const EYEBROW =
-  "font-label text-[11px] uppercase tracking-[0.12em] text-outline";
 
 type PageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -18,81 +16,54 @@ export default async function ContactPage({ searchParams }: PageProps) {
 
   return (
     <main>
-      <PageIntro
-        eyebrow="Contact"
-        title="Reach a person, not a queue."
-        lead="Office hours are Monday through Friday, 9AM to 5PM. Messages sent through the form reach your community manager and the board liaison together."
+      <PageHero
+        eyebrow="Contact us"
+        title="Reach the management office."
+        intro="Maintenance, billing, documents or a message for the board — send it here and it gets routed with your lot details. Urgent common-area issues should go by phone during office hours."
       />
 
-      <section className={`${SECTION_PAD} pb-12 md:pb-20`}>
-        <div className={`${SECTION_COL} grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] items-start gap-16`}>
+      <section className="mx-auto mt-[60px] grid max-w-[1320px] items-start gap-10 px-6 md:grid-cols-[1.15fr_0.85fr] md:gap-14 md:px-11">
+        <div className="rounded-2xl border border-line bg-white px-6 py-9 md:px-12 md:py-11">
+          <h2 className="mb-[26px] font-display text-[26px] font-semibold tracking-[-0.03em] md:text-[30px]">Send a message</h2>
           <ContactForm initialTopic={topicParam ?? ""} />
+        </div>
 
-          <div className="grid gap-8">
-            <div>
-              <p className={EYEBROW}>Management office</p>
-              <p className="mt-3 text-[15px] leading-relaxed text-on-surface-variant">
-                7880 Morrison Road
-                <br />
-                Katy, Texas 77493
-                <br />
-                <a
-                  href="tel:7132083539"
-                  className="text-secondary hover:underline"
-                >
-                  713-208-3539
-                </a>
-                <br />
-                <a
-                  href="mailto:info@unitygridmanagement.com"
-                  className="text-secondary hover:underline"
-                >
-                  info@unitygridmanagement.com
-                </a>
-              </p>
+        <aside className="grid gap-3.5">
+          <div className="rounded-2xl bg-ink p-8 text-white">
+            <div className="mb-[18px] text-xs font-bold tracking-[0.08em] text-white/55 uppercase">Management office</div>
+            <div className="mb-[18px] font-display text-[24px] leading-[1.15] font-semibold tracking-[-0.02em] md:text-[26px]">
+              7880 Morrison Road
+              <br />
+              Katy, Texas 77493
             </div>
-
-            <div>
-              <p className={EYEBROW}>Office hours</p>
-              <p className="mt-3 text-[15px] leading-relaxed text-on-surface-variant">
-                Monday–Friday, 9AM–5PM
-                <br />
-                Saturday &amp; Sunday, closed
-              </p>
-            </div>
-
-            <div>
-              <p className={EYEBROW}>Emergencies</p>
-              <div className="mt-3 grid gap-2.5 text-[15px] leading-relaxed text-on-surface-variant">
-                <span>
-                  <strong className="font-semibold text-on-surface">
-                    Life safety, fire, crime
-                  </strong>{" "}
-                  — call 911 first, then the office.
-                </span>
-                <span>
-                  <strong className="font-semibold text-on-surface">
-                    Water main or major leak
-                  </strong>{" "}
-                  —{" "}
-                  <a
-                    href="tel:7132083539"
-                    className="text-secondary hover:underline"
-                  >
-                    713-208-3539
-                  </a>
-                  , available 24 hours.
-                </span>
-                <span>
-                  <strong className="font-semibold text-on-surface">
-                    Gate or access failure
-                  </strong>{" "}
-                  — the same line; a tech is dispatched the same day.
-                </span>
-              </div>
+            <div className="text-base leading-8 text-white/80">
+              <a href="tel:7132083539" className="text-cream hover:text-white">713-208-3539</a>
+              <br />
+              <a href="mailto:info@unitygridmanagement.com" className="text-cream hover:text-white">info@unitygridmanagement.com</a>
+              <br />
+              Mon–Fri, 9AM–5PM
             </div>
           </div>
-        </div>
+
+          <div className="rounded-2xl border border-line bg-white p-7">
+            <div className="mb-3 text-xs font-bold tracking-[0.08em] text-faint uppercase">Emergencies</div>
+            <div className="grid gap-2.5 text-[15px] leading-[1.55] text-body">
+              <span><strong className="text-ink">Life safety, fire, crime</strong> — call 911 first, then the office.</span>
+              <span><strong className="text-ink">Water main or major leak</strong> — <a href="tel:7132083539" className="text-moss hover:text-ink">713-208-3539</a>, available 24 hours.</span>
+              <span><strong className="text-ink">Gate or access failure</strong> — the same line; a tech is dispatched the same day.</span>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-tint p-7">
+            <div className="mb-2 font-display text-xl font-semibold tracking-[-0.02em]">Already a resident?</div>
+            <p className="mb-[18px] text-[15px] leading-[1.6] text-body">
+              Sign in to file a request, pay dues or track a past message — no form needed.
+            </p>
+            <Link href="/portal" className="inline-block rounded-lg bg-ink px-5 py-[13px] text-[15px] font-semibold text-white transition-colors hover:bg-moss">
+              Resident portal
+            </Link>
+          </div>
+        </aside>
       </section>
     </main>
   );
