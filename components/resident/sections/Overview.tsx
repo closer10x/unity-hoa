@@ -84,8 +84,13 @@ export default function Overview() {
       </StatRow>
 
       {/* Wide first, narrow second — and both drop to full width when the
-          column cannot hold them side by side. */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-start gap-4">
+          column cannot hold them side by side.
+
+          min(300px,100%), not a bare 300px: a track floor is a hard minimum,
+          so on a 320px phone — where this column is 273px wide — the grid
+          stayed 300 and pushed the whole page sideways. Wrapping the floor in
+          min() lets it give way once the container is narrower than it. */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] items-start gap-4">
         <Card className="px-[clamp(18px,3vw,30px)] py-7">
           <CardHead
             title="Recent activity"

@@ -36,9 +36,13 @@ function CountBadge({ children }: { children: React.ReactNode }) {
   );
 }
 
+/* On ink, in the colour the chip actually reads in. `chipOn` became the dark
+   ink when the palette moved to olive, and this kept the old dark-sage text —
+   so the phone's nav toggle carried a solid dark pill with nothing legible
+   inside it. */
 function Badge({ children }: { children: React.ReactNode }) {
   return (
-    <span style={{ fontFamily: font.mono, fontSize: 11, background: color.chipOn, color: "oklch(0.38 0.05 155)", borderRadius: 999, padding: "2px 8px" }}>
+    <span style={{ fontFamily: font.mono, fontSize: 11, background: color.chipOn, color: color.chipOnText, borderRadius: 999, padding: "2px 8px" }}>
       {children}
     </span>
   );
@@ -67,7 +71,10 @@ function ScopeSelect() {
       onChange={(e) => s.setScope(e.target.value)}
       aria-label="Which communities to show"
       style={{
-        width: "100%", font: "inherit", fontSize: 14, minHeight: 44,
+        /* 16px: the rail is on screen from 760px up, which is squarely iPad
+           territory, and iOS zooms the page on any focusable control under
+           it — here that would scroll the rail itself out of reach. */
+        width: "100%", font: "inherit", fontSize: 16, minHeight: 44,
         appearance: "none", cursor: "pointer",
         background: "rgba(255,255,255,0.08)",
         border: "1px solid rgba(255,255,255,0.2)",
@@ -191,7 +198,12 @@ export function Sidebar() {
                   background: on ? "#FFFFFF" : "transparent",
                   color: on ? color.ink : "rgba(255,255,255,0.78)",
                   fontWeight: on ? 600 : 500,
-                  borderRadius: radius.md, padding: "7px 12px", cursor: "pointer",
+                  /* 44px: the rail shows from 760px, and half the devices in
+                     that band are touched rather than pointed at. The rail
+                     already takes its own scrollbar, so the extra height
+                     costs a scroll rather than a missed tap. */
+                  borderRadius: radius.md, padding: "7px 12px", minHeight: 44,
+                  cursor: "pointer",
                 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                   <NavIcon id={n.id} />
@@ -215,7 +227,11 @@ export function MobileNav() {
   const s = useStore();
   const items = NAV.filter((n) => s.allowedSections.includes(n.id));
   const current = items.find((n) => n.id === s.view) ?? items[0] ?? NAV[0];
-  const openTotal = items.reduce((t, n) => t + (("badge" in n && n.badge) ? parseInt(n.badge, 10) || 0 : 0), 0);
+  /* The same live counts the rail uses. This read `n.badge`, a field NAV no
+     longer carries, so the toggle always said "0 open" — a badge reading zero
+     is noise, and one that can only ever read zero is worse. */
+  const counts = useSectionCounts();
+  const openTotal = items.reduce((t, n) => t + (counts[n.id] ?? 0), 0);
 
   return (
     <div style={{ flex: "1 1 100%", display: "grid", gap: 10 }}>
@@ -233,7 +249,7 @@ export function MobileNav() {
           <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: "-0.01em" }}>{current.label}</span>
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 9, flex: "0 0 auto" }}>
-          <Badge>{openTotal} open</Badge>
+          {openTotal > 0 ? <Badge>{openTotal} open</Badge> : null}
           <span style={{ fontSize: 13, fontWeight: 500, color: "oklch(0.44 0.045 155)" }}>{s.navOpen ? "Close" : "Menu"}</span>
         </span>
       </button>
@@ -265,7 +281,7 @@ export function MobileNav() {
                       <span style={{ fontWeight: on ? 600 : 400 }}>{n.label}</span>
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: 8, flex: "0 0 auto" }}>
-                      {"badge" in n && n.badge ? <Badge>{n.badge}</Badge> : null}
+                      {counts[n.id] ? <Badge>{counts[n.id]}</Badge> : null}
                       {on ? <span style={{ fontFamily: font.mono, fontSize: 12, color: "oklch(0.5 0.04 155)" }}>viewing</span> : null}
                     </span>
                   </button>

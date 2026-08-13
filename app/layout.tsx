@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, IBM_Plex_Mono, Instrument_Sans, Libre_Franklin } from "next/font/google";
 import "./globals.css";
 import { MATERIAL_SYMBOLS_URL } from "@/components/site/constants";
@@ -36,6 +36,19 @@ export const metadata: Metadata = {
   },
   description:
     "Premier homeowners association management—amenities, resident services, and community governance.",
+};
+
+/**
+ * Said out loud rather than left to the framework's default. Both portals are
+ * built against the device width — the nav sheet, the stacking tables, the
+ * intrinsic gutters all assume it — so the one line the whole layout depends
+ * on should not be an implementation detail of the version of Next in the
+ * lockfile. Zoom is left alone: pinching is how somebody with poor eyesight
+ * reads a balance, and no layout is worth taking that away.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({

@@ -14,7 +14,7 @@ import type { Address, Owner } from "@/lib/admin-portal/types";
 import {
   AddDrawer, AddressFields, Card, Chip, ConfirmBar, DateInput, Empty, ErrorLine,
   CallOut, CellStack, Field, FieldGrid, FilterBar, Input, MailingAddress, Mono,
-  Primary, Row, RowMain, Scroller, Select, Status, TableHead, TableRow, Tag,
+  Primary, Select, Table, TableRow, Tag,
   TextButton,
 } from "../ui";
 import { usePrimaryAction } from "../SectionHead";
@@ -409,22 +409,25 @@ export default function Owners() {
           sortOptions={SORTS} sort={sort} onSort={setSort}
           extra={
             <select value={community} onChange={(e) => setCommunity(e.target.value)}
-              style={{ appearance: "none", font: "inherit", fontSize: 14, background: color.surfaceSunken, border: `1px solid ${color.borderInput}`, borderRadius: 999, padding: "11px 30px 11px 14px", cursor: "pointer", color: color.ink }}>
+              /* 16px, like every other control: iOS zooms the page on any
+                 focusable thing smaller, and this one sits in a filter bar
+                 that is already the widest strip on the screen. */
+              style={{ appearance: "none", font: "inherit", fontSize: 16, background: color.surfaceSunken, border: `1px solid ${color.borderInput}`, borderRadius: 999, padding: "11px 30px 11px 14px", minHeight: 44, maxWidth: "100%", cursor: "pointer", color: color.ink }}>
               <option value="all">Every community</option>
               {s.communities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           } />
 
         {visible.length === 0 ? <Empty>No owners match that search.</Empty> : (
-          <Scroller min={860}>
-            <TableHead
-              cols={OWNER_COLS}
-              labels={["Street address", "Owner", "Lot", "Balance", "Status", ""]}
-              align={[3, 4]}
-            />
+          <Table
+            min={860}
+            cols={OWNER_COLS}
+            labels={["Street address", "Owner", "Lot", "Balance", "Status", ""]}
+            align={[3, 4]}
+          >
             {visible.map((o) => (
               <React.Fragment key={o.id}>
-                <TableRow cols={OWNER_COLS}>
+                <TableRow>
                   {/* The address leads: the roster is a list of homes, and the
                       owner of one changes while the home does not. */}
                   <CellStack top={o.address.split("\n")[0]} sub={o.address.split("\n")[1]} />
@@ -455,8 +458,8 @@ export default function Owners() {
                 </TableRow>
 
                 {editId === o.id ? (
-              <div style={{ padding: `0 24px 20px`, borderBottom: `1px solid ${color.hairlineSoft}` }}>
-                <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: 22, display: "grid", gap: 16 }}>
+              <div style={{ padding: `0 clamp(16px, 2.4vw, 24px) 20px`, borderBottom: `1px solid ${color.hairlineSoft}` }}>
+                <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: "clamp(15px, 4vw, 22px)", display: "grid", gap: 16 }}>
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16 }}>
                     <span style={{ fontSize: 16, fontWeight: 600 }}>
                       {editLinked || editLoading ? `Edit resident · ${o.account}` : `No owner linked · ${o.account}`}
@@ -690,10 +693,10 @@ export default function Owners() {
 
               </React.Fragment>
             ))}
-          </Scroller>
+          </Table>
         )}
         {sorted.length > visible.length ? (
-          <div style={{ padding: `14px ${"clamp(16px, 2.4vw, 24px)"}`, fontSize: 14, color: color.inkTertiary }}>
+          <div style={{ padding: "14px clamp(16px, 2.4vw, 24px)", fontSize: 14, color: color.inkTertiary }}>
             Showing the first {visible.length} of {sorted.length} homes. Search or filter to narrow it down.
           </div>
         ) : null}

@@ -10,7 +10,7 @@ import { isFieldRole } from "@/lib/crew/roles";
 import { assignWorkOrder } from "@/lib/admin-portal/work-actions";
 import {
   AddDrawer, Card, CardHead, Chip, DateInput, Field, FieldGrid, Mono, Pill,
-  Primary, Select,
+  Primary, Select, useIsNarrow,
 } from "../ui";
 
 /**
@@ -79,6 +79,7 @@ function JobPill({ w }: { w: WorkOrder }) {
 
 export default function Schedule() {
   const s = useStore();
+  const narrow = useIsNarrow();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const [showAllStaff, setShowAllStaff] = useState(false);
 
@@ -221,6 +222,59 @@ export default function Schedule() {
           <div style={{ padding: "22px clamp(16px, 2.4vw, 24px)", fontSize: 15, color: color.inkTertiary }}>
             No {showAllStaff ? "active staff" : "maintenance techs or inspectors"} on file yet.
             Add them under Team, then assign work orders to them.
+          </div>
+        ) : narrow ? (
+          /* A seven-day board has a real minimum width, and a phone does not
+             have it — the alternative was scrolling a 860px grid sideways to
+             find out whether anyone is on Thursday. So on a phone the board
+             turns ninety degrees: one card per tech, and under it only the
+             days they actually have something on. An empty week says so in
+             words rather than as seven empty cells. */
+          <div>
+            {crew.map((m) => {
+              const week = days
+                .map((d) => ({ day: d, jobs: cell(m.id, d) }))
+                .filter((x) => x.jobs.length > 0);
+              const total = week.reduce((t, x) => t + x.jobs.length, 0);
+              return (
+                <div
+                  key={m.id}
+                  style={{
+                    padding: `14px ${pad.card}`,
+                    borderBottom: `1px solid ${color.hairlineSoft}`,
+                    display: "grid", gap: 10,
+                  }}
+                >
+                  <span style={{
+                    display: "flex", justifyContent: "space-between",
+                    alignItems: "baseline", gap: 12, flexWrap: "wrap",
+                  }}>
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: "block", fontSize: 16, fontWeight: 500 }}>{m.name}</span>
+                      <span style={{ display: "block", fontSize: 13, color: color.inkTertiary }}>{m.role}</span>
+                    </span>
+                    <Mono size={12} style={{ color: total ? color.inkSecondary : color.inkQuaternary }}>
+                      {total === 0 ? "nothing this week" : `${total} ${total === 1 ? "job" : "jobs"}`}
+                    </Mono>
+                  </span>
+                  {week.map(({ day: d, jobs }) => (
+                    <div key={iso(d)} style={{ display: "grid", gap: 6 }}>
+                      <Mono
+                        size={11}
+                        style={{
+                          letterSpacing: "0.12em", textTransform: "uppercase",
+                          color: iso(d) === todayIso ? color.accent : color.inkQuaternary,
+                        }}
+                      >
+                        {DAY_NAMES[d.getDay()]} {d.getDate()}
+                        {iso(d) === todayIso ? " · today" : ""}
+                      </Mono>
+                      {jobs.map((w) => <JobPill key={w.id} w={w} />)}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
           </div>
         ) : (
           /* Horizontal scroll rather than squeezing: a 7-day board has a real

@@ -27,7 +27,12 @@ export function PageHead({
         </h1>
         <p className="mt-1 text-sm text-muted">{sub}</p>
       </div>
-      {actions ? <div className="flex flex-wrap items-center gap-3">{actions}</div> : null}
+      {actions ? (
+        /* min-w-0 so the cluster may shrink below its widest button rather
+           than setting a floor the whole column has to honour — without it a
+           320px screen was 11px wider than itself. */
+        <div className="flex min-w-0 flex-wrap items-center gap-3">{actions}</div>
+      ) : null}
     </div>
   );
 }

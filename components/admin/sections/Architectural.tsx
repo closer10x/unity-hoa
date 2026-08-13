@@ -41,7 +41,7 @@ export default function Architectural() {
         const threadOpen = openThread === a.id;
         return (
           <Card key={a.id}>
-            <div style={{ padding: 24 }}>
+            <div style={{ padding: "clamp(16px, 2.4vw, 24px)" }}>
               <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 14 }}>
                 <span>
                   <Mono size={13} style={{ color: color.neutral }}>{a.ref}</Mono>

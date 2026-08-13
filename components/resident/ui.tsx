@@ -494,6 +494,38 @@ export function FilterBar({
   );
 }
 
+/**
+ * True once a container is narrower than the width its content needs.
+ *
+ * The 760px breakpoint below answers "is this a phone", which is the wrong
+ * question for a table inside the main column: the rail takes 268px of an
+ * iPad's 768, so a four-column ledger runs out of room at 820px of viewport
+ * while `useIsNarrow` still says no. This measures the box the thing is
+ * actually in. Same spirit as the admin toolkit's Table.
+ */
+const useMeasureEffect =
+  typeof window === "undefined" ? React.useEffect : React.useLayoutEffect;
+
+export function useNarrowerThan(
+  ref: React.RefObject<HTMLElement | null>,
+  min: number,
+): boolean {
+  const [narrow, setNarrow] = React.useState(false);
+  useMeasureEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.clientWidth;
+      if (w > 0) setNarrow(w < min);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref, min]);
+  return narrow;
+}
+
 /** The 760px breakpoint, for primitives that cannot reach the store. */
 export function useIsNarrow(): boolean {
   const [narrow, setNarrow] = React.useState(false);

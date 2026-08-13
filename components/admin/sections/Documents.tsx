@@ -5,9 +5,9 @@ import { setDocumentPublished } from "@/lib/admin-portal/document-actions";
 import { useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color } from "@/lib/admin-portal/tokens";
 import { usePrimaryAction } from "../SectionHead";
-import { Tag, TableRow, TableHead, Scroller, CellStack,
+import { Tag, Table, TableRow, CellStack,
   AddDrawer, Card, Empty, ErrorLine, Field, FieldGrid, FilterBar, Input,
-  Pill, Primary, Row, RowMain, Select, Status, TextButton,
+  Pill, Primary, Select, TextButton,
 } from "../ui";
 
 const FILTERS = ["All", "Published", "Draft"];
@@ -102,7 +102,7 @@ export default function Documents() {
               type="file"
               accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              style={{ font: "inherit", fontSize: 14, color: color.inkSecondary }}
+              style={{ font: "inherit", fontSize: 16, maxWidth: "100%", color: color.inkSecondary }}
             />
           </label>
           <p style={{ fontSize: 14, lineHeight: 1.6, color: color.inkTertiary, margin: 0 }}>
@@ -117,12 +117,11 @@ export default function Documents() {
 
         <FilterBar query={query} onQuery={setQuery} placeholder="Search documents…"
           filters={FILTERS} active={filter} onFilter={setFilter} />
-        {rowError ? <div style={{ padding: "12px 24px" }}><ErrorLine>{rowError}</ErrorLine></div> : null}
+        {rowError ? <div style={{ padding: "12px clamp(16px, 2.4vw, 24px)" }}><ErrorLine>{rowError}</ErrorLine></div> : null}
         {visible.length === 0 ? <Empty>No documents match that.</Empty> : (
-        <Scroller min={760}>
-        <TableHead cols={DOC_COLS} labels={["Document", "In the portal", ""]} align={[1]} />
+        <Table min={760} cols={DOC_COLS} labels={["Document", "In the portal", ""]} align={[1]}>
         {visible.map((d) => (
-          <TableRow key={d.id} cols={DOC_COLS}>
+          <TableRow key={d.id}>
             <CellStack top={d.title} sub={d.meta} />
             <span style={{ textAlign: "right" }}>
               <Tag tone={d.published ? "moss" : "amber"}>{d.published ? "Published" : "Draft"}</Tag>
@@ -148,7 +147,7 @@ export default function Documents() {
             </span>
           </TableRow>
         ))}
-        </Scroller>
+        </Table>
         )}
       </Card>
     </>

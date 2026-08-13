@@ -9,10 +9,10 @@ import { buildActionMenu, useSearchFilter, useStore } from "@/lib/admin-portal/s
 import { color, pad, radius, rowGrid } from "@/lib/admin-portal/tokens";
 import type { PendingConfirm, Violation, ViolationStatus } from "@/lib/admin-portal/types";
 import { usePrimaryAction } from "../SectionHead";
-import { Tag, TableRow, TableHead, Scroller, CellStack,
+import { Tag, Table, TableRow, CellStack,
   ActionSelect, AddDrawer, Area, Card, ConfirmBar, DateInput, DropZone, Empty,
   ErrorLine, Eyebrow, Field, FieldGrid, FilterBar, Input, Mono, Pill,
-  Primary, Row, RowMain, Select, Status, TextButton,
+  Primary, Select, TextButton,
 } from "../ui";
 
 const FILTERS = ["All", "Open", "Reported", "Courtesy sent", "Notice sent", "Hearing set", "Resolved"];
@@ -135,14 +135,13 @@ export default function Violations() {
         {flowError ? <div style={{ padding: `12px ${pad.card} 0` }}><ErrorLine>{flowError}</ErrorLine></div> : null}
 
         {visible.length === 0 ? <Empty>No violations match that.</Empty> : (
-        <Scroller min={860}>
-        <TableHead cols={VIO_COLS} labels={["Opened", "Finding", "Status", ""]} align={[2]} />
+        <Table min={860} cols={VIO_COLS} labels={["Opened", "Finding", "Status", ""]} align={[2]}>
         {visible.map((v) => {
           const menu = buildActionMenu(VIOLATION_STEPS, v.status, v.id, v.detail.split(" · ")[0], pending, setPending);
           const md = mailDrafts[v.id] ?? { kind: "Courtesy notice", method: "First-class mail", sent: "", tracking: "" };
           return (
             <React.Fragment key={v.id}>
-              <TableRow cols={VIO_COLS}>
+              <TableRow>
                 <Mono size={13} style={{ color: color.neutral }}>{v.date}</Mono>
                 <CellStack top={v.title} sub={v.detail} />
                 <span style={{ textAlign: "right" }}>
@@ -281,7 +280,7 @@ export default function Violations() {
             </React.Fragment>
           );
         })}
-        </Scroller>
+        </Table>
         )}
       </Card>
     </>

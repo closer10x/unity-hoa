@@ -9,7 +9,7 @@ import { useResident } from "@/lib/resident-portal/store";
 import type { Thread } from "@/lib/resident-portal/types";
 import {
   Area, Card, CardHeadMeta as CardHead, Chip, Empty, ErrorLine, Field, FieldGrid, Input, Mono,
-  Pill, Primary, Select, Status, TextButton,
+  Pill, Primary, Select, Status, TextButton, useIsNarrow,
 } from "../ui";
 import { color, font, pad, radius } from "../ui";
 
@@ -45,6 +45,23 @@ export default function Messages() {
   });
 
   const thread = s.threads.find((t) => t.id === threadId) ?? visible[0] ?? s.threads[0] ?? null;
+
+  /**
+   * Two panes side by side is right on a desk and wrong on a phone: they wrap,
+   * so the conversation lands under the whole inbox and reading a reply means
+   * scrolling past every other thread first. On a phone this is one pane at a
+   * time — the list, or the conversation with a way back to it.
+   *
+   * `threadId`, not `thread`: the latter falls back to the first conversation
+   * so a desk always has something on the right, and a phone must open on the
+   * list rather than on whichever thread happens to be newest.
+   */
+  const narrow = useIsNarrow();
+  const detailOpen = composing || threadId !== null;
+  const showList = !narrow || !detailOpen;
+  const showDetail = !narrow || detailOpen;
+
+  const backToList = () => { setThreadId(null); setComposing(false); setMsgError(""); };
 
   const [sending, setSending] = useState(false);
 
@@ -97,6 +114,7 @@ export default function Messages() {
     <>
 
       <Card>
+        {showList ? (
         <div style={{ padding: `16px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
           <Pill onClick={() => { setComposing(true); setMsgError(""); }}>New message</Pill>
           <input
@@ -115,10 +133,15 @@ export default function Messages() {
             <Chip key={f} size="sm" on={f === filter} onClick={() => setFilter(f)}>{f}</Chip>
           ))}
         </div>
+        ) : null}
 
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "stretch" }}>
           {/* Thread list */}
-          <div style={{ flex: "1 1 260px", minWidth: 0, borderRight: `1px solid ${color.hairlineSoft}` }}>
+          {showList ? (
+          <div style={{
+            flex: "1 1 260px", minWidth: 0,
+            borderRight: narrow ? undefined : `1px solid ${color.hairlineSoft}`,
+          }}>
             {visible.length === 0 ? (
               <Empty>
                 {s.threads.length === 0
@@ -154,9 +177,16 @@ export default function Messages() {
               })
             )}
           </div>
+          ) : null}
 
           {/* Conversation / composer */}
+          {showDetail ? (
           <div style={{ flex: "2 1 340px", minWidth: 0, display: "grid", alignContent: "start" }}>
+            {narrow ? (
+              <div style={{ padding: `12px ${pad.card} 0` }}>
+                <TextButton tone="muted" onClick={backToList}>&larr; All conversations</TextButton>
+              </div>
+            ) : null}
             {composing ? (
               <div style={{ padding: pad.card, display: "grid", gap: 16 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
@@ -231,6 +261,7 @@ export default function Messages() {
               </>
             )}
           </div>
+          ) : null}
         </div>
       </Card>
     </>

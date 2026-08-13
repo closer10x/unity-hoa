@@ -34,13 +34,29 @@ export default function Shell() {
 
   /* The two things a resident came to do, on every screen. Paying leads
      because it is the one with a deadline; both jump to the section that
-     actually does the work rather than opening a second surface. */
+     actually does the work rather than opening a second surface.
+
+     On a phone they wrap under the title rather than disappearing. They used
+     to be dropped on mobile to save a row, which took the pay button off the
+     one device most residents open this on — and a homeowner who cannot find
+     how to pay is the whole portal failing at its first job. */
   const actions = (
     <>
-      <button type="button" className={secondaryBtn} onClick={() => s.setView("maintenance")}>
+      {/* grow + a 150px basis: side by side wherever both fit, and one to a
+          line — each filling the width — where they do not. Intrinsic, so
+          there is no width at which they overlap or overflow. */}
+      <button
+        type="button"
+        className={`${secondaryBtn} grow basis-[150px]`}
+        onClick={() => s.setView("maintenance")}
+      >
         File a request
       </button>
-      <button type="button" className={primaryBtn} onClick={() => s.setView("payments")}>
+      <button
+        type="button"
+        className={`${primaryBtn} grow basis-[150px]`}
+        onClick={() => s.setView("payments")}
+      >
         {s.property.balance ? `Pay ${s.property.balance}` : "Pay HOA fees"}
       </button>
     </>
@@ -70,7 +86,7 @@ export default function Shell() {
           className="grid min-w-0 flex-[999_1_420px] content-start gap-4"
           style={{ paddingBottom: s.isMobile ? 96 : 0 }}
         >
-          <PageHead title={copy.title} sub={copy.sub} actions={s.isMobile ? null : actions} />
+          <PageHead title={copy.title} sub={copy.sub} actions={actions} />
           <Section />
         </main>
       </div>

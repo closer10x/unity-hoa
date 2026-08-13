@@ -239,13 +239,22 @@ export default function Accounting() {
   return (
     <>
 
-      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", borderBottom: `1px solid ${color.hairline}` }}>
+      {/* One strip that scrolls rather than six tabs that wrap. The six names
+          run about 600px, so on a desk nothing scrolls and this looks exactly
+          as it did; on a phone the alternative was three stacked rows of tabs
+          above every screen in Accounting. No breakpoint — it simply scrolls
+          when it has to. */}
+      <div className="no-scrollbar" style={{
+        display: "flex", gap: 4, flexWrap: "nowrap",
+        overflowX: "auto", borderBottom: `1px solid ${color.hairline}`,
+      }}>
         {ACCOUNTING_TABS.map((t) => (
           <button key={t.id} type="button"
             onClick={() => setTab(t.id)}
             aria-current={tab === t.id ? "page" : undefined}
             style={{
               font: "inherit", fontSize: 15, fontWeight: 500, cursor: "pointer",
+              flex: "0 0 auto",
               background: "none", border: "none", padding: "10px 14px 12px",
               color: tab === t.id ? color.ink : color.inkTertiary,
               boxShadow: tab === t.id ? `inset 0 -2px 0 ${color.accent}` : "none",
@@ -314,7 +323,7 @@ export default function Accounting() {
 
       <Card>
         <CardHead title="Take a payment" meta={`Phone, walk-in or mailed check · posted by ${s.currentUser.split(" · ")[0]}`} />
-        <div style={{ padding: 24 }}>
+        <div style={{ padding: "clamp(16px, 2.4vw, 24px)" }}>
           {done ? (
             <div style={{ display: "grid", gap: 16, maxWidth: 640 }}>
               <Mono size={11} style={{ letterSpacing: "0.12em", textTransform: "uppercase", color: color.neutral }}>Payment posted</Mono>
@@ -432,7 +441,7 @@ export default function Accounting() {
                 </FieldGrid>
               ) : null}
 
-              <div style={{ background: color.surfaceMuted, border: `1px solid ${color.hairlineSoft}`, borderRadius: radius.lg, padding: 18, display: "grid", gap: 8 }}>
+              <div style={{ background: color.surfaceMuted, border: `1px solid ${color.hairlineSoft}`, borderRadius: radius.lg, padding: "clamp(14px, 3.5vw, 18px)", display: "grid", gap: 8 }}>
                 {[
                   ["Payment", `$${amt.toFixed(2)}`],
                   [method === "card" ? "Processor fee (2.95%)" : "Processor fee", `$${fee.toFixed(2)}`],
@@ -924,7 +933,7 @@ function InvoicesCard() {
                   the cluster sat mid-row with empty columns beyond it.
                   Placing it in the last track is what puts it at the edge. */}
               <span style={{
-                display: "flex", gap: 10, alignItems: "center", flexWrap: "nowrap",
+                display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap",
                 gridColumn: "-2 / -1", justifySelf: "end",
               }}>
                 <TextButton onClick={() => setOpenId(openId === inv.id ? null : inv.id)}>
@@ -950,7 +959,7 @@ function InvoicesCard() {
 
             {openId === inv.id ? (
               <div style={{ padding: `0 ${pad.card} 18px` }}>
-                <div style={{ background: color.surfaceSunken, border: `1px solid ${color.hairline}`, borderRadius: radius.lg, padding: 18, display: "grid", gap: 10 }}>
+                <div style={{ background: color.surfaceSunken, border: `1px solid ${color.hairline}`, borderRadius: radius.lg, padding: "clamp(14px, 3.5vw, 18px)", display: "grid", gap: 10 }}>
                   {inv.lines.map((l) => (
                     <div key={l.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 14 }}>
                       <span style={{ color: color.inkSecondary }}>
@@ -990,7 +999,7 @@ function InvoicesCard() {
 
             {editing === inv.id ? (
               <div style={{ padding: `0 ${pad.card} 18px` }}>
-                <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: 18, display: "grid", gap: 14 }}>
+                <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: "clamp(14px, 3.5vw, 18px)", display: "grid", gap: 14 }}>
                   <span style={{ fontSize: 15, fontWeight: 600 }}>Edit {inv.number}</span>
 
                   <FieldGrid>
@@ -1058,7 +1067,7 @@ function InvoicesCard() {
 
             {collecting === inv.id ? (
               <div style={{ padding: `0 ${pad.card} 18px` }}>
-                <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: 18, display: "grid", gap: 14 }}>
+                <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: "clamp(14px, 3.5vw, 18px)", display: "grid", gap: 14 }}>
                   <span style={{ fontSize: 15, fontWeight: 600 }}>Record payment for {inv.number}</span>
                   <FieldGrid>
                     <Field label="Date received"><DateInput value={paidOn} onChange={setPaidOn} /></Field>
@@ -1173,7 +1182,7 @@ function InvoicesCard() {
 
             {voiding === inv.id ? (
               <div style={{ padding: `0 ${pad.card} 18px` }}>
-                <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: 18, display: "grid", gap: 14 }}>
+                <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: "clamp(14px, 3.5vw, 18px)", display: "grid", gap: 14 }}>
                   <Field label={`Why is ${inv.number} being voided?`} hint="Stays on the record — an invoice is never deleted">
                     <Input value={voidReason} onChange={setVoidReason} placeholder="e.g. billed to the wrong home" />
                   </Field>
@@ -1747,7 +1756,7 @@ function ReportsCard() {
       </div>
 
       {report ? (
-        <div style={{ padding: 24, display: "grid", gap: 20 }}>
+        <div style={{ padding: "clamp(16px, 2.4vw, 24px)", display: "grid", gap: 20 }}>
           <div>
             <Mono size={11} style={{ letterSpacing: "0.12em", textTransform: "uppercase", color: color.neutral }}>
               {report.community}
@@ -2003,7 +2012,7 @@ function FeeCard() {
 
           {editId === f.id ? (
             <div style={{ padding: `0 ${pad.card} 18px` }}>
-              <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: 18, display: "grid", gap: 14 }}>
+              <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: "clamp(14px, 3.5vw, 18px)", display: "grid", gap: 14 }}>
                 <FieldGrid>
                   <Field label="Fee name"><Input value={ef.name} onChange={(v) => setEf({ ...ef, name: v })} /></Field>
                   <Field label="Amount"><Input value={ef.amount} onChange={(v) => setEf({ ...ef, amount: v })} placeholder="e.g. 375.00" /></Field>

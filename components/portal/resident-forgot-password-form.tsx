@@ -45,7 +45,7 @@ export function ResidentForgotPasswordForm() {
         required
         placeholder="your@email.com"
         style={{
-          width: "100%", font: "inherit", fontSize: 15,
+          width: "100%", font: "inherit", fontSize: 16,
           background: "oklch(0.99 0.004 130)",
           border: "1px solid oklch(0.86 0.012 145)",
           borderRadius: 10, padding: "11px 14px",

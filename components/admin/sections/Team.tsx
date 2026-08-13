@@ -17,8 +17,15 @@ import { usePrimaryAction } from "../SectionHead";
 import {
   ConfirmBar, CopyLine,
   AddDrawer, Card, CardHead, Chip, Empty, ErrorLine, Field, FieldGrid, FilterBar,
-  Input, Mono, Pill, Primary, Row, RowMain, Select, Status, TextButton,
+  Input, Mono, Pill, Primary, Row, RowMain, Select, Status, Table, TableRow,
+  TextButton,
 } from "../ui";
+
+/* Head and rows share one definition. The last track is wide because it
+   holds four controls; below the width they all fit, the whole thing becomes
+   a stack of records and the cluster gets a line to itself. */
+const TEAM_COLS =
+  "minmax(210px, 1.7fr) minmax(130px, 1fr) minmax(150px, 1.1fr) 104px minmax(296px, auto)";
 
 /* Ordered by how much each role can reach, narrowest first, so the matrix
    below reads left to right as access widening and the role picker offers
@@ -461,25 +468,33 @@ export default function Team() {
           </div>
         ) : null}
 
+        <Table
+          min={1000}
+          cols={TEAM_COLS}
+          labels={["Team member", "Role", "Communities", "Open work", ""]}
+        >
         {s.staff.map((p) => (
+          /* Everything about one account under the row it belongs to. These
+             used to be four more passes over the roster appended below the
+             whole list, so tapping Edit on the first of twenty people opened
+             a form nineteen rows further down. */
           <React.Fragment key={p.id}>
-          {/* Tight vertical rhythm: when the action cluster wraps under the
-              name at narrower widths, the row shouldn't balloon. */}
-          <Row style={{ padding: `10px ${pad.card}`, rowGap: 4, alignItems: "center" }}>
+          <TableRow>
             <span style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
               <Avatar name={p.name} url={p.photoUrl} />
               <RowMain label={p.name} detail={p.email} detailSize={12.5} />
             </span>
             <Mono size={12} style={{ color: color.neutral }}>{p.role}</Mono>
-            <span style={{ fontSize: 14, color: color.inkTertiary, overflow: "hidden", textOverflow: "ellipsis" }}>
+            <span style={{ fontSize: 14, color: color.inkTertiary, minWidth: 0 }}>
               {p.communities.map((id) => s.communities.find((c) => c.id === id)?.name).filter(Boolean).join(", ") || "None assigned"}
             </span>
             <Status tone={!p.active ? "neutral" : p.load > 7 ? "attention" : "positive"}>
               {p.active ? `${p.load} open` : "Disabled"}
             </Status>
-            {/* One line, always: the controls read as a set, and a wrapped
-                "Remove" under the others looks like a separate row. */}
-            <span style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "nowrap", justifySelf: "end" }}>
+            {/* Allowed to wrap. Held on one line, four controls needed 300px
+                of a 343px phone and the last of them hung off the card. The
+                table only stays a table where all four fit anyway. */}
+            <span style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifySelf: "end" }}>
               <Pill style={{ padding: "10px 12px", fontSize: 12.5 }}
                 onClick={() => (editing === p.id ? setEditing(null) : openEdit(p))}>
                 {editing === p.id ? "Close" : "Edit"}
@@ -530,7 +545,7 @@ export default function Team() {
                 </span>
               )}
             </span>
-          </Row>
+          </TableRow>
 
           {/* Product rule: a field employee always has a job board. It is
               shown here, whole, because handing the URL over is the common
@@ -579,11 +594,9 @@ export default function Team() {
               onConfirm={() => changeCrewLink(p, crewConfirm.kind)}
             />
           ) : null}
-          </React.Fragment>
-        ))}
-        {s.staff.map((p) =>
-          editing === p.id ? (
-            <div key={`edit-${p.id}`}
+
+          {editing === p.id ? (
+            <div
               style={{ padding: `18px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, background: color.surfaceSunken }}>
               <div style={{ display: "grid", gap: 16, maxWidth: 860 }}>
                 <span style={{ fontSize: 15, fontWeight: 600 }}>Edit {p.name}&rsquo;s account</span>
@@ -698,23 +711,19 @@ export default function Team() {
                 </div>
               </div>
             </div>
-          ) : null,
-        )}
-        {s.staff.map((p) =>
-          resending === p.id ? (
+          ) : null}
+
+          {resending === p.id ? (
             <ConfirmBar
-              key={`resend-${p.id}`}
               text={`Email ${p.name} a fresh invitation at ${p.email}? They get a one-time link that signs them in and asks them to choose a password. Any earlier link stops working, and nothing about the account changes until they follow this one.`}
               confirmLabel={rowBusy === p.id ? "Sending…" : "Yes, resend the invitation"}
               onCancel={() => setResending(null)}
               onConfirm={() => resendInvite(p)}
             />
-          ) : null,
-        )}
-        {s.staff.map((p) =>
-          disabling === p.id ? (
+          ) : null}
+
+          {disabling === p.id ? (
             <ConfirmBar
-              key={`toggle-${p.id}`}
               text={p.active
                 ? `Switch off the account for ${p.name}? They keep their record and their history, but cannot sign in until it is switched back on.`
                 : `Switch the account for ${p.name} back on? They will be able to sign in again with the access their role allows.`}
@@ -734,12 +743,10 @@ export default function Team() {
                 s.audit(`${p.active ? "Switched off" : "Switched on"} the account for ${p.name}`);
               }}
             />
-          ) : null,
-        )}
-        {s.staff.map((p) =>
-          removing === p.id ? (
+          ) : null}
+
+          {removing === p.id ? (
             <ConfirmBar
-              key={`confirm-${p.id}`}
               text={`Are you sure you want to delete ${p.name}? This removes their roster record and their sign-in for good — they will not be able to reach the portal again. Work already logged against them stays, unassigned, and the audit trail keeps the history. To switch someone off temporarily instead, use Disable.`}
               confirmLabel="Yes, delete this account"
               onCancel={() => setRemoving(null)}
@@ -757,8 +764,10 @@ export default function Team() {
                 setRemoving(null);
               }}
             />
-          ) : null,
-        )}
+          ) : null}
+          </React.Fragment>
+        ))}
+        </Table>
       </Card>
 
       {/* Sign-in activity sits beside the audit trail: that log records what an

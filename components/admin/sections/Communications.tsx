@@ -20,7 +20,7 @@ import { useStore } from "@/lib/admin-portal/store";
 import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
 import {
   Area, Card, CardHead, Chip, ConfirmBar, DateInput, Empty, ErrorLine, Field, FieldGrid,
-  Input, Mono, Primary, Row, RowMain, Select, Status, TextButton,
+  Input, Mono, Primary, Row, RowMain, Select, Status, TextButton, useIsNarrow,
 } from "../ui";
 
 const THREAD_FILTERS = ["All", "Awaiting reply", "Open", "Closed"];
@@ -119,6 +119,27 @@ function ResidentInbox() {
   const thread =
     s.residentThreads.find((t) => t.id === threadId) ?? visible[0] ?? null;
   const waiting = s.residentThreads.filter((t) => t.awaitingReply).length;
+
+  /**
+   * Two panes on a desk, one at a time on a phone. Side by side they wrap
+   * rather than shrink, which puts the conversation underneath the entire
+   * inbox — with a few hundred threads on the roster, reading one reply meant
+   * scrolling past all of them.
+   *
+   * The test is `threadId`, not `thread`: `thread` falls back to the first
+   * match so a wide screen always has something in the right-hand pane, and a
+   * phone has to open on the list rather than on whichever thread is newest.
+   */
+  const narrow = useIsNarrow();
+  const detailOpen = threadId !== null;
+  const showList = !narrow || !detailOpen;
+  const showDetail = !narrow || detailOpen;
+
+  function backToList() {
+    setThreadId(null);
+    setCtx(null); setCreateMsgId(null); setCreateNote(null); setCreateError("");
+    setError("");
+  }
 
   async function send() {
     if (!thread) return;
@@ -282,6 +303,7 @@ function ResidentInbox() {
         </div>
       ) : null}
 
+      {showList ? (
       <div style={{ padding: `16px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
         <input
           type="text"
@@ -298,9 +320,14 @@ function ResidentInbox() {
           <Chip key={f} size="sm" on={f === filter} onClick={() => setFilter(f)}>{f}</Chip>
         ))}
       </div>
+      ) : null}
 
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "stretch" }}>
-        <div style={{ flex: "1 1 260px", minWidth: 0, borderRight: `1px solid ${color.hairlineSoft}` }}>
+        {showList ? (
+        <div style={{
+          flex: "1 1 260px", minWidth: 0,
+          borderRight: narrow ? undefined : `1px solid ${color.hairlineSoft}`,
+        }}>
           {visible.length === 0 ? (
             <Empty>
               {s.residentThreads.length === 0
@@ -339,8 +366,15 @@ function ResidentInbox() {
             })
           )}
         </div>
+        ) : null}
 
+        {showDetail ? (
         <div style={{ flex: "2 1 340px", minWidth: 0, display: "grid", alignContent: "start" }}>
+          {narrow ? (
+            <div style={{ padding: `12px ${pad.card} 0` }}>
+              <TextButton tone="muted" onClick={backToList}>&larr; All conversations</TextButton>
+            </div>
+          ) : null}
           {!thread ? (
             <Empty>Select a conversation.</Empty>
           ) : (
@@ -383,7 +417,7 @@ function ResidentInbox() {
                       <div style={{
                         justifySelf: "stretch", maxWidth: "min(560px, 100%)",
                         background: color.surface, border: `1px solid ${color.accentTintBorder}`,
-                        borderRadius: radius.lg, padding: 18, display: "grid", gap: 14,
+                        borderRadius: radius.lg, padding: "clamp(14px, 3.5vw, 18px)", display: "grid", gap: 14,
                       }}>
                         <span style={{ fontSize: 15, fontWeight: 600 }}>Create from this message</span>
                         {ctxLoading ? (
@@ -477,6 +511,7 @@ function ResidentInbox() {
             </>
           )}
         </div>
+        ) : null}
       </div>
     </Card>
   );
@@ -714,7 +749,7 @@ export default function Communications() {
           </TextButton>
         </CardHead>
         {composeOpen ? (
-        <div style={{ padding: 24, display: "grid", gap: 16, maxWidth: 760 }}>
+        <div style={{ padding: "clamp(16px, 2.4vw, 24px)", display: "grid", gap: 16, maxWidth: 760 }}>
           <Field label="Subject"><Input value={subject} onChange={setSubject} placeholder="e.g. Water shut-off Thursday" /></Field>
           <Field label="Message"><Area value={body} onChange={setBody} rows={4} placeholder="Plain language. Lead with what changes and when." /></Field>
 

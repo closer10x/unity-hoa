@@ -125,6 +125,46 @@ Two things that follow from that grid and cost an afternoon each:
   more tracks than most rows have cells — so a cluster sits mid-row with empty
   columns beyond it. Use `gridColumn: "-2 / -1"` *and* `justifySelf: "end"`.
 
+## Tables, and the width they need
+
+A table is not a data row. Its columns line up *down* the page, so a cell that
+wraps destroys the alignment that makes it a table — which is why the five
+list screens use `Table` from the admin toolkit rather than `Row`.
+
+`Table` takes one number, `min`: the width below which it stops being a table.
+Below it, each record becomes a card — the leading cell on its own line, every
+other cell against the column head it belongs to, and any cell whose head is
+blank (an action cluster) on a full line at the foot. Three things follow:
+
+- **The threshold is the container's width, not the viewport's.** A 900px table
+  has no room at 1000px either, once the rail has taken its 248. `Table`
+  measures itself with a ResizeObserver, before paint, so a phone never shows a
+  frame of the wide layout first. This is measurement, not a media query — the
+  house rule still holds.
+- **Per-row drawers must live inside the `Table`, not inside a scroller.** The
+  reason the old `Scroller` had to go: Owners' edit form and a violation's case
+  file were *inside* an 860px minimum width, so a phone scrolled a 900px form
+  sideways to reach its own Save button. Stacking drops the minimum with it.
+- **Interleave a row's drawers with the row.** Team appended its edit form and
+  three confirm bars as four more passes over the roster *below the whole list*,
+  so tapping Edit on the first of twenty people opened a form nineteen rows
+  down. One `React.Fragment` per record.
+
+## The two mobile rules that keep being broken
+
+- **A grid track floor is a hard minimum.** `minmax(300px, 1fr)` does not give
+  way at 320px — it stays 300 and pushes the whole page sideways. Write
+  `minmax(min(300px, 100%), 1fr)` for any floor that could exceed a phone's
+  content width (about 273px inside the shell's gutters at 320).
+- **Every focusable control is 16px or larger, and 44px tall.** iOS Safari
+  zooms the page on focus of anything smaller, and the user is then stranded
+  scrolled-in on a layout with no horizontal room. This includes the `mono`
+  variant of `Input`, native `select`s, and search boxes styled inline.
+
+Two-pane screens — Communications, the resident's Messages — show **one pane at
+a time** below the breakpoint, with a way back to the list. Side by side they
+merely wrap, which buries the conversation under the entire inbox.
+
 **Card summary tiles are the exception**: `Tiles` lays out with `flex-wrap` and
 `flex: 1 1 <min>px`, not `auto-fit`. `auto-fit` computes a fixed column count,
 and any tile that does not divide into it is stranded one column wide with the

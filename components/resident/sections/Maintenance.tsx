@@ -80,7 +80,7 @@ export default function Maintenance() {
     <div className={PAGE} style={{ paddingInline: 0, paddingTop: 0 }}>
       {/* The form beside the list where there is room, above it where there
           is not — the request you are filing is the reason you opened this. */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(310px,1fr))] items-start gap-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(310px,100%),1fr))] items-start gap-4">
         <Card className="px-[clamp(18px,3vw,30px)] py-7">
           <CardHead title="Your requests" />
 

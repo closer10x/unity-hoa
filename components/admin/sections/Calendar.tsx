@@ -141,7 +141,7 @@ export default function Calendar() {
 
       {addOpen ? (
         <Card>
-          <div style={{ padding: 24, display: "grid", gap: 16 }}>
+          <div style={{ padding: "clamp(16px, 2.4vw, 24px)", display: "grid", gap: 16 }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16 }}>
               <span style={{ fontSize: 16, fontWeight: 600 }}>New event</span>
               <TextButton tone="muted" onClick={() => { setAddOpen(false); setError(""); }}>Cancel</TextButton>

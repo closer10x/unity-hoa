@@ -380,7 +380,11 @@ export function Input({
       onChange={(e) => { if (!readOnly) onChange(e.target.value); }}
       style={{
         ...inputStyle,
-        ...(mono ? { fontFamily: font.mono, fontSize: 14 } : null),
+        /* The mono variant keeps the face and drops the size difference: at
+           14 it was the one field in either portal that still zoomed iOS on
+           focus, and it is the lot number — the field somebody standing at a
+           property types most. */
+        ...(mono ? { fontFamily: font.mono } : null),
         ...(readOnly
           ? { background: color.surfaceMuted, color: color.inkTertiary, cursor: "default" }
           : null),
@@ -719,7 +723,9 @@ export function AddDrawer({
   }
   return (
     <div style={{ padding: pad.card, borderBottom: `1px solid ${color.hairlineSoft}` }}>
-      <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: 22, display: "grid", gap: 16 }}>
+      {/* Intrinsic, not a fixed 22: on a 375px screen a flat 22 spends a
+          quarter of the form's width on its own gutters. */}
+      <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: "clamp(15px, 4vw, 22px)", display: "grid", gap: 16 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16 }}>
           <span style={{ fontSize: 16, fontWeight: 600 }}>{title}</span>
           <TextButton tone="muted" onClick={onCancel}>Cancel</TextButton>
@@ -1021,82 +1027,198 @@ export function PhotoSlot({ label, ratio = "16 / 9", size }: { label: string; ra
 /* ---------- tables ---------- */
 
 /**
- * A wide table, scrolled rather than squeezed.
+ * A table where there is room for one, and a list of records where there is
+ * not.
  *
- * The row grid elsewhere in this portal reflows: cells wrap to a second line
- * as space runs out, which suits a record whose cells are independent. A
- * table is not that — its columns line up *down* the page, and a cell that
- * wraps breaks the alignment that makes it a table at all. So below its
- * natural width this scrolls sideways and keeps its shape, which is the
- * documented pattern for wide content.
+ * A table's columns line up *down* the page, so a cell that wraps breaks the
+ * alignment that makes it a table at all — which is why these used to sit in
+ * a horizontal scroller with a fixed minimum width. That reads acceptably on
+ * a laptop with a squeezed column and badly on a phone, and it had a second
+ * cost nobody planned for: the per-row drawers these sections open — Owners'
+ * edit form, a violation's whole case file — are *inside* the scroller, so a
+ * 375px screen was scrolling a 900px form sideways to reach its own Save
+ * button.
+ *
+ * Below its natural width the table stops being a table. Each record becomes
+ * a card: the leading cell on its own line, then every other cell against the
+ * column head it belongs to, so nothing loses the label that gave it meaning.
+ * Drawers land at full width because the minimum width is gone with it.
+ *
+ * The threshold is the container's own width, not the viewport's — a 900px
+ * table has no room at 1000px either, once the rail has taken its 248. Still
+ * measurement rather than a media query, and still one number per table.
  */
-export function Scroller({ min, children }: { min: number; children: React.ReactNode }) {
-  return (
-    <div style={{ overflowX: "auto" }}>
-      <div style={{ minWidth: min }}>{children}</div>
-    </div>
-  );
-}
-
-/**
- * Column heads. `cols` is a grid-template-columns string shared with every
- * TableRow beneath it — one definition, so a head and its column cannot drift
- * apart. `align` marks the columns that read right (amounts, status).
- */
-export function TableHead({
-  cols, labels, align = [],
-}: {
+type TableShape = {
   cols: string;
   labels: string[];
-  /** Indices that right-align, matching their rows. */
+  align: number[];
+  stacked: boolean;
+};
+
+const TableCtx = React.createContext<TableShape | null>(null);
+
+/* Measuring before paint, so a phone never shows one frame of the wide
+   layout before it collapses. On the server there is nothing to measure. */
+const useMeasureEffect =
+  typeof window === "undefined" ? React.useEffect : React.useLayoutEffect;
+
+/** True once the element is narrower than the width the table needs. */
+function useTooNarrowFor(ref: React.RefObject<HTMLElement | null>, min: number): boolean {
+  const [stacked, setStacked] = React.useState(false);
+
+  useMeasureEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    /* clientWidth is the space available, not the content's — the inner
+       track carries the minimum width, so this cannot feed back on itself. */
+    const measure = () => {
+      const w = el.clientWidth;
+      if (w > 0) setStacked(w < min);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref, min]);
+
+  return stacked;
+}
+
+export function Table({
+  min, cols, labels, align = [], children,
+}: {
+  /** The width below which this stops being a table. */
+  min: number;
+  cols: string;
+  labels: string[];
+  /** Indices that read right — amounts, status. */
   align?: number[];
+  children: React.ReactNode;
 }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const stacked = useTooNarrowFor(ref, min);
+
   return (
-    <div
-      style={{
-        display: "grid", gridTemplateColumns: cols, gap: 16,
-        borderBottom: `1px solid ${color.ink}`,
-        padding: `12px ${pad.card}`,
-      }}
-    >
-      {labels.map((l, i) => (
-        <span
-          key={l + i}
-          style={{
-            fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
-            textTransform: "uppercase", color: color.inkQuaternary,
-            textAlign: align.includes(i) ? "right" : "left",
-          }}
-        >
-          {l}
-        </span>
-      ))}
-    </div>
+    <TableCtx.Provider value={{ cols, labels, align, stacked }}>
+      {/* The scroller stays on the wide path as a backstop for one
+          unbreakable string; at these widths it has nothing to scroll. */}
+      <div ref={ref} style={stacked ? undefined : { overflowX: "auto" }}>
+        <div style={stacked ? undefined : { minWidth: min }}>
+          {stacked ? null : (
+            <div
+              style={{
+                display: "grid", gridTemplateColumns: cols, gap: 16,
+                borderBottom: `1px solid ${color.ink}`,
+                padding: `12px ${pad.card}`,
+              }}
+            >
+              {labels.map((l, i) => (
+                <span
+                  key={l + i}
+                  style={{
+                    fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
+                    textTransform: "uppercase", color: color.inkQuaternary,
+                    textAlign: align.includes(i) ? "right" : "left",
+                  }}
+                >
+                  {l}
+                </span>
+              ))}
+            </div>
+          )}
+          {children}
+        </div>
+      </div>
+    </TableCtx.Provider>
   );
 }
 
-/** One line of a table. Same `cols` as its head, or the columns will not line up. */
+/** One record. Its columns come from the Table above it, so they cannot drift. */
 export function TableRow({
-  cols, children, last = false, onClick,
+  children, last = false, onClick,
 }: {
-  cols: string;
   children: React.ReactNode;
   last?: boolean;
   onClick?: () => void;
 }) {
+  const shape = React.useContext(TableCtx);
+  const cols = shape?.cols ?? "1fr";
+  const edge = last ? "none" : `1px solid ${color.hairline}`;
+
+  if (!shape?.stacked) {
+    return (
+      <div
+        onClick={onClick}
+        style={{
+          display: "grid", gridTemplateColumns: cols, gap: 16,
+          alignItems: "center",
+          padding: `15px ${pad.card}`,
+          borderBottom: edge,
+          fontSize: 15,
+          cursor: onClick ? "pointer" : undefined,
+        }}
+      >
+        {children}
+      </div>
+    );
+  }
+
+  /* The stacked record. The first cell identifies it and leads on its own
+     line; the rest sit against their column head, because a bare "$1,240"
+     under a street address is a number nobody can name. A cell whose head is
+     blank — an action cluster — takes a full line of its own at the foot,
+     which is where a thumb expects to find it. */
+  const cells = React.Children.toArray(children);
+  const [lead, ...rest] = cells;
+
   return (
     <div
       onClick={onClick}
       style={{
-        display: "grid", gridTemplateColumns: cols, gap: 16,
-        alignItems: "center",
-        padding: `15px ${pad.card}`,
-        borderBottom: last ? "none" : `1px solid ${color.hairline}`,
+        display: "grid", gap: 9,
+        padding: `16px ${pad.card}`,
+        borderBottom: edge,
         fontSize: 15,
         cursor: onClick ? "pointer" : undefined,
       }}
     >
-      {children}
+      {lead == null ? null : <div style={{ minWidth: 0 }}>{lead}</div>}
+      {rest.map((cell, i) => {
+        const label = shape.labels[i + 1] ?? "";
+        if (!label) {
+          return (
+            <div
+              key={i}
+              style={{
+                display: "flex", flexWrap: "wrap", alignItems: "center",
+                gap: "8px 12px", minWidth: 0,
+              }}
+            >
+              {cell}
+            </div>
+          );
+        }
+        return (
+          <div
+            key={i}
+            style={{
+              display: "flex", justifyContent: "space-between",
+              alignItems: "baseline", gap: 16, minWidth: 0,
+            }}
+          >
+            <span
+              style={{
+                flex: "0 0 auto", fontFamily: font.mono, fontSize: 11,
+                letterSpacing: "0.08em", textTransform: "uppercase",
+                color: color.inkQuaternary,
+              }}
+            >
+              {label}
+            </span>
+            <span style={{ minWidth: 0, textAlign: "right" }}>{cell}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1204,11 +1326,15 @@ export function CopyLine({
           onClick={(e) => e.currentTarget.select()}
           aria-label="Link"
           style={{
+            /* 16px and 44: this is a focusable field, so anything smaller
+               zooms iOS — and it is most often read on a phone, by a manager
+               handing a tech their board over the counter. The field shrinks
+               and scrolls its own text, so the larger size costs no layout. */
             flex: "1 1 260px", minWidth: 0,
-            font: "inherit", fontFamily: font.mono, fontSize: 12.5,
+            font: "inherit", fontFamily: font.mono, fontSize: 16,
             color: color.inkSecondary, background: color.surfaceSunken,
             border: `1px solid ${color.hairline}`, borderRadius: radius.sm,
-            padding: "10px 12px", minHeight: 40,
+            padding: "10px 12px", minHeight: 44,
           }}
         />
         <Pill style={{ padding: "10px 14px", fontSize: 12.5 }} onClick={copy}>
@@ -1221,7 +1347,7 @@ export function CopyLine({
           style={{
             font: "inherit", fontSize: 12.5, fontWeight: 500,
             color: color.accent, textDecoration: "none",
-            padding: "10px 6px", minHeight: 40,
+            padding: "10px 8px", minHeight: 44,
             display: "inline-flex", alignItems: "center", whiteSpace: "nowrap",
           }}
         >

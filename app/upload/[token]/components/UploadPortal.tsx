@@ -196,7 +196,7 @@ export function UploadPortal({ token, link, categories = [], error }: Props) {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter password"
               autoFocus
-              className="w-full rounded-lg border border-outline-variant/50 bg-white px-4 py-3 pr-12 text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
+              className="w-full rounded-lg border border-outline-variant/50 bg-white px-4 py-3 pr-12 text-base outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
               aria-label="Upload password"
             />
             <button
@@ -324,7 +324,7 @@ export function UploadPortal({ token, link, categories = [], error }: Props) {
               value={submitterName}
               onChange={(e) => setSubmitterName(e.target.value)}
               placeholder="e.g., John Doe"
-              className="w-full rounded-lg border border-outline-variant/50 bg-white px-3 py-2 text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
+              className="w-full rounded-lg border border-outline-variant/50 bg-white px-3 py-3 text-base outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
             />
           </div>
           <div>
@@ -336,7 +336,7 @@ export function UploadPortal({ token, link, categories = [], error }: Props) {
               value={submitterEmail}
               onChange={(e) => setSubmitterEmail(e.target.value)}
               placeholder="e.g., john@example.com"
-              className="w-full rounded-lg border border-outline-variant/50 bg-white px-3 py-2 text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
+              className="w-full rounded-lg border border-outline-variant/50 bg-white px-3 py-3 text-base outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
             />
           </div>
         </div>
@@ -437,7 +437,7 @@ export function UploadPortal({ token, link, categories = [], error }: Props) {
                       type="text"
                       value={entry.title}
                       onChange={(e) => updateEntry(idx, { title: e.target.value })}
-                      className="w-full rounded-lg border border-outline-variant/50 bg-white px-3 py-2 text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
+                      className="w-full rounded-lg border border-outline-variant/50 bg-white px-3 py-3 text-base outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
                       required
                     />
                   </div>
@@ -448,7 +448,7 @@ export function UploadPortal({ token, link, categories = [], error }: Props) {
                     <select
                       value={entry.categoryId}
                       onChange={(e) => updateEntry(idx, { categoryId: e.target.value })}
-                      className="w-full rounded-lg border border-outline-variant/50 bg-white px-3 py-2 text-sm outline-none focus:border-secondary"
+                      className="w-full rounded-lg border border-outline-variant/50 bg-white px-3 py-3 text-base outline-none focus:border-secondary"
                     >
                       {categories.map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
@@ -464,7 +464,7 @@ export function UploadPortal({ token, link, categories = [], error }: Props) {
                       value={entry.description}
                       onChange={(e) => updateEntry(idx, { description: e.target.value })}
                       placeholder="Optional"
-                      className="w-full rounded-lg border border-outline-variant/50 bg-white px-3 py-2 text-sm outline-none focus:border-secondary"
+                      className="w-full rounded-lg border border-outline-variant/50 bg-white px-3 py-3 text-base outline-none focus:border-secondary"
                     />
                   </div>
                 </div>

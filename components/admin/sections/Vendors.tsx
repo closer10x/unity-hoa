@@ -7,10 +7,10 @@ import { useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color, pad } from "@/lib/admin-portal/tokens";
 import type { Address } from "@/lib/admin-portal/types";
 import { usePrimaryAction } from "../SectionHead";
-import { Tag, TableRow, TableHead, Scroller, CellStack,
+import { Tag, Table, TableRow, CellStack,
   ActionSelect, AddDrawer, AddressFields, Card, ConfirmBar, DateInput, DropZone,
   Empty, ErrorLine, Field, FieldGrid, FilterBar, Input, Mono, Primary,
-  Row, RowMain, Select, Status,
+  Select, Status,
 } from "../ui";
 
 const FILTERS = ["All", "Insurance current", "Insurance expired"];
@@ -105,13 +105,12 @@ export default function Vendors() {
         {flowError ? <div style={{ padding: `12px ${pad.card} 0` }}><ErrorLine>{flowError}</ErrorLine></div> : null}
 
         {visible.length === 0 ? <Empty>No vendors match that.</Empty> : (
-        <Scroller min={900}>
-        <TableHead cols={VENDOR_COLS} labels={["Vendor", "Contract", "Spend", "Insurance", ""]} align={[2, 3]} />
+        <Table min={900} cols={VENDOR_COLS} labels={["Vendor", "Contract", "Spend", "Insurance", ""]} align={[2, 3]}>
         {visible.map((v) => {
           const off = deactivated.includes(v.id);
           return (
             <React.Fragment key={v.id}>
-              <TableRow cols={VENDOR_COLS}>
+              <TableRow>
                 <CellStack top={v.name} sub={v.trade} />
                 <span style={{ fontSize: 14, color: color.inkTertiary, minWidth: 0 }}>{v.contract}</span>
                 <Mono size={14} style={{ textAlign: "right" }}>{v.spend}</Mono>
@@ -138,7 +137,7 @@ export default function Vendors() {
             </React.Fragment>
           );
         })}
-        </Scroller>
+        </Table>
         )}
       </Card>
     </>

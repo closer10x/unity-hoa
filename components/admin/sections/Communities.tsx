@@ -258,8 +258,8 @@ export default function Communities() {
               </Row>
 
               {editId === c.id ? (
-                <div style={{ padding: "0 24px 20px", borderBottom: `1px solid ${color.hairlineSoft}` }}>
-                  <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: 22, display: "grid", gap: 16 }}>
+                <div style={{ padding: "0 clamp(16px, 2.4vw, 24px) 20px", borderBottom: `1px solid ${color.hairlineSoft}` }}>
+                  <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: radius.lg, padding: "clamp(15px, 4vw, 22px)", display: "grid", gap: 16 }}>
                     <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16 }}>
                       <span style={{ fontSize: 16, fontWeight: 600 }}>Edit {c.name}</span>
                       <TextButton tone="muted" onClick={() => setEditId(null)}>Cancel</TextButton>

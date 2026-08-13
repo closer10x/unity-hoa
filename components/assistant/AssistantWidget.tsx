@@ -175,7 +175,10 @@ export default function AssistantWidget() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") send(); }}
               style={{
-                flex: 1, font: "inherit", fontSize: 14.5, color: color.ink,
+                /* 16px: iOS Safari zooms the page whenever a focusable control
+                   is smaller, and the panel is fixed-position, so the zoom left
+                   the whole assistant half off the screen with no way back. */
+                flex: 1, minWidth: 0, font: "inherit", fontSize: 16, color: color.ink,
                 background: color.surfaceSunken, border: `1px solid ${color.borderInput}`,
                 borderRadius: radius.md, padding: "11px 14px",
               }}
@@ -183,6 +186,7 @@ export default function AssistantWidget() {
             <button type="button" onClick={send}
               style={{
                 font: "inherit", fontSize: 14.5, fontWeight: 500, cursor: "pointer",
+                flex: "0 0 auto", minHeight: 44,
                 background: busy ? color.neutral : color.accent, color: "oklch(0.97 0.008 140)",
                 border: "none", borderRadius: radius.md, padding: "0 18px",
               }}>

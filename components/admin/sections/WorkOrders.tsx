@@ -12,7 +12,7 @@ import {
 } from "@/lib/admin-portal/work-actions";
 import { isFieldRole } from "@/lib/crew/roles";
 import { usePrimaryAction } from "../SectionHead";
-import { Tag, TableRow, TableHead, Scroller, CellStack,
+import { Tag, Table, TableRow, CellStack,
   CardHead, CopyLine, DropZone,
   ActionSelect, AddDrawer, Card, Chip, ConfirmBar, DateInput, Empty, ErrorLine,
   Field, FieldGrid, FilterBar, Input, Mono, Primary,
@@ -293,17 +293,17 @@ export default function WorkOrders() {
         {flowError ? <div style={{ padding: `12px ${pad.card} 0` }}><ErrorLine>{flowError}</ErrorLine></div> : null}
 
         {visible.length === 0 ? <Empty>No work orders match that.</Empty> : (
-        <Scroller min={900}>
-        <TableHead
+        <Table
+          min={900}
           cols={WORK_COLS}
           labels={["Ref", "Job", "Assigned to", "Status", ""]}
           align={[3]}
-        />
+        >
         {visible.map((w) => {
           const menu = buildActionMenu(WORK_STEPS, w.status, w.id, w.title, pending, setPending);
           return (
             <React.Fragment key={w.id}>
-              <TableRow cols={WORK_COLS}>
+              <TableRow>
                 <Mono size={13} style={{ color: color.neutral }}>{w.ref}</Mono>
                 <CellStack top={w.title} sub={w.detail} />
                 <CellStack
@@ -321,8 +321,8 @@ export default function WorkOrders() {
               </TableRow>
 
               {editing === w.id ? (
-                <div style={{ padding: "0 24px 20px", borderBottom: `1px solid ${color.hairlineSoft}` }}>
-                  <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: 14, padding: 20, display: "grid", gap: 14 }}>
+                <div style={{ padding: "0 clamp(16px, 2.4vw, 24px) 20px", borderBottom: `1px solid ${color.hairlineSoft}` }}>
+                  <div style={{ background: color.surfaceSunken, border: `1px solid ${color.accentTintBorder}`, borderRadius: 14, padding: "clamp(15px, 4vw, 20px)", display: "grid", gap: 14 }}>
                     <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16 }}>
                       <span style={{ fontSize: 15, fontWeight: 600 }}>Edit {w.ref}</span>
                       <TextButton tone="muted" onClick={() => setEditing("")}>Cancel</TextButton>
@@ -368,7 +368,7 @@ export default function WorkOrders() {
               ) : null}
 
               {reassigning === w.id ? (
-                <div style={{ padding: "0 24px 20px", display: "grid", gap: 12, borderBottom: `1px solid ${color.hairlineSoft}` }}>
+                <div style={{ padding: "0 clamp(16px, 2.4vw, 24px) 20px", display: "grid", gap: 12, borderBottom: `1px solid ${color.hairlineSoft}` }}>
                   <span style={{ fontSize: 14, color: color.inkSecondary }}>Assign to</span>
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     {assignOptions.map((o) => (
@@ -390,7 +390,7 @@ export default function WorkOrders() {
             </React.Fragment>
           );
         })}
-        </Scroller>
+        </Table>
         )}
       </Card>
     </>
