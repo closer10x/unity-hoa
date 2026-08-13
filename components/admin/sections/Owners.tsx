@@ -433,9 +433,20 @@ export default function Owners() {
                   </span>
                   <Mono size={13} style={{ color: color.inkQuaternary }}>#{o.account}</Mono>
                   <Mono size={15} style={{ textAlign: "right" }}>{o.balance}</Mono>
+                  {/* The word and the colour have to agree. A home that is
+                      simply owned read "Owner on file" in the red reserved for
+                      trouble, because the balance work started flagging past
+                      due — alarming, and it did not say what was wrong. Past
+                      due now says so; everything else is calm. */}
                   <span style={{ textAlign: "right" }}>
-                    <Tag tone={o.flag === "delinquent" ? "red" : o.flag === "tenant" ? "amber" : o.name === "Unassigned lot" ? "grey" : "moss"}>
-                      {o.status}
+                    <Tag
+                      tone={
+                        o.flag === "delinquent" ? "red"
+                          : o.name === "Unassigned lot" ? "grey"
+                            : "moss"
+                      }
+                    >
+                      {o.flag === "delinquent" ? "Past due" : o.status}
                     </Tag>
                   </span>
                   <span style={{ justifySelf: "end" }}>

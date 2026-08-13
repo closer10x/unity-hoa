@@ -80,10 +80,20 @@ const EMPTY: ResidentData = {
 const usdExact = (cents: number) =>
   (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 
-const shortDate = (iso: string | null | undefined) =>
-  iso
-    ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-    : "—";
+/**
+ * A date-only string is a calendar day, not an instant.
+ *
+ * `new Date("2026-08-12")` is midnight UTC, which is the 11th anywhere west
+ * of Greenwich — so a due date rendered this way reads a day early for every
+ * resident in Texas. Anchoring at noon UTC puts it far enough from either
+ * midnight that no timezone can move it. Timestamps that already carry a
+ * time are left alone.
+ */
+const shortDate = (iso: string | null | undefined) => {
+  if (!iso) return "—";
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T12:00:00Z`) : new Date(iso);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+};
 
 const longDate = (d: Date) =>
   d.toLocaleDateString("en-US", { month: "long", day: "numeric" });
@@ -192,6 +202,35 @@ export async function loadResidentData(user: {
     return data;
   });
 
+  /* This household's issued, uncollected invoices.
+     Invoices sit in front of the ledger — issuing bills the household and
+     writes nothing, only collecting posts an entry — so a resident's balance
+     lives on their invoices. Reading the ledger shows them nothing owed
+     while an invoice is sitting in their name. */
+  const openInvoices = await safe([] as {
+    total_cents: number; due_on: string | null; invoice_number: string; issued_on: string;
+  }[], async () => {
+    if (!lot) return [];
+    const { data, error } = await db
+      .from("invoices")
+      .select("invoice_number, total_cents, due_on, issued_on")
+      .eq("lot_id", lot.id)
+      .eq("status", "sent")
+      .order("due_on", { ascending: true });
+    if (error) throw error;
+    return data ?? [];
+  });
+
+  const owedCents = openInvoices.reduce((t, i) => t + Number(i.total_cents ?? 0), 0);
+  const today = new Date().toISOString().slice(0, 10);
+  const invoicesOverdue = openInvoices.some((i) => i.due_on && i.due_on < today);
+  /* Noon UTC, not midnight: a date-only string parsed as midnight lands on
+     the previous day for anyone west of Greenwich, and a due date that reads
+     a day early is worse than none. */
+  const nextInvoiceDue = openInvoices[0]?.due_on
+    ? longDate(new Date(`${openInvoices[0].due_on}T12:00:00Z`))
+    : "";
+
   const billing = await safe(null as null | {
     hoa_fee_amount_cents: number | null;
     hoa_due_day_of_month: number | null;
@@ -231,13 +270,23 @@ export async function loadResidentData(user: {
           .filter(Boolean)
           .join(", "),
         account: lot.lot_number ? `Lot ${lot.lot_number}` : "",
+        /* What this household actually owes, not what the community's fee
+           happens to be. It read the schedule's standard amount, so a
+           resident with a $375 certificate invoice was shown the quarterly
+           HOA fee — or nothing at all — and never the bill they had.
+           Filled from their own invoices below; the fee is the fallback for
+           a household with none, which is still the useful number to see. */
         balance:
-          billing?.hoa_fee_amount_cents != null
-            ? usdExact(billing.hoa_fee_amount_cents)
-            : "",
-        balanceCents: billing?.hoa_fee_amount_cents ?? null,
-        due: boundaries.next ? longDate(boundaries.next) : "",
-        overdue: false,
+          owedCents > 0
+            ? usdExact(owedCents)
+            : billing?.hoa_fee_amount_cents != null
+              ? usdExact(billing.hoa_fee_amount_cents)
+              : "",
+        balanceCents: owedCents > 0 ? owedCents : billing?.hoa_fee_amount_cents ?? null,
+        /* Their own invoice's due date beats the community's next boundary —
+           that is the date they are actually being held to. */
+        due: nextInvoiceDue || (boundaries.next ? longDate(boundaries.next) : ""),
+        overdue: invoicesOverdue,
         cadence: billing?.dues_frequency
           ? CADENCE[billing.dues_frequency] ?? ""
           : "",
@@ -264,12 +313,28 @@ export async function loadResidentData(user: {
         r.kind === "income"
           ? `−${usdExact(Number(r.amount_cents))}`
           : usdExact(Number(r.amount_cents)),
-      // Running balances need the billing ledger; until charges post per
-      // lot there is nothing honest to show here.
+      // A running balance needs every line in order; these are the collected
+      // rows only, so the column stays honest rather than guessing.
       balance: "—",
       credit: r.kind === "income",
     }));
   });
+
+  /* An issued invoice is a charge the household can see coming. Without it
+     their activity list is empty until somebody collects, which reads as
+     "you owe nothing" at exactly the moment they do. Merged newest-first
+     with the collected rows above. */
+  const ledgerWithInvoices: LedgerLine[] = [
+    ...openInvoices.map((i) => ({
+      id: `inv-${i.invoice_number}`,
+      date: shortDate(i.issued_on),
+      label: `${i.invoice_number} issued${i.due_on ? ` · due ${shortDate(i.due_on)}` : ""}`,
+      amount: usdExact(Number(i.total_cents ?? 0)),
+      balance: "—",
+      credit: false,
+    })),
+    ...ledger,
+  ];
 
   /* ─── Late? The last due date passed with no payment on the lot ────── */
 
@@ -656,7 +721,7 @@ export async function loadResidentData(user: {
 
   return {
     property,
-    ledger,
+    ledger: ledgerWithInvoices,
     payments,
     requests,
     arcApps,
