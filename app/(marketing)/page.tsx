@@ -69,7 +69,7 @@ export default async function HomePage() {
           </h1>
           <p className="mb-[34px] max-w-[54ch] text-[19px] leading-[1.6] text-body text-pretty">
             Pay your HOA dues, ask for a repair, or read the rules — without hunting for a
-            phone number. Unity Grid runs the day-to-day of your association so the
+            phone number. Unity Grid Management runs the day-to-day of your association so the
             neighborhood stays well kept and the board stays out of the weeds.
           </p>
           <div className="flex flex-wrap gap-3">
