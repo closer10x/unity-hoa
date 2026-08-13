@@ -3,7 +3,7 @@
 import React from "react";
 import { useStore } from "@/lib/admin-portal/store";
 import { color, font, radius } from "@/lib/admin-portal/tokens";
-import { Card, CardHead, Mono, PageTitle, Pill, Row, RowMain, Tile, Tiles } from "../ui";
+import { Card, CardHead, Mono, Pill, Row, RowMain, Tile, Tiles } from "../ui";
 
 /**
  * The dashboard answers one question — what needs me today — and everything
@@ -159,7 +159,6 @@ export default function Dashboard() {
 
   return (
     <>
-      <PageTitle title="Dashboard" lede={`What needs attention across ${s.scopeLabel}.`} />
 
       {/* 150 does double duty: two tiles side by side on a 375px phone
           instead of one per screenful, and still five across the desk, since

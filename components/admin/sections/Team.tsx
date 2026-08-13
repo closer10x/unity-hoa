@@ -10,10 +10,11 @@ import {
 import { useStore } from "@/lib/admin-portal/store";
 import { color, font, pad } from "@/lib/admin-portal/tokens";
 import type { Staff, StaffRole } from "@/lib/admin-portal/types";
+import { usePrimaryAction } from "../SectionHead";
 import {
   ConfirmBar,
   AddDrawer, Card, CardHead, Chip, Empty, ErrorLine, Field, FieldGrid, FilterBar,
-  Input, Mono, PageTitle, Pill, Primary, Row, RowMain, Select, Status, TextButton,
+  Input, Mono, Pill, Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
 
 /* Ordered by how much each role can reach, narrowest first, so the matrix
@@ -204,6 +205,8 @@ export default function Team() {
     }
   }
   const [open, setOpen] = useState(false);
+  /* The header's primary button opens this screen's add-form. */
+  usePrimaryAction(() => setOpen(true));
   const [error, setError] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -371,7 +374,6 @@ export default function Team() {
 
   return (
     <>
-      <PageTitle title="Unity Grid team" lede="Staff accounts, what each role can reach, the communities they cover and the work sitting with them today." />
 
       <Card>
         <CardHead title="Staff accounts"

@@ -13,7 +13,7 @@ import { color, radius } from "@/lib/admin-portal/tokens";
 import type { Address, Owner } from "@/lib/admin-portal/types";
 import {
   AddDrawer, AddressFields, Card, Chip, ConfirmBar, DateInput, Empty, ErrorLine,
-  Field, FieldGrid, FilterBar, Input, MailingAddress, Mono, PageTitle, Primary,
+  Field, FieldGrid, FilterBar, Input, MailingAddress, Mono, Primary,
   Row, RowMain, Select, Status, TextButton,
 } from "../ui";
 
@@ -318,7 +318,6 @@ export default function Owners() {
 
   return (
     <>
-      <PageTitle title="Owners" lede="Every homeowner of record, their balance and how to reach them." />
       <Card>
         <AddDrawer
           open={open} onOpen={() => { setOpen(true); setError(""); }} onCancel={() => { setOpen(false); setError(""); }}

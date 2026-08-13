@@ -4,9 +4,10 @@ import React, { useEffect, useState } from "react";
 import { setDocumentPublished } from "@/lib/admin-portal/document-actions";
 import { useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color } from "@/lib/admin-portal/tokens";
+import { usePrimaryAction } from "../SectionHead";
 import {
   AddDrawer, Card, Empty, ErrorLine, Field, FieldGrid, FilterBar, Input,
-  PageTitle, Pill, Primary, Row, RowMain, Select, Status, TextButton,
+  Pill, Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
 
 const FILTERS = ["All", "Published", "Draft"];
@@ -18,6 +19,8 @@ export default function Documents() {
 
   // Add-form state
   const [open, setOpen] = useState(false);
+  /* The header's primary button opens this screen's add-form. */
+  usePrimaryAction(() => setOpen(true));
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
@@ -78,7 +81,6 @@ export default function Documents() {
 
   return (
     <>
-      <PageTitle title="Documents" lede="Governing documents, financials and minutes. Publishing makes a document visible in every resident portal." />
       <Card>
         <AddDrawer open={open} onOpen={() => { setOpen(true); setError(""); }}
           onCancel={() => { setOpen(false); setError(""); }}

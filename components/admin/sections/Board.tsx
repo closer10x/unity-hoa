@@ -11,8 +11,7 @@ import { color, pad } from "@/lib/admin-portal/tokens";
 import type { Address, MeetingStatus, PendingConfirm } from "@/lib/admin-portal/types";
 import {
   ActionSelect, AddDrawer, AddressFields, Area, Card, CardHead, Chip, ConfirmBar,
-  DateInput, Empty, ErrorLine, Eyebrow, Field, FieldGrid, Input, Mono, PageTitle,
-  Pill, Primary, Row, RowMain, Select, Status, TextButton,
+  DateInput, Empty, ErrorLine, Eyebrow, Field, FieldGrid, Input, Mono, Pill, Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
 
 const ROLES = ["President", "Vice president", "Treasurer", "Secretary", "Director at large"];
@@ -154,7 +153,6 @@ export default function Board() {
 
   return (
     <>
-      <PageTitle title="Board & meetings" lede="Directors, the meeting calendar, statutory notice and the minutes record." />
 
       <Card>
         <CardHead title="Directors" meta={`${s.directors.filter((d) => !termEnded(d.term)).length} seated`} />

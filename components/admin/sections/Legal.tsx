@@ -10,7 +10,7 @@ import type { Address, LegalStage, PendingConfirm } from "@/lib/admin-portal/typ
 import { parseDollarsToCents } from "@/lib/format/money";
 import {
   ActionSelect, AddDrawer, AddressFields, Card, CardHead, ConfirmBar, DateInput,
-  Empty, ErrorLine, Field, FieldGrid, Input, Mono, PageTitle, Primary, Row,
+  Empty, ErrorLine, Field, FieldGrid, Input, Mono, Primary, Row,
   RowMain, Select, Status,
 } from "../ui";
 
@@ -58,7 +58,6 @@ export default function Legal() {
 
   return (
     <>
-      <PageTitle title="Legal & liens" lede="Matters with counsel, recorded liens and the dates that carry deadlines." />
 
       <Card>
         <CardHead title="Open matters" meta="Consequential stages need a recorded board vote" />

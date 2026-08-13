@@ -8,9 +8,10 @@ import {
 import { buildActionMenu, useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color, pad, radius, rowGrid } from "@/lib/admin-portal/tokens";
 import type { PendingConfirm, Violation, ViolationStatus } from "@/lib/admin-portal/types";
+import { usePrimaryAction } from "../SectionHead";
 import {
   ActionSelect, AddDrawer, Area, Card, ConfirmBar, DateInput, DropZone, Empty,
-  ErrorLine, Eyebrow, Field, FieldGrid, FilterBar, Input, Mono, PageTitle, Pill,
+  ErrorLine, Eyebrow, Field, FieldGrid, FilterBar, Input, Mono, Pill,
   Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
 
@@ -39,6 +40,8 @@ export default function Violations() {
   const [mailDrafts, setMailDrafts] = useState<Record<string, { kind: string; method: string; sent: string; tracking: string }>>({});
 
   const [open, setOpen] = useState(false);
+  /* The header's primary button opens this screen's add-form. */
+  usePrimaryAction(() => setOpen(true));
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [flowError, setFlowError] = useState("");
@@ -76,7 +79,6 @@ export default function Violations() {
 
   return (
     <>
-      <PageTitle title="Violations & inspections" lede="Resident reports, inspection findings and the notice ladder. Every step is written to the owner's file." />
       <Card>
         <AddDrawer
           open={open} onOpen={() => { setOpen(true); setError(""); }} onCancel={() => { setOpen(false); setError(""); }}

@@ -2,8 +2,10 @@
 
 import React from "react";
 import Header from "./Header";
+import { SECTION_META, SectionHead, firePrimaryAction } from "./SectionHead";
 import { MobileNav, Sidebar } from "./Nav";
 import { useStore } from "@/lib/admin-portal/store";
+import { Primary } from "./ui";
 import { pad } from "@/lib/admin-portal/tokens";
 
 import Dashboard from "./sections/Dashboard";
@@ -59,6 +61,19 @@ export default function Shell() {
           alignContent: "start",
           paddingBottom: s.isMobile ? 96 : 0,
         }}>
+          {/* The title, its description and the screen's primary action come
+              from one table rather than from each section, which is how two
+              screens ended up calling the same list different names. */}
+          <SectionHead
+            view={view}
+            right={
+              SECTION_META[view]?.action ? (
+                <Primary onClick={firePrimaryAction}>
+                  {SECTION_META[view].action}
+                </Primary>
+              ) : null
+            }
+          />
           <Section />
         </main>
       </div>

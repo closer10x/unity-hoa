@@ -18,7 +18,7 @@ import type {
   ReportData, ReportType,
 } from "@/lib/admin-portal/types";
 import {
-  ActionSelect, AddDrawer, Card, CardHead, Chip, ConfirmBar, DateInput, Empty, ErrorLine, Field, FieldGrid, FilterBar, HomePicker, Input, Mono, PageTitle, Primary, Row, RowMain, Select, Status, TextButton, Tile, Tiles,
+  ActionSelect, AddDrawer, Card, CardHead, Chip, ConfirmBar, DateInput, Empty, ErrorLine, Field, FieldGrid, FilterBar, HomePicker, Input, Mono, Primary, Row, RowMain, Select, Status, TextButton, Tile, Tiles,
 } from "../ui";
 
 const INCOME_CATEGORIES = [
@@ -238,7 +238,6 @@ export default function Accounting() {
 
   return (
     <>
-      <PageTitle title="Accounting" lede={`Receivables, the general ledger and bank activity for ${s.scopeLabel}.`} />
 
       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", borderBottom: `1px solid ${color.hairline}` }}>
         {ACCOUNTING_TABS.map((t) => (

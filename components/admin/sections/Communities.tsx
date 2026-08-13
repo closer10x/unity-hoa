@@ -15,7 +15,7 @@ import { color, radius } from "@/lib/admin-portal/tokens";
 import type { Address, Community, PendingConfirm } from "@/lib/admin-portal/types";
 import {
   ActionSelect, AddDrawer, AddressFields, Card, CardHead, Chip, ConfirmBar,
-  ErrorLine, Field, FieldGrid, Input, Mono, PageTitle, Primary, Row, RowMain,
+  ErrorLine, Field, FieldGrid, Input, Mono, Primary, Row, RowMain,
   Select, Status, TextButton,
 } from "../ui";
 
@@ -170,7 +170,6 @@ export default function Communities() {
 
   return (
     <>
-      <PageTitle title="Communities" lede="Portfolios, the communities in each, and where new ones are in onboarding." />
 
       <Card>
         <CardHead title="Portfolios" meta="Portfolios are created and scoped — never removed" />

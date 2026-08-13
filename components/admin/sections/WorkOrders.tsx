@@ -8,10 +8,11 @@ import type { PendingConfirm, WorkOrder, WorkStatus } from "@/lib/admin-portal/t
 import {
   assignWorkOrder, createWorkOrder, setWorkOrderStatus, updateWorkOrder,
 } from "@/lib/admin-portal/work-actions";
+import { usePrimaryAction } from "../SectionHead";
 import {
   DropZone,
   ActionSelect, AddDrawer, Card, Chip, ConfirmBar, DateInput, Empty, ErrorLine,
-  Field, FieldGrid, FilterBar, Input, Mono, PageTitle, Primary, Row, RowMain,
+  Field, FieldGrid, FilterBar, Input, Mono, Primary, Row, RowMain,
   Select, Status, Area, TextButton,
 } from "../ui";
 
@@ -59,6 +60,8 @@ export default function WorkOrders() {
   }
 
   const [open, setOpen] = useState(false);
+  /* The header's primary button opens this screen's add-form. */
+  usePrimaryAction(() => setOpen(true));
   const [error, setError] = useState("");
   const [flowError, setFlowError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -116,7 +119,6 @@ export default function WorkOrders() {
 
   return (
     <>
-      <PageTitle title="Work orders" lede="Resident reports and scheduled maintenance. Assign it, then close with a note." />
       <Card>
         <AddDrawer
           open={open} onOpen={() => { setOpen(true); setError(""); }} onCancel={() => { setOpen(false); setError(""); }}

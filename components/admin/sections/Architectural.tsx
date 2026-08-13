@@ -8,7 +8,7 @@ import { color, pad, radius } from "@/lib/admin-portal/tokens";
 import type { ArcStatus, PendingConfirm } from "@/lib/admin-portal/types";
 import {
   ActionSelect, Area, Card, Chip, ConfirmBar, Empty, ErrorLine, Eyebrow, Mono,
-  PageTitle, Primary, Status,
+  Primary, Status,
 } from "../ui";
 
 /* Mirrors the audience column on arc_messages — an internal note must never
@@ -31,7 +31,6 @@ export default function Architectural() {
 
   return (
     <>
-      <PageTitle title="Architectural review" lede="Applications on the 30-day statutory clock. Decisions and correspondence stay on the case." />
 
       {flowError ? <Card><div style={{ padding: `12px ${pad.card}` }}><ErrorLine>{flowError}</ErrorLine></div></Card> : null}
 

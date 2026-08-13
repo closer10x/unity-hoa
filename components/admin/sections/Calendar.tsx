@@ -7,8 +7,7 @@ import { useStore } from "@/lib/admin-portal/store";
 import { calColor, calTint, color, font, pad } from "@/lib/admin-portal/tokens";
 import type { CalEvent } from "@/lib/admin-portal/types";
 import {
-  Card, Chip, DateInput, ErrorLine, Field, FieldGrid, Input, Mono, PageTitle,
-  Pill, Primary, Row, RowMain, Select, TextButton,
+  Card, Chip, DateInput, ErrorLine, Field, FieldGrid, Input, Mono, Pill, Primary, Row, RowMain, Select, TextButton,
 } from "../ui";
 
 const KINDS = [
@@ -137,7 +136,6 @@ export default function Calendar() {
   return (
     <>
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24, flexWrap: "wrap" }}>
-        <PageTitle title="Calendar" lede={`Meetings, inspections, bookings and legal dates across ${s.scopeLabel}.`} />
         <Primary onClick={() => { setAddOpen(true); setError(""); }}>Add an event</Primary>
       </div>
 

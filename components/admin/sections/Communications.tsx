@@ -20,7 +20,7 @@ import { useStore } from "@/lib/admin-portal/store";
 import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
 import {
   Area, Card, CardHead, Chip, ConfirmBar, DateInput, Empty, ErrorLine, Field, FieldGrid,
-  Input, Mono, PageTitle, Primary, Row, RowMain, Select, Status, TextButton,
+  Input, Mono, Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
 
 const THREAD_FILTERS = ["All", "Awaiting reply", "Open", "Closed"];
@@ -685,7 +685,6 @@ export default function Communications() {
 
   return (
     <>
-      <PageTitle title="Communications" lede="Resident conversations, and announcements to owners by email, text and the portal." />
 
       <Card>
         <CardHead title="Text messaging" meta="The master switch for all outbound texts, through SignalWire.">

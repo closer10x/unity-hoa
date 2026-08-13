@@ -7,7 +7,7 @@ import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
 import type { WorkOrder } from "@/lib/admin-portal/types";
 import { assignWorkOrder } from "@/lib/admin-portal/work-actions";
 import {
-  AddDrawer, Card, CardHead, Chip, DateInput, Field, FieldGrid, Mono, PageTitle, Pill,
+  AddDrawer, Card, CardHead, Chip, DateInput, Field, FieldGrid, Mono, Pill,
   Primary, Select,
 } from "../ui";
 
@@ -142,10 +142,6 @@ export default function Schedule() {
 
   return (
     <>
-      <PageTitle
-        title="Schedule"
-        lede="Who is where this week. Jobs appear on the day they are due, on the tech they are assigned to."
-      />
 
       <Card>
         {s.canEditSchedule ? (

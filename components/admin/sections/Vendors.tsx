@@ -6,9 +6,10 @@ import { createVendor, setVendorActive } from "@/lib/admin-portal/operations-act
 import { useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color, pad } from "@/lib/admin-portal/tokens";
 import type { Address } from "@/lib/admin-portal/types";
+import { usePrimaryAction } from "../SectionHead";
 import {
   ActionSelect, AddDrawer, AddressFields, Card, ConfirmBar, DateInput, DropZone,
-  Empty, ErrorLine, Field, FieldGrid, FilterBar, Input, Mono, PageTitle, Primary,
+  Empty, ErrorLine, Field, FieldGrid, FilterBar, Input, Mono, Primary,
   Row, RowMain, Select, Status,
 } from "../ui";
 
@@ -27,6 +28,8 @@ export default function Vendors() {
   const [filter, setFilter] = useState("All");
 
   const [open, setOpen] = useState(false);
+  /* The header's primary button opens this screen's add-form. */
+  usePrimaryAction(() => setOpen(true));
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
@@ -69,7 +72,6 @@ export default function Vendors() {
 
   return (
     <>
-      <PageTitle title="Vendors" lede="Approved vendors, contract terms and insurance certificates on file." />
       <Card>
         <AddDrawer open={open} onOpen={() => { setOpen(true); setError(""); }} onCancel={() => { setOpen(false); setError(""); }}
           openLabel="Add a vendor" title="Add a vendor">

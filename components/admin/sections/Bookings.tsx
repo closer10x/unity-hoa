@@ -6,9 +6,10 @@ import { createBooking, setBookingStatus } from "@/lib/admin-portal/operations-a
 import { buildActionMenu, useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color, pad } from "@/lib/admin-portal/tokens";
 import type { BookingStatus, PendingConfirm } from "@/lib/admin-portal/types";
+import { usePrimaryAction } from "../SectionHead";
 import {
   ActionSelect, AddDrawer, Area, Card, Chip, ConfirmBar, DateInput, Empty,
-  ErrorLine, Field, FieldGrid, FilterBar, Input, Mono, PageTitle, Primary, Row,
+  ErrorLine, Field, FieldGrid, FilterBar, Input, Mono, Primary, Row,
   RowMain, Select, Status,
 } from "../ui";
 
@@ -25,6 +26,8 @@ export default function Bookings() {
   const [flowError, setFlowError] = useState("");
 
   const [open, setOpen] = useState(false);
+  /* The header's primary button opens this screen's add-form. */
+  usePrimaryAction(() => setOpen(true));
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [resident, setResident] = useState("");
@@ -65,7 +68,6 @@ export default function Bookings() {
 
   return (
     <>
-      <PageTitle title="Amenity bookings" lede="Requests from residents, deposits held and the upcoming schedule." />
       <Card>
         <AddDrawer
           open={open} onOpen={() => { setOpen(true); setError(""); }} onCancel={() => { setOpen(false); setError(""); }}
