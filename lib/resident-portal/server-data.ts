@@ -509,6 +509,7 @@ export async function loadResidentData(user: {
         "id, title, file_type, file_size_bytes, version, effective_date, access_level, is_archived, document_categories(name)",
       )
       .eq("is_archived", false)
+      .eq("assistant_only", false)
       .in("access_level", ["public", "resident"])
       .order("uploaded_at", { ascending: false })
       .limit(120);

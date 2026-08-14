@@ -33,12 +33,20 @@ export async function GET(
   const [{ data: doc }, { data: profile }] = await Promise.all([
     service
       .from("documents")
-      .select("id, title, file_path, file_name, access_level, is_archived")
+      .select("id, title, file_path, file_name, access_level, is_archived, assistant_only")
       .eq("id", id)
       .maybeSingle(),
     service.from("profiles").select("role").eq("id", user.id).maybeSingle(),
   ]);
   if (!doc) {
+    return NextResponse.json({ error: "That document no longer exists." }, { status: 404 });
+  }
+
+  /* A grounding document is not on the shelf for anybody, staff included —
+     it exists so the assistant can answer correctly, and it is deliberately
+     absent from every listing. 404 rather than 403: "no" is the whole answer,
+     and a 403 would confirm the id names something. */
+  if (doc.assistant_only) {
     return NextResponse.json({ error: "That document no longer exists." }, { status: 404 });
   }
 
