@@ -80,6 +80,20 @@ export default async function HomePage() {
               File a maintenance request
             </Link>
           </div>
+          {/* Both buttons above land on a sign-in wall, which is where a
+              homeowner who has never been invited stops. This is the way
+              through for them, so it sits with the buttons rather than
+              further down the page. */}
+          <p className="mt-[18px] text-[15px] leading-[1.6] text-muted">
+            New to the community?{" "}
+            <Link
+              href="/join"
+              className="font-semibold text-moss underline-offset-4 transition-colors hover:text-ink hover:underline"
+            >
+              Set up your resident account
+            </Link>
+            .
+          </p>
         </div>
 
         <div className="grid grid-cols-2 grid-rows-[200px_148px] gap-3.5">
