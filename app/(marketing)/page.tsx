@@ -83,17 +83,20 @@ export default async function HomePage() {
           {/* Both buttons above land on a sign-in wall, which is where a
               homeowner who has never been invited stops. This is the way
               through for them, so it sits with the buttons rather than
-              further down the page. */}
-          <p className="mt-[18px] text-[15px] leading-[1.6] text-muted">
-            New to the community?{" "}
+              further down the page — and in its own tinted panel, because as
+              a grey line of small print underneath two solid buttons it read
+              as a footnote to them rather than the third way in. */}
+          <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-moss/30 bg-tint px-6 py-[18px]">
+            <span className="text-[17px] font-semibold text-ink">
+              New to the community?
+            </span>
             <Link
               href="/join"
-              className="font-semibold text-moss underline-offset-4 transition-colors hover:text-ink hover:underline"
+              className="text-[17px] font-bold text-moss underline decoration-2 underline-offset-4 transition-colors hover:text-ink"
             >
               Set up your resident account
             </Link>
-            .
-          </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 grid-rows-[200px_148px] gap-3.5">
