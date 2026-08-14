@@ -3,14 +3,9 @@
   "configurations": [
     {
       "name": "unity-hoa",
-      "url": "http://localhost:3001",
-      "port": 3001
-    },
-    {
-      "name": "unity-hoa-start",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 3001
+      "runtimeArgs": ["run", "dev", "--", "--port", "3000"],
+      "port": 3000
     },
     {
       "name": "unity-hoa-3002",

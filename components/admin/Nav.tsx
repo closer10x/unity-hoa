@@ -144,17 +144,11 @@ export function Sidebar() {
       height: `calc(100dvh - 88px - ${pad.shell} * 2)`,
       overflowY: "auto",
     }}>
-      {/* The mark and what this portal is, so the rail identifies the product
-          and the header is free to carry the screen. */}
+      {/* What this portal is. The mark itself is carried by the header, so the
+          rail does not repeat it. */}
       <div style={{ padding: "4px 10px 14px" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/images/unitylogo.png"
-          alt="Unity Grid Management"
-          style={{ display: "block", height: 24, width: "auto", filter: "brightness(0) invert(1)" }}
-        />
         <div style={{
-          marginTop: 9, fontFamily: font.mono, fontSize: 10,
+          fontFamily: font.mono, fontSize: 10,
           letterSpacing: "0.12em", textTransform: "uppercase",
           color: "#AEBB90",
         }}>
