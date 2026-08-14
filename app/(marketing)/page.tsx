@@ -86,13 +86,16 @@ export default async function HomePage() {
               further down the page — and in its own tinted panel, because as
               a grey line of small print underneath two solid buttons it read
               as a footnote to them rather than the third way in. */}
-          <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-moss/30 bg-tint px-6 py-[18px]">
-            <span className="text-[17px] font-semibold text-ink">
+          {/* Same radius, padding and type size as the two buttons, and only
+              as wide as its contents — it belongs to that row rather than
+              being a band underneath it. */}
+          <div className="mt-3 inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-moss/30 bg-tint px-7 py-4">
+            <span className="text-base font-semibold text-ink">
               New to the community?
             </span>
             <Link
               href="/join"
-              className="text-[17px] font-bold text-moss underline decoration-2 underline-offset-4 transition-colors hover:text-ink"
+              className="text-base font-bold text-moss underline decoration-2 underline-offset-4 transition-colors hover:text-ink"
             >
               Set up your resident account
             </Link>
