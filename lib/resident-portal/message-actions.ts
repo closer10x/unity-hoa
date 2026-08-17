@@ -44,13 +44,21 @@ export async function startResidentThread(input: {
   party: string;
   subject: string;
   body: string;
+  /** Already in the bucket, put there by /api/messages/attachment. */
+  attachmentPath?: string;
 }): Promise<{ ok: true; thread: Thread } | Fail> {
   try {
     const { db, userId, authorName } = await residentContext();
 
     const subject = input.subject.trim();
     const body = input.body.trim();
-    if (!subject || !body) return { ok: false, error: "Add a subject and a message." };
+    const attachmentPath = input.attachmentPath?.trim() || null;
+    /* A photo of the broken gate says more than the sentence under it, so a
+       message carrying one needs no body — but it still needs a subject, or
+       the office gets a list of conversations called nothing. */
+    if (!subject || (!body && !attachmentPath)) {
+      return { ok: false, error: "Add a subject, and a message or a file." };
+    }
     const party = PARTIES.includes(input.party) ? input.party : PARTIES[0];
 
     const now = new Date().toISOString();
@@ -75,6 +83,7 @@ export async function startResidentThread(input: {
         author_name: authorName,
         is_resident: true,
         body,
+        attachment_path: attachmentPath,
       })
       .select("*")
       .single();
@@ -97,6 +106,7 @@ export async function startResidentThread(input: {
           mine: true,
           time: stampTime(msg.created_at as string),
           body,
+          attachment: attachmentPath ?? undefined,
         }],
       },
     };
@@ -108,12 +118,17 @@ export async function startResidentThread(input: {
 export async function replyAsResident(input: {
   threadId: string;
   body: string;
+  /** Already in the bucket, put there by /api/messages/attachment. */
+  attachmentPath?: string;
 }): Promise<{ ok: true; message: ChatMsg } | Fail> {
   try {
     const { db, userId, authorName } = await residentContext();
 
     const body = input.body.trim();
-    if (!body) return { ok: false, error: "Write the reply first." };
+    const attachmentPath = input.attachmentPath?.trim() || null;
+    if (!body && !attachmentPath) {
+      return { ok: false, error: "Write the reply, or attach a file." };
+    }
 
     // Scope check: the thread must belong to this session's account.
     const { data: thread, error: tErr } = await db
@@ -132,6 +147,7 @@ export async function replyAsResident(input: {
         author_name: authorName,
         is_resident: true,
         body,
+        attachment_path: attachmentPath,
       })
       .select("*")
       .single();
@@ -153,6 +169,7 @@ export async function replyAsResident(input: {
         mine: true,
         time: stampTime(msg.created_at as string),
         body,
+        attachment: attachmentPath ?? undefined,
       },
     };
   } catch (e) {

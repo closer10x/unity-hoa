@@ -5,6 +5,10 @@ import React, { useState } from "react";
 import {
   markResidentThreadRead, replyAsResident, startResidentThread,
 } from "@/lib/resident-portal/message-actions";
+import { fileSize, uploadMessageAttachment } from "@/lib/messages/upload-attachment";
+import {
+  attachmentName, attachmentUrl, isImageAttachment,
+} from "@/lib/supabase/message-files";
 import { useResident } from "@/lib/resident-portal/store";
 import type { Thread } from "@/lib/resident-portal/types";
 import {
@@ -30,6 +34,12 @@ export default function Messages() {
   const [msgSubject, setMsgSubject] = useState("");
   const [msgBody, setMsgBody] = useState("");
   const [msgError, setMsgError] = useState("");
+  /* Chosen but not yet uploaded — one for a reply, one for the new-message
+     form, because both can be open with different files picked. */
+  const [replyFile, setReplyFile] = useState<File | null>(null);
+  const [newFile, setNewFile] = useState<File | null>(null);
+  const replyInput = React.useRef<HTMLInputElement | null>(null);
+  const newInput = React.useRef<HTMLInputElement | null>(null);
 
   const q = query.trim().toLowerCase();
   const visible = s.threads.filter((t) => {
@@ -60,14 +70,29 @@ export default function Messages() {
   }
 
   async function sendReply() {
-    if (!thread || !reply.trim() || sending) return;
+    if (!thread || sending) return;
+    if (!reply.trim() && !replyFile) return;
     const text = reply.trim();
     setSending(true);
     setMsgError("");
-    const res = await replyAsResident({ threadId: thread.id, body: text });
+
+    /* Upload first, then write the message with the path on it — the other
+       way round leaves a message pointing at a file that never arrived. */
+    let attachmentPath: string | undefined;
+    if (replyFile) {
+      const up = await uploadMessageAttachment(replyFile, thread.id);
+      if (!up.ok) {
+        setSending(false);
+        return setMsgError(up.error);
+      }
+      attachmentPath = up.path;
+    }
+
+    const res = await replyAsResident({ threadId: thread.id, body: text, attachmentPath });
     setSending(false);
     if (!res.ok) return setMsgError(res.error);
     setReply("");
+    setReplyFile(null);
     s.setThreads((prev) =>
       prev.map((t) =>
         t.id === thread.id
@@ -79,18 +104,33 @@ export default function Messages() {
 
   async function sendNew() {
     if (sending) return;
-    if (!msgSubject.trim() || !msgBody.trim()) return setMsgError("Add a subject and a message.");
+    if (!msgSubject.trim() || (!msgBody.trim() && !newFile)) {
+      return setMsgError("Add a subject, and a message or a file.");
+    }
     setSending(true);
     setMsgError("");
+
+    /* No thread id yet — this message is what creates it — so the upload
+       lands in the sender's pending folder and the message carries the path. */
+    let attachmentPath: string | undefined;
+    if (newFile) {
+      const up = await uploadMessageAttachment(newFile);
+      if (!up.ok) {
+        setSending(false);
+        return setMsgError(up.error);
+      }
+      attachmentPath = up.path;
+    }
+
     const res = await startResidentThread({
-      party: msgTo, subject: msgSubject.trim(), body: msgBody.trim(),
+      party: msgTo, subject: msgSubject.trim(), body: msgBody.trim(), attachmentPath,
     });
     setSending(false);
     if (!res.ok) return setMsgError(res.error);
     s.setThreads((prev) => [res.thread, ...prev]);
     setThreadId(res.thread.id);
     setComposing(false);
-    setMsgSubject(""); setMsgBody(""); setMsgError("");
+    setMsgSubject(""); setMsgBody(""); setMsgError(""); setNewFile(null);
   }
 
   return (
@@ -174,11 +214,37 @@ export default function Messages() {
                 <Field label="Message">
                   <Area value={msgBody} onChange={setMsgBody} rows={4} placeholder="Write your message…" />
                 </Field>
+                <input
+                  ref={newInput}
+                  type="file"
+                  hidden
+                  onChange={(e) => {
+                    setNewFile(e.target.files?.[0] ?? null);
+                    setMsgError("");
+                    e.target.value = "";
+                  }}
+                />
+                {newFile ? (
+                  <span style={{
+                    justifySelf: "start", display: "inline-flex", alignItems: "center", gap: 10,
+                    background: color.surface, border: `1px solid ${color.borderInput}`,
+                    borderRadius: 10, padding: "7px 8px 7px 12px",
+                    fontFamily: font.mono, fontSize: 12, color: color.inkSecondary,
+                  }}>
+                    {newFile.name} · {fileSize(newFile.size)}
+                    <TextButton onClick={() => setNewFile(null)}>Remove</TextButton>
+                  </span>
+                ) : null}
                 {msgError ? <ErrorLine>{msgError}</ErrorLine> : null}
-                <Primary onClick={sendNew}
-                  style={{ justifySelf: "start", ...(sending ? { opacity: 0.6, pointerEvents: "none" } : {}) }}>
-                  {sending ? "Sending…" : "Send"}
-                </Primary>
+                <span style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                  <Primary onClick={sendNew}
+                    style={{ ...(sending ? { opacity: 0.6, pointerEvents: "none" } : {}) }}>
+                    {sending ? "Sending…" : "Send"}
+                  </Primary>
+                  <TextButton onClick={() => newInput.current?.click()}>
+                    Attach a photo or file
+                  </TextButton>
+                </span>
               </div>
             ) : !thread ? (
               <Empty>Select a conversation, or start a new one.</Empty>
@@ -212,21 +278,78 @@ export default function Messages() {
                       >
                         {m.body}
                       </div>
+                      {/* Was the storage path as plain text. A photo shows;
+                          anything else is a chip that downloads. */}
                       {m.attachment ? (
-                        <span style={{ fontFamily: font.mono, fontSize: 12, border: `1px solid ${color.borderInput}`, borderRadius: 6, padding: "5px 10px", color: color.inkSecondary }}>
-                          {m.attachment}
-                        </span>
+                        isImageAttachment(m.attachment) ? (
+                          <a
+                            href={attachmentUrl(m.id)}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={`${attachmentName(m.attachment)} — open full size`}
+                            style={{ display: "block", lineHeight: 0 }}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={attachmentUrl(m.id)}
+                              alt={attachmentName(m.attachment)}
+                              style={{
+                                display: "block", maxWidth: "min(280px, 100%)", maxHeight: 280,
+                                width: "auto", height: "auto",
+                                borderRadius: 12, border: `1px solid ${color.hairlineSoft}`,
+                              }}
+                            />
+                          </a>
+                        ) : (
+                          <a
+                            href={attachmentUrl(m.id, true)}
+                            style={{
+                              fontFamily: font.mono, fontSize: 12,
+                              border: `1px solid ${color.borderInput}`, borderRadius: 6,
+                              padding: "6px 10px", color: color.inkSecondary,
+                              textDecoration: "none", background: color.surface,
+                            }}
+                          >
+                            {attachmentName(m.attachment)}
+                          </a>
+                        )
                       ) : null}
                     </div>
                   ))}
                 </div>
                 <div style={{ padding: pad.card, borderTop: `1px solid ${color.hairlineSoft}`, display: "grid", gap: 10 }}>
                   <Area value={reply} onChange={setReply} rows={2} placeholder="Write a reply…" />
+                  <input
+                    ref={replyInput}
+                    type="file"
+                    hidden
+                    onChange={(e) => {
+                      setReplyFile(e.target.files?.[0] ?? null);
+                      setMsgError("");
+                      e.target.value = "";
+                    }}
+                  />
+                  {replyFile ? (
+                    <span style={{
+                      justifySelf: "start", display: "inline-flex", alignItems: "center", gap: 10,
+                      background: color.surface, border: `1px solid ${color.borderInput}`,
+                      borderRadius: 10, padding: "7px 8px 7px 12px",
+                      fontFamily: font.mono, fontSize: 12, color: color.inkSecondary,
+                    }}>
+                      {replyFile.name} · {fileSize(replyFile.size)}
+                      <TextButton onClick={() => setReplyFile(null)}>Remove</TextButton>
+                    </span>
+                  ) : null}
                   {msgError && !composing ? <ErrorLine>{msgError}</ErrorLine> : null}
-                  <Primary onClick={sendReply}
-                    style={{ justifySelf: "start", padding: "10px 22px", ...(sending ? { opacity: 0.6, pointerEvents: "none" } : {}) }}>
-                    {sending ? "Sending…" : "Reply"}
-                  </Primary>
+                  <span style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                    <Primary onClick={sendReply}
+                      style={{ padding: "10px 22px", ...(sending ? { opacity: 0.6, pointerEvents: "none" } : {}) }}>
+                      {sending ? "Sending…" : "Reply"}
+                    </Primary>
+                    <TextButton onClick={() => replyInput.current?.click()}>
+                      Attach a photo or file
+                    </TextButton>
+                  </span>
                 </div>
               </>
             )}

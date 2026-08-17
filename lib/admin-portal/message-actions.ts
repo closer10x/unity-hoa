@@ -60,11 +60,19 @@ export async function fetchResidentThreads(): Promise<
 export async function replyToResidentThread(input: {
   threadId: string;
   body: string;
+  /** Already in the bucket, put there by /api/messages/attachment. */
+  attachmentPath?: string;
 }): Promise<{ ok: true; message: ResidentThreadMsg } | Fail> {
   try {
     const { db, actorName, actorId } = await officeContext();
     const body = input.body.trim();
-    if (!body) return { ok: false, error: "Write the reply first." };
+    const attachmentPath = input.attachmentPath?.trim() || null;
+    /* A photo on its own is a reply — "here is the sign we put up" needs no
+       sentence under it. Only an empty message with nothing attached is a
+       mistake worth stopping. */
+    if (!body && !attachmentPath) {
+      return { ok: false, error: "Write the reply, or attach a file." };
+    }
 
     const { data: thread, error: tErr } = await db
       .from("resident_threads")
@@ -82,6 +90,7 @@ export async function replyToResidentThread(input: {
         author_name: actorName,
         is_resident: false,
         body,
+        attachment_path: attachmentPath,
       })
       .select("*")
       .single();
@@ -115,6 +124,7 @@ export async function replyToResidentThread(input: {
         fromStaff: true,
         time: stampTime(msg.created_at as string),
         body,
+        attachment: attachmentPath ?? undefined,
       },
     };
   } catch (e) {

@@ -16,6 +16,10 @@ import {
   createWorkOrderFromMessage, getThreadResidentContext,
   type ThreadResidentContext,
 } from "@/lib/admin-portal/thread-create-actions";
+import { fileSize, uploadMessageAttachment } from "@/lib/messages/upload-attachment";
+import {
+  attachmentName, attachmentUrl, isImageAttachment,
+} from "@/lib/supabase/message-files";
 import { useStore } from "@/lib/admin-portal/store";
 import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
 import {
@@ -34,6 +38,17 @@ const CREATE_KINDS = [
 type CreateKind = (typeof CREATE_KINDS)[number]["id"];
 
 const AMENITIES = ["Great Hall", "Pool cabana 1", "Pool cabana 2", "Clubhouse Annex", "Tennis court"];
+
+/** Paperclip — the attach mark, drawn in the same line style as the nav. */
+function ClipMark({ size = 17 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden focusable={false} style={{ flex: "0 0 auto" }}>
+      <path d="M21 11.5l-8.6 8.6a5 5 0 0 1-7.1-7.1l8.6-8.6a3.3 3.3 0 1 1 4.7 4.7l-8.6 8.6a1.7 1.7 0 1 1-2.4-2.4l7.9-7.9" />
+    </svg>
+  );
+}
 
 /** Arrow up — the send mark, drawn in the same line style as the nav. */
 function SendMark({ size = 17 }: { size?: number }) {
@@ -55,6 +70,10 @@ function ResidentInbox() {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  /* Chosen but not yet uploaded: the file goes to the bucket when the reply
+     is sent, so picking one and then changing your mind costs nothing. */
+  const [attachFile, setAttachFile] = useState<File | null>(null);
+  const fileInput = React.useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState("");
 
   /* Create-from-message: which message is open, the resident's autofill
@@ -134,12 +153,29 @@ function ResidentInbox() {
 
   async function send() {
     if (!thread) return;
+    if (!reply.trim() && !attachFile) return;
     setError("");
     setSending(true);
-    const res = await replyToResidentThread({ threadId: thread.id, body: reply });
+
+    /* Upload first, then write the message with the path on it. The other way
+       round leaves a message pointing at a file that never arrived. */
+    let attachmentPath: string | undefined;
+    if (attachFile) {
+      const up = await uploadMessageAttachment(attachFile, thread.id);
+      if (!up.ok) {
+        setSending(false);
+        return setError(up.error);
+      }
+      attachmentPath = up.path;
+    }
+
+    const res = await replyToResidentThread({
+      threadId: thread.id, body: reply, attachmentPath,
+    });
     setSending(false);
     if (!res.ok) return setError(res.error);
     setReply("");
+    setAttachFile(null);
     s.setResidentThreads((prev) =>
       prev.map((t) =>
         t.id === thread.id
@@ -437,17 +473,45 @@ function ResidentInbox() {
                     >
                       {m.body}
                     </div>
+                    {/* Was the file's name as plain text — a resident could
+                        send a photo of the broken gate and the office could
+                        read what it was called. A photo shows; anything else
+                        is a chip that downloads. */}
                     {m.attachment ? (
-                      <span style={{
-                        fontFamily: font.mono, fontSize: 12,
-                        border: `1px solid ${color.borderInput}`,
-                        borderRadius: 6, padding: "5px 10px",
-                        color: color.inkSecondary,
-                      }}>
-                        {m.attachment.includes("/")
-                          ? m.attachment.slice(m.attachment.lastIndexOf("/") + 1)
-                          : m.attachment}
-                      </span>
+                      isImageAttachment(m.attachment) ? (
+                        <a
+                          href={attachmentUrl(m.id)}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={`${attachmentName(m.attachment)} — open full size`}
+                          style={{ display: "block", lineHeight: 0 }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={attachmentUrl(m.id)}
+                            alt={attachmentName(m.attachment)}
+                            style={{
+                              display: "block", maxWidth: "min(280px, 100%)", maxHeight: 280,
+                              width: "auto", height: "auto",
+                              borderRadius: radius.lg,
+                              border: `1px solid ${color.hairlineSoft}`,
+                            }}
+                          />
+                        </a>
+                      ) : (
+                        <a
+                          href={attachmentUrl(m.id, true)}
+                          style={{
+                            fontFamily: font.mono, fontSize: 12,
+                            border: `1px solid ${color.borderInput}`,
+                            background: color.surface,
+                            borderRadius: 6, padding: "6px 10px",
+                            color: color.inkSecondary, textDecoration: "none",
+                          }}
+                        >
+                          {attachmentName(m.attachment)}
+                        </a>
+                      )
                     ) : null}
 
                     {createMsgId === m.id ? (
@@ -547,7 +611,7 @@ function ResidentInbox() {
                     onChange={setReply}
                     rows={2}
                     placeholder={`Reply to ${thread.resident}…`}
-                    style={{ paddingRight: 56 }}
+                    style={{ paddingRight: 96 }}
                     onKeyDown={(e) => {
                       /* Enter alone breaks the line — a reply to a resident is
                          often more than one. Cmd/Ctrl+Enter sends. */
@@ -557,10 +621,38 @@ function ResidentInbox() {
                       }
                     }}
                   />
+                  <input
+                    ref={fileInput}
+                    type="file"
+                    hidden
+                    onChange={(e) => {
+                      setAttachFile(e.target.files?.[0] ?? null);
+                      setError("");
+                      // Cleared so choosing the same file twice still fires.
+                      e.target.value = "";
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInput.current?.click()}
+                    disabled={sending}
+                    aria-label="Attach a file"
+                    title="Attach a photo or file"
+                    style={{
+                      position: "absolute", right: 52, top: "50%", transform: "translateY(-50%)",
+                      width: 34, height: 34, borderRadius: radius.pill,
+                      display: "grid", placeItems: "center",
+                      border: "none", padding: 0, background: "none",
+                      color: attachFile ? color.accent : color.inkTertiary,
+                      cursor: sending ? "default" : "pointer",
+                    }}
+                  >
+                    <ClipMark />
+                  </button>
                   <button
                     type="button"
                     onClick={send}
-                    disabled={sending || !reply.trim()}
+                    disabled={sending || (!reply.trim() && !attachFile)}
                     aria-label={sending ? "Sending reply" : "Send reply"}
                     title="Send reply (⌘↵)"
                     style={{
@@ -568,15 +660,29 @@ function ResidentInbox() {
                       width: 34, height: 34, borderRadius: radius.pill,
                       display: "grid", placeItems: "center",
                       border: "none", padding: 0,
-                      background: reply.trim() && !sending ? color.ink : color.hairline,
+                      background:
+                        (reply.trim() || attachFile) && !sending ? color.ink : color.hairline,
                       color: color.surface,
-                      cursor: reply.trim() && !sending ? "pointer" : "default",
+                      cursor: (reply.trim() || attachFile) && !sending ? "pointer" : "default",
                       transition: "background 120ms ease",
                     }}
                   >
                     <SendMark />
                   </button>
                 </div>
+                {attachFile ? (
+                  <span style={{
+                    justifySelf: "start", display: "inline-flex", alignItems: "center", gap: 10,
+                    background: color.surface, border: `1px solid ${color.borderInput}`,
+                    borderRadius: radius.md, padding: "7px 8px 7px 12px",
+                    fontFamily: font.mono, fontSize: 12, color: color.inkSecondary,
+                  }}>
+                    {attachFile.name} · {fileSize(attachFile.size)}
+                    <TextButton tone="muted" onClick={() => setAttachFile(null)}>
+                      Remove
+                    </TextButton>
+                  </span>
+                ) : null}
                 {error ? <ErrorLine>{error}</ErrorLine> : null}
                 <span style={{ fontFamily: font.mono, fontSize: 11, color: color.inkQuaternary }}>
                   Replies appear in the resident&rsquo;s portal immediately and flag their Messages badge.
