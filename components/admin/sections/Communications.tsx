@@ -425,6 +425,18 @@ function ResidentInbox() {
                     >
                       {m.body}
                     </div>
+                    {m.attachment ? (
+                      <span style={{
+                        fontFamily: font.mono, fontSize: 12,
+                        border: `1px solid ${color.borderInput}`,
+                        borderRadius: 6, padding: "5px 10px",
+                        color: color.inkSecondary,
+                      }}>
+                        {m.attachment.includes("/")
+                          ? m.attachment.slice(m.attachment.lastIndexOf("/") + 1)
+                          : m.attachment}
+                      </span>
+                    ) : null}
 
                     {createMsgId === m.id ? (
                       <div style={{
