@@ -1251,6 +1251,7 @@ async function loadResidentThreads(
     for (const m of (mRes.data ?? []) as {
       id: string; thread_id: string; author_name: string | null;
       is_resident: boolean; body: string | null; created_at: string;
+      attachment_path: string | null;
     }[]) {
       const list = byThread.get(m.thread_id) ?? [];
       list.push({
@@ -1259,6 +1260,7 @@ async function loadResidentThreads(
         fromStaff: !m.is_resident,
         time: stampTime(m.created_at),
         body: m.body ?? "",
+        attachment: m.attachment_path ?? undefined,
       });
       byThread.set(m.thread_id, list);
     }

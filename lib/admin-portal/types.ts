@@ -378,6 +378,8 @@ export interface ResidentThreadMsg {
   fromStaff: boolean;
   time: string;
   body: string;
+  /** Storage path in resident-message-files, when the sender attached a file. */
+  attachment?: string;
 }
 
 /** A resident's conversation with the office, shown in Communications. */
