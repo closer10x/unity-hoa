@@ -261,6 +261,7 @@ export async function createArcFromMessage(input: {
           : "—",
         status: "Awaiting decision",
         thread: [],
+        attachmentPaths: [],
       },
     };
   } catch (e) {

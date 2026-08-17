@@ -12,6 +12,7 @@ import type {
   AddressSuggestion,
   SignInEvent,
   ArcApp,
+  ConcernReport,
   Booking,
   Director,
   LegalCase,
@@ -69,6 +70,7 @@ export type PortalData = {
   /** The companies the office keeps books for. */
   entities: BillingEntity[];
   violations: Violation[];
+  concerns: ConcernReport[];
   arcApps: ArcApp[];
   bookings: Booking[];
   vendors: Vendor[];
@@ -103,6 +105,7 @@ const EMPTY: PortalData = {
   payments: [],
   communities: [],
   violations: [],
+  concerns: [],
   arcApps: [],
   bookings: [],
   vendors: [],
@@ -636,7 +639,7 @@ const dateLabel = (d: string | null) =>
   d ? new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—";
 
 async function loadRemainingDomains(db: SupabaseClient) {
-  const [vRes, aRes, bRes, venRes, lRes, mRes, dRes, pRes, pcRes, mmRes, coRes, vmRes, vnRes, amRes] =
+  const [vRes, aRes, bRes, venRes, lRes, mRes, dRes, pRes, pcRes, mmRes, coRes, vmRes, vnRes, amRes, crRes] =
     await Promise.all([
       db.from("violations").select("*").order("opened_on", { ascending: false }),
       db.from("arc_applications").select("*").order("submitted_on", { ascending: false }),
@@ -652,6 +655,7 @@ async function loadRemainingDomains(db: SupabaseClient) {
       db.from("violation_mailings").select("*").order("sent_on", { ascending: false }).limit(2000),
       db.from("violation_notes").select("*").order("created_at", { ascending: true }).limit(2000),
       db.from("arc_messages").select("*").order("created_at", { ascending: true }).limit(2000),
+      db.from("concern_reports").select("*").order("created_at", { ascending: false }).limit(100),
     ]);
 
   /* The case file is the evidence: notices sent and notes written have to
@@ -744,6 +748,23 @@ async function loadRemainingDomains(db: SupabaseClient) {
     status: a.status ?? "Awaiting decision",
     decisionNote: a.decision_note ?? undefined,
     thread: threadByApplication.get(a.id) ?? [],
+    attachmentPaths: Array.isArray(a.attachment_paths)
+      ? (a.attachment_paths as unknown[]).filter((p): p is string => typeof p === "string" && p.length > 0)
+      : [],
+  }));
+
+  const concerns: ConcernReport[] = (crRes.data ?? []).map((c) => ({
+    id: c.id,
+    date: dateLabel((c.created_at as string | null)?.slice(0, 10) ?? null),
+    title: c.concern_type ?? "Concern",
+    detail: [
+      c.location,
+      c.detail,
+      c.anonymous ? "Anonymous" : c.reporter_name,
+    ].filter(Boolean).join(" · "),
+    anonymous: Boolean(c.anonymous),
+    status: c.status ?? "Received",
+    photoPath: typeof c.photo_path === "string" && c.photo_path ? c.photo_path : null,
   }));
 
   const bookings: Booking[] = (bRes.data ?? []).map((b) => ({
@@ -844,7 +865,7 @@ async function loadRemainingDomains(db: SupabaseClient) {
   }
 
   return {
-    violations, arcApps, bookings, vendors, legalCases, meetings, directors,
+    violations, concerns, arcApps, bookings, vendors, legalCases, meetings, directors,
     portfolios, communityStages,
   };
 }

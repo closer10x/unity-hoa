@@ -148,6 +148,7 @@ export async function createArcApplication(input: {
   detail: string;
   contractor: string;
   start: string;
+  attachmentPaths?: string[];
 }): Promise<{ ok: true; app: ResArcApp } | Fail> {
   try {
     const { db, name, street } = await residentContext();
@@ -163,25 +164,38 @@ export async function createArcApplication(input: {
       };
     }
 
+    let attachmentPaths = (input.attachmentPaths ?? [])
+      .map((p) => p.trim())
+      .filter(Boolean);
     const reference = ref("ARC");
-    const { data, error } = await db
+    const row: Record<string, unknown> = {
+      reference,
+      title: type,
+      owner_name: name,
+      address: street || null,
+      project_type: type,
+      contractor: input.contractor.trim() || null,
+      status: "Awaiting decision",
+      decision_note: [
+        detail,
+        input.start ? `Requested start: ${input.start}` : "",
+      ].filter(Boolean).join("\n\n"),
+    };
+    if (attachmentPaths.length) row.attachment_paths = attachmentPaths;
+
+    let { data, error } = await db
       .from("arc_applications")
-      .insert({
-        reference,
-        title: type,
-        owner_name: name,
-        address: street || null,
-        project_type: type,
-        contractor: input.contractor.trim() || null,
-        status: "Awaiting decision",
-        decision_note: [
-          detail,
-          input.start ? `Requested start: ${input.start}` : "",
-        ].filter(Boolean).join("\n\n"),
-      })
+      .insert(row)
       .select("id, submitted_on")
       .single();
-    if (error) throw new Error(error.message);
+    if (error && attachmentPaths.length) {
+      delete row.attachment_paths;
+      const retry = await db.from("arc_applications").insert(row).select("id, submitted_on").single();
+      data = retry.data;
+      error = retry.error;
+      attachmentPaths = [];
+    }
+    if (error || !data) throw new Error(error?.message ?? "The application could not be filed.");
 
     revalidatePath("/portal");
     revalidatePath("/admin");
@@ -198,12 +212,64 @@ export async function createArcApplication(input: {
         ].filter(Boolean).join(" · "),
         status: "Awaiting decision",
         ok: false,
+        attachmentPaths,
       },
     };
   } catch (e) {
     return {
       ok: false,
       error: e instanceof Error ? e.message : "The application could not be filed.",
+    };
+  }
+}
+
+/* ─── Compliance concern reports ───────────────────────────────────── */
+
+export async function createConcernReport(input: {
+  type: string;
+  location: string;
+  detail: string;
+  anonymous: boolean;
+  photoPath?: string;
+}): Promise<{ ok: true } | Fail> {
+  try {
+    const { db, userId, name } = await residentContext();
+
+    const type = input.type.trim();
+    const location = input.location.trim();
+    if (!type) return { ok: false, error: "Pick the kind of issue." };
+    if (!location) return { ok: false, error: "Tell us where it is." };
+
+    let photoPath = input.photoPath?.trim() || null;
+    const row: Record<string, unknown> = {
+      /* Anonymous reports store no reporter at all — the portal promises
+         the office does not keep the name either. */
+      reporter_user_id: input.anonymous ? null : userId,
+      reporter_name: input.anonymous ? null : name,
+      concern_type: type,
+      location,
+      detail: input.detail.trim() || null,
+      anonymous: input.anonymous,
+      status: "Received",
+    };
+    if (photoPath) row.photo_path = photoPath;
+
+    let { error } = await db.from("concern_reports").insert(row);
+    if (error && photoPath) {
+      delete row.photo_path;
+      const retry = await db.from("concern_reports").insert(row);
+      error = retry.error;
+      photoPath = null;
+    }
+    if (error) throw new Error(error.message);
+
+    revalidatePath("/portal");
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "The report could not be sent.",
     };
   }
 }

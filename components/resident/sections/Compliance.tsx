@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 
+import { uploadResidentPhoto } from "@/lib/messages/upload-attachment";
+import { createConcernReport } from "@/lib/resident-portal/request-actions";
 import { useResident, useSearchFilter } from "@/lib/resident-portal/store";
 import type { ComplianceNotice } from "@/lib/resident-portal/types";
 import {
@@ -29,7 +31,9 @@ export default function Compliance() {
   const [location, setLocation] = useState("");
   const [detail, setDetail] = useState("");
   const [anonymous, setAnonymous] = useState(false);
+  const [photo, setPhoto] = useState<File | null>(null);
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const visible = useSearchFilter(
     s.notices, query, ["title", "detail", "status"],
@@ -37,12 +41,26 @@ export default function Compliance() {
       filter === "All" ? true : filter === "Resolved" ? n.ok : !n.ok,
   );
 
-  function submit() {
+  /* Was assembled here and never left the tab — the office never saw it
+     and a reload lost it. It now writes the concern_reports row the
+     office reads. Photo is optional; a failed upload still files the words. */
+  async function submit() {
+    if (sending) return;
     if (!type) return setError("Pick the kind of issue.");
     if (!location.trim()) return setError("Tell us where it is.");
+    setSending(true);
+    setError("");
+    let photoPath: string | undefined;
+    if (photo) {
+      const up = await uploadResidentPhoto(photo, "compliance");
+      if (up.ok) photoPath = up.path;
+    }
+    const res = await createConcernReport({ type, location, detail, anonymous, photoPath });
+    setSending(false);
+    if (!res.ok) return setError(res.error);
     setSent(true);
     setOpen(false);
-    setError(""); setType(""); setLocation(""); setDetail(""); setAnonymous(false);
+    setType(""); setLocation(""); setDetail(""); setAnonymous(false); setPhoto(null);
   }
 
   return (
@@ -85,7 +103,7 @@ export default function Compliance() {
         <AddDrawer
           open={open}
           onOpen={() => { setOpen(true); setError(""); setSent(false); }}
-          onCancel={() => { setOpen(false); setError(""); }}
+          onCancel={() => { setOpen(false); setError(""); setPhoto(null); }}
           openLabel="Report a concern"
           title="Report a concern"
           note="For issues elsewhere in the neighborhood."
@@ -103,7 +121,13 @@ export default function Compliance() {
             <Area value={detail} onChange={setDetail} rows={3}
               placeholder="What's going on and how long it's been happening." />
           </Field>
-          <DropZone camera>Add a photo if it helps</DropZone>
+          <DropZone
+            camera
+            files={photo ? [photo] : []}
+            onFiles={(next) => setPhoto(next[0] ?? null)}
+          >
+            Add a photo if it helps
+          </DropZone>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             <Chip on={anonymous} onClick={() => setAnonymous(!anonymous)}>
               {anonymous ? "Anonymous" : "Include my name"}
@@ -113,7 +137,7 @@ export default function Compliance() {
             </span>
           </div>
           {error ? <ErrorLine>{error}</ErrorLine> : null}
-          <Primary onClick={submit} style={{ justifySelf: "start" }}>Send report</Primary>
+          <Primary onClick={submit} style={{ justifySelf: "start" }}>{sending ? "Sending…" : "Send report"}</Primary>
         </AddDrawer>
       </Card>
     </>

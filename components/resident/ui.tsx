@@ -535,21 +535,57 @@ export function AddDrawer({
   );
 }
 
+const ARC_ACCEPT = "image/*,application/pdf,.doc,.docx,.xls,.xlsx,.dwg,.dxf,.txt,.rtf";
+
 export function DropZone({
-  children, camera = false,
+  children,
+  camera = false,
+  multiple = false,
+  accept,
+  files,
+  onFiles,
 }: {
-  children: React.ReactNode; camera?: boolean;
+  children: React.ReactNode;
+  camera?: boolean;
+  multiple?: boolean;
+  accept?: string;
+  files?: File[];
+  onFiles?: (files: File[]) => void;
 }) {
+  const chosen = files ?? [];
   return (
-    <label className="grid min-h-11 cursor-pointer place-items-center rounded-lg border border-dashed border-[#D8D4C6] bg-field px-4 py-6 text-center text-[14px] text-muted transition-colors hover:border-ink">
-      {children}
-      <input
-        type="file"
-        accept="image/*,application/pdf"
-        {...(camera ? { capture: "environment" as const } : {})}
-        className="absolute h-px w-px overflow-hidden opacity-0"
-      />
-    </label>
+    <div className="grid gap-2">
+      <label className="relative grid min-h-11 cursor-pointer place-items-center rounded-lg border border-dashed border-[#D8D4C6] bg-field px-4 py-6 text-center text-[14px] text-muted transition-colors hover:border-ink">
+        {children}
+        <input
+          type="file"
+          multiple={multiple}
+          accept={accept ?? (camera ? "image/*" : ARC_ACCEPT)}
+          {...(camera ? { capture: "environment" as const } : {})}
+          onChange={(e) => {
+            onFiles?.(Array.from(e.target.files ?? []));
+            e.target.value = "";
+          }}
+          className="absolute h-px w-px overflow-hidden opacity-0"
+        />
+      </label>
+      {chosen.length > 0 ? (
+        <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[13px] text-muted">
+          {chosen.map((f) => (
+            <span key={`${f.name}-${f.size}`}>{f.name}</span>
+          ))}
+          {onFiles ? (
+            <button
+              type="button"
+              onClick={() => onFiles([])}
+              className="min-h-11 text-sm font-semibold text-muted hover:text-ink"
+            >
+              Remove
+            </button>
+          ) : null}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
