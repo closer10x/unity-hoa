@@ -5,6 +5,7 @@ import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
 import { requireAdminUser } from "@/lib/auth/require-admin";
+import { getEmailBaseUrl } from "@/lib/email/link-base-url";
 import { sendWelcomeEmailViaResend } from "@/lib/email/send-welcome-email";
 import { mintSetPasswordUrl } from "@/lib/email/set-password-link";
 import { requireServiceSupabase } from "@/lib/supabase/service";
@@ -231,7 +232,10 @@ export async function transferLot(input: {
     let warning: string | undefined;
     let welcomeNote = "no email sent";
     if (tempPassword && input.sendWelcome) {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3001";
+      // The recipient's host, not this process's: NEXT_PUBLIC_SITE_URL is
+      // localhost on a dev server and was going out in the welcome email as
+      // the address to sign in at from now on.
+      const siteUrl = getEmailBaseUrl();
       /* The account was created with a password only this server has seen;
          the email carries a link to replace it, never the password itself. */
       const setPasswordUrl = await mintSetPasswordUrl(db, email, "portal");

@@ -1,21 +1,26 @@
 import { notFound } from "next/navigation";
 
+import { getEmailBaseUrl } from "@/lib/email/link-base-url";
 import { buildWelcomeEmailHtml } from "@/lib/email/send-welcome-email";
 
 /**
  * Dev-only preview of the team-invite welcome email, rendered from the real
  * template so the preview can never drift from what actually gets sent.
+ *
+ * The URLs come from the same helper the sender uses. Hard-coded localhost
+ * made the preview show an address no recipient could ever reach, which is
+ * exactly the mistake the preview exists to catch.
  */
 export default function WelcomeEmailPreview() {
   if (process.env.NODE_ENV === "production") notFound();
 
+  const base = getEmailBaseUrl();
   const html = buildWelcomeEmailHtml({
     name: "Jordan Rivera",
     email: "jordan@unitygridmanagement.com",
     role: "Community manager",
-    setPasswordUrl:
-      "http://localhost:3001/auth/confirm?token_hash=preview-token&type=invite&next=/admin",
-    loginUrl: "http://localhost:3001/admin/login",
+    setPasswordUrl: `${base}/auth/confirm?token_hash=preview-token&type=invite&next=/admin`,
+    loginUrl: `${base}/admin/login`,
   });
 
   return (
