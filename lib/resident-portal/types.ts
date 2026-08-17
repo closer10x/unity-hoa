@@ -60,6 +60,8 @@ export type MaintReq = {
   detail: string;
   status: MaintStatus;
   open: boolean;
+  /** Storage path; the list fetches the image through the signed-URL route. */
+  photoPath?: string | null;
 };
 
 export type ResArcApp = {
@@ -90,6 +92,7 @@ export type Vehicle = {
   id: string;
   label: string;
   tag: string;
+  photoPath?: string | null;
 };
 
 /** A compliance notice against the resident's own property. */
@@ -143,6 +146,7 @@ export type Pet = {
   detail: string;
   status: string;
   ok: boolean;
+  photoPath?: string | null;
 };
 
 export type Lease = {

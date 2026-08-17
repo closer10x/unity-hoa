@@ -2,12 +2,14 @@
 
 import React, { useState } from "react";
 
+import { uploadResidentPhoto } from "@/lib/messages/upload-attachment";
 import { createMaintenanceRequest } from "@/lib/resident-portal/request-actions";
 import { useResident, useSearchFilter } from "@/lib/resident-portal/store";
 import type { MaintReq } from "@/lib/resident-portal/types";
+import { recordPhotoUrl } from "@/lib/supabase/message-files";
 import {
-  Card, CardHead, Empty, ErrorLine, Field, FieldRow, NoteLine, PAGE, Pill,
-  Progress, inputCls, primaryBtn,
+  Card, CardHead, Empty, ErrorLine, Field, FieldRow, NoteLine, PAGE, PhotoPicker, Pill,
+  Progress, RecordPhoto, inputCls, primaryBtn,
 } from "../ui";
 
 const LOCATIONS = [
@@ -53,6 +55,7 @@ export default function Maintenance() {
   const [category, setCategory] = useState("");
   const [urgency, setUrgency] = useState("routine");
   const [detail, setDetail] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
   const [sentRef, setSentRef] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -70,12 +73,19 @@ export default function Maintenance() {
     if (!detail.trim()) return setError("Describe what's wrong so the crew arrives prepared.");
     setSending(true);
     setError("");
-    const res = await createMaintenanceRequest({ location, category, urgency, detail });
+    /* A failed upload must not block the request — the crew would rather
+       have the words than wait on a photo that never arrived. */
+    let photoPath: string | undefined;
+    if (photo) {
+      const up = await uploadResidentPhoto(photo, "work-orders");
+      if (up.ok) photoPath = up.path;
+    }
+    const res = await createMaintenanceRequest({ location, category, urgency, detail, photoPath });
     setSending(false);
     if (!res.ok) return setError(res.error);
     s.setRequests((prev) => [res.request, ...prev]);
     setSentRef(res.request.ref);
-    setLocation(""); setCategory(""); setUrgency("routine"); setDetail("");
+    setLocation(""); setCategory(""); setUrgency("routine"); setDetail(""); setPhoto(null);
   }
 
   return (
@@ -136,6 +146,11 @@ export default function Maintenance() {
                     <p className="mb-3 text-[15px] leading-[1.55] text-muted">
                       {r.ref} · {r.detail}
                     </p>
+                    {r.photoPath ? (
+                      <div className="mb-3">
+                        <RecordPhoto href={recordPhotoUrl("work-orders", r.id)} alt={r.title} size={72} />
+                      </div>
+                    ) : null}
                     {closed ? null : <Progress pct={prog.pct} step={prog.step} />}
                   </div>
                 );
@@ -197,6 +212,13 @@ export default function Maintenance() {
                 className="w-full resize-y rounded-lg border border-[#D8D4C6] bg-field px-3.5 py-3 text-[16px] leading-[1.55] text-ink"
               />
             </Field>
+            <PhotoPicker
+              label="Photo"
+              hint="Optional. A photo helps the crew arrive prepared."
+              file={photo}
+              onChange={setPhoto}
+              size={160}
+            />
             {error ? <ErrorLine>{error}</ErrorLine> : null}
             <button type="button" onClick={submit} disabled={sending} className={`${primaryBtn} justify-self-start`}>
               Send request

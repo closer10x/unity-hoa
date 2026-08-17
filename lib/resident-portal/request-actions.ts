@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireResidentUser } from "@/lib/auth/require-resident";
+import { MESSAGE_FILES_BUCKET } from "@/lib/supabase/message-files";
 import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 import type { GuestPass, MaintReq, ResArcApp, Reservation, Vehicle } from "./types";
@@ -65,6 +66,7 @@ export async function createMaintenanceRequest(input: {
   category: string;
   urgency: string;
   detail: string;
+  photoPath?: string;
 }): Promise<{ ok: true; request: MaintReq } | Fail> {
   try {
     const { db, name, email, street } = await residentContext();
@@ -85,24 +87,37 @@ export async function createMaintenanceRequest(input: {
     const number = ref("UG");
     const title = input.category.trim() ? `${input.category.trim()} — ${location}` : location;
 
-    const { data, error } = await db
+    let photoPath = input.photoPath?.trim() || null;
+    const row: Record<string, unknown> = {
+      work_order_number: number,
+      title,
+      description: detail,
+      location: street ? `${street} · ${location}` : location,
+      priority,
+      status: "open",
+      /* How the resident's own screen finds it again. Without this the
+         request lands in the office's list and vanishes from theirs. */
+      reported_by_name: name,
+      reported_by_email: email,
+      reported_by_unit: street || null,
+    };
+    /* Only set when a photo landed. A missing column then still accepts a
+       request that has no picture, which is the common case. */
+    if (photoPath) row.photo_path = photoPath;
+
+    let { data, error } = await db
       .from("work_orders")
-      .insert({
-        work_order_number: number,
-        title,
-        description: detail,
-        location: street ? `${street} · ${location}` : location,
-        priority,
-        status: "open",
-        /* How the resident's own screen finds it again. Without this the
-           request lands in the office's list and vanishes from theirs. */
-        reported_by_name: name,
-        reported_by_email: email,
-        reported_by_unit: street || null,
-      })
+      .insert(row)
       .select("id, created_at")
       .single();
-    if (error) throw new Error(error.message);
+    if (error && photoPath) {
+      delete row.photo_path;
+      const retry = await db.from("work_orders").insert(row).select("id, created_at").single();
+      data = retry.data;
+      error = retry.error;
+      photoPath = null;
+    }
+    if (error || !data) throw new Error(error?.message ?? "The request could not be filed.");
 
     revalidatePath("/portal");
     revalidatePath("/admin");
@@ -115,6 +130,7 @@ export async function createMaintenanceRequest(input: {
         detail: [`At ${location}`, `Reported ${shortDate(data.created_at as string)}`].join(" · "),
         status: "Received",
         open: true,
+        photoPath,
       },
     };
   } catch (e) {
@@ -344,6 +360,7 @@ export async function revokeGuestPass(id: string): Promise<{ ok: true } | Fail> 
 export async function createVehicle(input: {
   description: string;
   plate: string;
+  photoPath?: string;
 }): Promise<{ ok: true; vehicle: Vehicle } | Fail> {
   try {
     const { db, userId } = await residentContext();
@@ -352,17 +369,35 @@ export async function createVehicle(input: {
     if (!description) return { ok: false, error: "Which vehicle?" };
     if (!plate) return { ok: false, error: "Add the plate." };
 
-    const { data, error } = await db
+    let photoPath = input.photoPath?.trim() || null;
+    const row: Record<string, unknown> = {
+      user_id: userId, description, plate, tag_status: "pending",
+    };
+    if (photoPath) row.photo_path = photoPath;
+
+    let { data, error } = await db
       .from("resident_vehicles")
-      .insert({ user_id: userId, description, plate, tag_status: "pending" })
+      .insert(row)
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
+    if (error && photoPath) {
+      delete row.photo_path;
+      const retry = await db.from("resident_vehicles").insert(row).select("id").single();
+      data = retry.data;
+      error = retry.error;
+      photoPath = null;
+    }
+    if (error || !data) throw new Error(error?.message ?? "Could not add that vehicle.");
 
     revalidatePath("/portal");
     return {
       ok: true,
-      vehicle: { id: data.id as string, label: `${description} · ${plate}`, tag: "Pending" },
+      vehicle: {
+        id: data.id as string,
+        label: `${description} · ${plate}`,
+        tag: "Pending",
+        photoPath,
+      },
     };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Could not add that vehicle." };
@@ -372,12 +407,22 @@ export async function createVehicle(input: {
 export async function removeVehicle(id: string): Promise<{ ok: true } | Fail> {
   try {
     const { db, userId } = await residentContext();
+    const { data: existing } = await db
+      .from("resident_vehicles")
+      .select("photo_path")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .maybeSingle();
     const { error } = await db
       .from("resident_vehicles")
       .delete()
       .eq("id", id)
       .eq("user_id", userId);
     if (error) throw new Error(error.message);
+    const path = existing?.photo_path as string | null;
+    if (path) {
+      await db.storage.from(MESSAGE_FILES_BUCKET).remove([path]);
+    }
     revalidatePath("/portal");
     return { ok: true };
   } catch (e) {

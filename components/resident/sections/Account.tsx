@@ -6,13 +6,16 @@ import { requestResidentPasswordReset } from "@/app/portal/login/actions";
 import {
   addHouseholdMember, getHousehold, removeHouseholdMember,
 } from "@/lib/resident-portal/household-actions";
+import { createPet, getPets, removePet } from "@/lib/resident-portal/pet-actions";
+import { uploadResidentPhoto } from "@/lib/messages/upload-attachment";
+import { recordPhotoUrl } from "@/lib/supabase/message-files";
 import { useResident } from "@/lib/resident-portal/store";
 import type { Address } from "@/lib/admin-portal/types";
-import type { HouseholdMember, Lease, Pet } from "@/lib/resident-portal/types";
+import type { Lease } from "@/lib/resident-portal/types";
 import { NOTIFY_TYPES } from "@/lib/resident-portal/types";
 import {
   AddDrawer, Card, CardHeadMeta as CardHead, Chip, Empty, ErrorLine, Field, FieldGrid, Input,
-  MailingAddress, Mono, PhotoSlot, Primary, Row, RowMain, Select,
+  MailingAddress, Mono, PhotoPicker, Primary, RecordPhoto, Row, RowMain, Select,
   Status, TextButton,
 } from "../ui";
 import { color, pad } from "../ui";
@@ -86,6 +89,8 @@ export default function Account() {
   const [petColor, setPetColor] = useState("");
   const [petTag, setPetTag] = useState("");
   const [petVet, setPetVet] = useState("");
+  const [petPhoto, setPetPhoto] = useState<File | null>(null);
+  const [petBusy, setPetBusy] = useState(false);
 
   // Leases
   const [leaseOpen, setLeaseOpen] = useState(false);
@@ -112,6 +117,10 @@ export default function Account() {
     getHousehold().then((rows) => {
       if (!live || rows.length === 0) return;
       s.setHousehold((prev) => [...prev.filter((m) => m.locked), ...rows]);
+    });
+    getPets().then((rows) => {
+      if (!live) return;
+      s.setPets(rows);
     });
     return () => { live = false; };
     // Once on mount; the store setter is stable.
@@ -155,21 +164,40 @@ export default function Account() {
     if ("error" in res) s.setHousehold(snapshot);
   }
 
-  function savePet() {
+  async function savePet() {
+    if (petBusy) return;
     if (!petName.trim()) return setPetError("Add the pet's name.");
     if (!petTag.trim()) return setPetError("A current rabies tag number is required.");
-    const detail = [
+    setPetBusy(true);
+    setPetError("");
+    let photoPath: string | undefined;
+    if (petPhoto) {
+      const up = await uploadResidentPhoto(petPhoto, "pets");
+      if (up.ok) photoPath = up.path;
+    }
+    const res = await createPet({
+      name: petName.trim(),
       petType,
-      petBreed.trim(),
-      petWeight.trim() ? `${petWeight.trim()} lb` : "",
-      petColor.trim(),
-      `rabies tag ${petTag.trim()}`,
-      petVet.trim() ? `vet: ${petVet.trim()}` : "",
-    ].filter(Boolean).join(" · ");
-    const pet: Pet = { id: s.uid("pt"), name: petName.trim(), detail, status: "Registered", ok: true };
-    s.setPets((prev) => [...prev, pet]);
+      breed: petBreed.trim(),
+      weight: petWeight.trim(),
+      color: petColor.trim(),
+      tag: petTag.trim(),
+      vet: petVet.trim(),
+      photoPath,
+    });
+    setPetBusy(false);
+    if ("error" in res) return setPetError(res.error);
+    s.setPets((prev) => [...prev, res.pet]);
     setPetOpen(false);
-    setPetError(""); setPetName(""); setPetBreed(""); setPetWeight(""); setPetColor(""); setPetTag(""); setPetVet("");
+    setPetError(""); setPetName(""); setPetBreed(""); setPetWeight(""); setPetColor("");
+    setPetTag(""); setPetVet(""); setPetPhoto(null); setPetType(PET_TYPES[0]);
+  }
+
+  async function dropPet(id: string) {
+    const snapshot = s.pets;
+    s.setPets((prev) => prev.filter((x) => x.id !== id));
+    const res = await removePet(id);
+    if ("error" in res) s.setPets(snapshot);
   }
 
   function saveLease() {
@@ -336,7 +364,7 @@ export default function Account() {
         <AddDrawer
           open={petOpen}
           onOpen={() => { setPetOpen(true); setPetError(""); }}
-          onCancel={() => { setPetOpen(false); setPetError(""); }}
+          onCancel={() => { setPetOpen(false); setPetError(""); setPetPhoto(null); }}
           openLabel="Register a pet"
           title="Register a pet"
           count={s.pets.length ? `${s.pets.length} registered` : undefined}
@@ -356,11 +384,17 @@ export default function Account() {
           <FieldGrid>
             <Field label="Veterinarian" hint="Optional"><Input value={petVet} onChange={setPetVet} placeholder="Clinic or vet name" /></Field>
           </FieldGrid>
-          <div style={{ maxWidth: 112 }}>
-            <PhotoSlot label="Pet photo" size={112} />
-          </div>
+          <PhotoPicker
+            label="Pet photo"
+            hint="Optional. If they're lost, the office has a picture."
+            file={petPhoto}
+            onChange={setPetPhoto}
+            size={112}
+          />
           {petError ? <ErrorLine>{petError}</ErrorLine> : null}
-          <Primary onClick={savePet} style={{ justifySelf: "start" }}>Register pet</Primary>
+          <Primary onClick={savePet} style={{ justifySelf: "start", ...(petBusy ? { opacity: 0.6, pointerEvents: "none" } : {}) }}>
+            {petBusy ? "Registering…" : "Register pet"}
+          </Primary>
         </AddDrawer>
 
         <CardHead title="Pets" />
@@ -368,10 +402,13 @@ export default function Account() {
           <Empty>No pets registered. The association asks that dogs and cats carry a current rabies tag.</Empty>
         ) : (
           s.pets.map((p) => (
-            <Row key={p.id}>
+            <Row key={p.id} style={{ alignItems: "center" }}>
+              {p.photoPath ? (
+                <RecordPhoto href={recordPhotoUrl("pets", p.id)} alt={p.name} />
+              ) : null}
               <RowMain label={p.name} detail={p.detail} />
               <Status tone={p.ok ? "positive" : "attention"}>{p.status}</Status>
-              <TextButton tone="destructive" onClick={() => s.setPets((prev) => prev.filter((x) => x.id !== p.id))}>
+              <TextButton tone="destructive" onClick={() => dropPet(p.id)}>
                 Remove
               </TextButton>
             </Row>

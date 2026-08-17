@@ -21,6 +21,8 @@ export interface WorkOrder {
   assigneeId?: string | null;
   dueAt?: string | null;
   priority?: string | null;
+  /** Resident-supplied photo path in resident-message-files. */
+  photoPath?: string | null;
 }
 export type WorkStatus = "New" | "Scheduled" | "In progress" | "Closed";
 

@@ -92,6 +92,7 @@ type WorkOrderRow = {
   status: string | null;
   assigned_to: string | null;
   due_at: string | null;
+  photo_path?: string | null;
 };
 
 /**
@@ -125,11 +126,13 @@ function toWorkOrder(row: WorkOrderRow, assigneeName: string): WorkOrder {
     dueAt: row.due_at,
     priority: row.priority,
     status: toWorkStatus(row.status ?? "open"),
+    photoPath: row.photo_path ?? null,
   };
 }
 
-const ROW_COLUMNS =
-  "id, work_order_number, title, description, location, priority, status, assigned_to, due_at";
+/* Star rather than an explicit list: a missing photo_path column then
+   still returns the row, and toWorkOrder reads the field when it is there. */
+const ROW_COLUMNS = "*";
 
 export async function createWorkOrder(input: {
   community: string;
