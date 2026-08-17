@@ -2,8 +2,10 @@
 
 import React, { useState } from "react";
 
+import {
+  createGuestPass, createVehicle, removeVehicle, revokeGuestPass,
+} from "@/lib/resident-portal/request-actions";
 import { useResident } from "@/lib/resident-portal/store";
-import type { GuestPass, Vehicle } from "@/lib/resident-portal/types";
 import {
   AddDrawer, Card, CardHeadMeta as CardHead, ConfirmBar, Empty, ErrorLine, Field, FieldGrid,
   Input, Mono, Primary, Row, RowMain, TextButton,
@@ -25,32 +27,58 @@ export default function Access() {
   const [vehicleError, setVehicleError] = useState("");
   const [vehicleDesc, setVehicleDesc] = useState("");
   const [vehiclePlate, setVehiclePlate] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  function issuePass() {
+  /* Both of these built a record in the browser and pushed it into React
+     state. The gate had no way of knowing a pass existed, and the code the
+     resident showed at the gate was invented by their own tab and gone on
+     reload. They now write guest_passes and resident_vehicles. */
+  async function issuePass() {
+    if (busy) return;
     if (!guestName.trim() || !guestDates.trim())
       return setPassError("Add the guest's name and the dates they'll be here.");
-    const pass: GuestPass = {
-      id: s.uid("gp"),
-      name: guestName.trim(),
-      detail: guestDates.trim() + (guestPlate.trim() ? ` · ${guestPlate.trim()}` : ""),
-      code: `GP-${Math.floor(1000 + Math.random() * 8999)}`,
-    };
-    s.setGuestPasses((prev) => [pass, ...prev]);
+    setBusy(true);
+    setPassError("");
+    const res = await createGuestPass({
+      guestName, dates: guestDates, plate: guestPlate,
+    });
+    setBusy(false);
+    if (!res.ok) return setPassError(res.error);
+    s.setGuestPasses((prev) => [res.pass, ...prev]);
     setPassOpen(false);
-    setPassError(""); setGuestName(""); setGuestDates(""); setGuestPlate("");
+    setGuestName(""); setGuestDates(""); setGuestPlate("");
   }
 
-  function addVehicle() {
+  async function revokePass(id: string) {
+    if (busy) return;
+    setBusy(true);
+    const res = await revokeGuestPass(id);
+    setBusy(false);
+    if (!res.ok) return setPassError(res.error);
+    s.setGuestPasses((prev) => prev.filter((x) => x.id !== id));
+  }
+
+  async function addVehicle() {
+    if (busy) return;
     if (!vehicleDesc.trim() || !vehiclePlate.trim())
       return setVehicleError("Add the vehicle and its plate.");
-    const v: Vehicle = {
-      id: s.uid("vh"),
-      label: `${vehicleDesc.trim()} · ${vehiclePlate.trim()}`,
-      tag: "Tag pending — pick up at the office",
-    };
-    s.setVehicles((prev) => [v, ...prev]);
+    setBusy(true);
+    setVehicleError("");
+    const res = await createVehicle({ description: vehicleDesc, plate: vehiclePlate });
+    setBusy(false);
+    if (!res.ok) return setVehicleError(res.error);
+    s.setVehicles((prev) => [res.vehicle, ...prev]);
     setVehicleOpen(false);
-    setVehicleError(""); setVehicleDesc(""); setVehiclePlate("");
+    setVehicleDesc(""); setVehiclePlate("");
+  }
+
+  async function dropVehicle(id: string) {
+    if (busy) return;
+    setBusy(true);
+    const res = await removeVehicle(id);
+    setBusy(false);
+    if (!res.ok) return setVehicleError(res.error);
+    s.setVehicles((prev) => prev.filter((x) => x.id !== id));
   }
 
   return (
@@ -117,7 +145,7 @@ export default function Access() {
             <Row key={g.id}>
               <Mono size={13} style={{ color: color.neutral }}>{g.code}</Mono>
               <RowMain label={g.name} detail={g.detail} />
-              <TextButton tone="destructive" onClick={() => s.setGuestPasses((prev) => prev.filter((x) => x.id !== g.id))}>
+              <TextButton tone="destructive" onClick={() => revokePass(g.id)}>
                 Revoke
               </TextButton>
             </Row>
@@ -151,7 +179,7 @@ export default function Access() {
             <Row key={v.id}>
               <RowMain label={v.label} />
               <Mono size={13} style={{ color: color.attention }}>{v.tag}</Mono>
-              <TextButton tone="destructive" onClick={() => s.setVehicles((prev) => prev.filter((x) => x.id !== v.id))}>
+              <TextButton tone="destructive" onClick={() => dropVehicle(v.id)}>
                 Remove
               </TextButton>
             </Row>

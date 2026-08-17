@@ -123,6 +123,8 @@ export type ResidentInitialData = Partial<{
   notify: NotifyPrefs;
   smsOptIn: boolean;
   threads: Thread[];
+  guestPasses: GuestPass[];
+  vehicles: Vehicle[];
   leasesAllowed: boolean;
   gateCodesAllowed: boolean;
   guestPassesAllowed: boolean;
@@ -152,8 +154,11 @@ export function StoreProvider({
   const [arcApps, setArcApps] = useState<ResArcApp[]>(initialData?.arcApps ?? []);
   const notices = initialData?.notices ?? [];
   const [reservations, setReservations] = useState<Reservation[]>(initialData?.reservations ?? []);
-  const [guestPasses, setGuestPasses] = useState<GuestPass[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  /* Seeded from the server like every other collection. These two were
+     initialised empty, so a pass issued in one session was gone by the next
+     even once it was being written down. */
+  const [guestPasses, setGuestPasses] = useState<GuestPass[]>(initialData?.guestPasses ?? []);
+  const [vehicles, setVehicles] = useState<Vehicle[]>(initialData?.vehicles ?? []);
   const docs = initialData?.docs ?? [];
   const [threads, setThreads] = useState<Thread[]>(initialData?.threads ?? []);
   const events = initialData?.events ?? [];

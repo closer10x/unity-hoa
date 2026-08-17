@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 
+import { createMaintenanceRequest } from "@/lib/resident-portal/request-actions";
 import { useResident, useSearchFilter } from "@/lib/resident-portal/store";
 import type { MaintReq } from "@/lib/resident-portal/types";
 import {
@@ -53,27 +54,28 @@ export default function Maintenance() {
   const [urgency, setUrgency] = useState("routine");
   const [detail, setDetail] = useState("");
   const [sentRef, setSentRef] = useState("");
+  const [sending, setSending] = useState(false);
 
   const visible = useSearchFilter(
     s.requests, query, ["ref", "title", "detail", "status"],
     (r: MaintReq) => (filter === "All" ? true : filter === "Open" ? r.open : !r.open),
   );
 
-  function submit() {
+  /* Was built here and pushed into React state: the resident got a reference
+     number, the office got nothing, and a reload lost the request. It now
+     writes the work_orders row the office reads. */
+  async function submit() {
+    if (sending) return;
     if (!location) return setError("Tell us where the problem is.");
     if (!detail.trim()) return setError("Describe what's wrong so the crew arrives prepared.");
-    const ref = `UG-${Math.floor(100000 + Math.random() * 899999)}`;
-    const req: MaintReq = {
-      id: s.uid("mr"),
-      ref,
-      title: category ? `${category} — ${location}` : location,
-      detail: `Reported ${s.stamp()} · ${URGENCY.find((u) => u.id === urgency)?.label ?? ""}`,
-      status: "Received",
-      open: true,
-    };
-    s.setRequests((prev) => [req, ...prev]);
-    setSentRef(ref);
-    setError(""); setLocation(""); setCategory(""); setUrgency("routine"); setDetail("");
+    setSending(true);
+    setError("");
+    const res = await createMaintenanceRequest({ location, category, urgency, detail });
+    setSending(false);
+    if (!res.ok) return setError(res.error);
+    s.setRequests((prev) => [res.request, ...prev]);
+    setSentRef(res.request.ref);
+    setLocation(""); setCategory(""); setUrgency("routine"); setDetail("");
   }
 
   return (
@@ -196,7 +198,7 @@ export default function Maintenance() {
               />
             </Field>
             {error ? <ErrorLine>{error}</ErrorLine> : null}
-            <button type="button" onClick={submit} className={`${primaryBtn} justify-self-start`}>
+            <button type="button" onClick={submit} disabled={sending} className={`${primaryBtn} justify-self-start`}>
               Send request
             </button>
           </div>

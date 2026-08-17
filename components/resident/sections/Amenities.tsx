@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 
+import { createBooking } from "@/lib/resident-portal/request-actions";
 import { useResident } from "@/lib/resident-portal/store";
-import type { Reservation } from "@/lib/resident-portal/types";
 import {
   AddDrawer, Area, Card, CardHeadMeta as CardHead, Chip, DateInput, Empty, ErrorLine, Field,
   FieldGrid, Mono, Primary, Row, RowMain, Select, Status,
@@ -42,8 +42,13 @@ export default function Amenities() {
   const [eventType, setEventType] = useState(EVENTS[0]);
   const [note, setNote] = useState("");
   const [flags, setFlags] = useState({ alcohol: false, insurance: false, vendors: false, afterHours: false });
+  const [sending, setSending] = useState(false);
 
-  function submit() {
+  /* Was a Reservation built here and pushed into React state: the office had
+     no idea the clubhouse was spoken for, and a reload lost the booking. It
+     now writes the bookings row the office reads. */
+  async function submit() {
+    if (sending) return;
     if (!date.trim()) return setError("Pick a date.");
     if (!timeFrom || !timeTo) return setError("Pick the start and end times.");
     if (TIMES.indexOf(timeTo) <= TIMES.indexOf(timeFrom))
@@ -51,24 +56,20 @@ export default function Amenities() {
     const time = `${timeFrom}–${timeTo}`;
     if (flags.alcohol && !flags.insurance)
       return setError("Serving alcohol requires a certificate of insurance naming the association — mark it once you have one, or drop the alcohol flag.");
-    const flagCount = Object.values(flags).filter(Boolean).length;
-    const r: Reservation = {
-      id: s.uid("rv"),
-      date,
-      label: [
-        amenity,
-        time,
-        eventType.toLowerCase(),
-        guests ? `${guests} ${guests === "1" ? "guest" : "guests"}` : "",
-        flagCount ? `${flagCount} requirement${flagCount === 1 ? "" : "s"}` : "",
-      ].filter(Boolean).join(" · "),
-      status: "Requested",
-      deposit: "Deposit instructions to follow",
-    };
-    s.setReservations((prev) => [r, ...prev]);
-    setConfirmed(`${amenity} is requested for ${date}, ${time}. A confirmation and any deposit instructions are on the way by email.`);
+
+    setSending(true);
+    setError("");
+    const res = await createBooking({
+      amenity, date, timeFrom, timeTo, guests, eventType, note,
+      alcohol: flags.alcohol, insurance: flags.insurance,
+    });
+    setSending(false);
+    if (!res.ok) return setError(res.error);
+
+    s.setReservations((prev) => [res.reservation, ...prev]);
+    setConfirmed(`${amenity} is requested for ${date}, ${time}. The office confirms bookings and sends any deposit instructions.`);
     setOpen(false);
-    setError(""); setDate(""); setTimeFrom(""); setTimeTo(""); setGuests(""); setNote("");
+    setDate(""); setTimeFrom(""); setTimeTo(""); setGuests(""); setNote("");
     setFlags({ alcohol: false, insurance: false, vendors: false, afterHours: false });
   }
 

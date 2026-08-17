@@ -5,9 +5,9 @@ import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase/server
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
-  Announcement, ChatMsg, ComplianceNotice, DocItem, EventItem, LedgerLine,
-  MaintReq, MaintStatus, NotifyPrefs, PaymentRecord, Property, ResArcApp,
-  Reservation, Thread,
+  Announcement, ChatMsg, ComplianceNotice, DocItem, EventItem, GuestPass,
+  LedgerLine, MaintReq, MaintStatus, NotifyPrefs, PaymentRecord, Property,
+  ResArcApp, Reservation, Thread, Vehicle,
 } from "./types";
 import { DEFAULT_NOTIFY } from "./types";
 
@@ -36,6 +36,9 @@ export type ResidentData = {
   smsOptIn: boolean;
   /** Conversations with the office, incoming replies included. */
   threads: Thread[];
+  /** Gate passes still live, and the vehicles on file. */
+  guestPasses: GuestPass[];
+  vehicles: Vehicle[];
   /** Some communities prohibit leasing; hides lease registration. */
   leasesAllowed: boolean;
   /** Communities without gates hide the gate-code card. */
@@ -72,6 +75,8 @@ const EMPTY: ResidentData = {
   notify: DEFAULT_NOTIFY,
   smsOptIn: false,
   threads: [],
+  guestPasses: [],
+  vehicles: [],
   leasesAllowed: true,
   gateCodesAllowed: true,
   guestPassesAllowed: true,
@@ -722,6 +727,41 @@ export async function loadResidentData(user: {
     },
   );
 
+  /* ─── Gate access: passes still live, and vehicles on file ────────── */
+
+  const guestPasses = await safe([] as GuestPass[], async () => {
+    const { data, error } = await db
+      .from("guest_passes")
+      .select("id, guest_name, dates, plate, code")
+      // A revoked pass is history, not access — the gate would turn it away.
+      .eq("user_id", user.id)
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false })
+      .limit(40);
+    if (error) throw error;
+    return (data ?? []).map((r) => ({
+      id: r.id as string,
+      name: (r.guest_name as string) ?? "",
+      detail: [r.dates as string, r.plate as string | null].filter(Boolean).join(" · "),
+      code: (r.code as string) ?? "",
+    }));
+  });
+
+  const vehicles = await safe([] as Vehicle[], async () => {
+    const { data, error } = await db
+      .from("resident_vehicles")
+      .select("id, description, plate, tag_status")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (error) throw error;
+    return (data ?? []).map((r) => ({
+      id: r.id as string,
+      label: [r.description as string, r.plate as string].filter(Boolean).join(" · "),
+      tag: (r.tag_status as string) === "issued" ? "Issued" : "Pending",
+    }));
+  });
+
   return {
     property,
     ledger: ledgerWithInvoices,
@@ -736,6 +776,8 @@ export async function loadResidentData(user: {
     notify: prefs.notify,
     smsOptIn: prefs.smsOptIn,
     threads,
+    guestPasses,
+    vehicles,
     ...policy,
   };
 }

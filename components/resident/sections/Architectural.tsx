@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 
+import { createArcApplication } from "@/lib/resident-portal/request-actions";
 import { useResident, useSearchFilter } from "@/lib/resident-portal/store";
 import type { ResArcApp } from "@/lib/resident-portal/types";
 import {
@@ -30,6 +31,7 @@ export default function Architectural() {
   const [contractor, setContractor] = useState("");
   const [start, setStart] = useState("");
   const [submitted, setSubmitted] = useState("");
+  const [sending, setSending] = useState(false);
 
   const visible = useSearchFilter(
     s.arcApps, query, ["ref", "title", "detail", "status"],
@@ -37,23 +39,23 @@ export default function Architectural() {
       filter === "All" ? true : filter === "Decided" ? a.ok : !a.ok,
   );
 
-  function submit() {
+  /* Was assembled here and pushed into React state — the committee never saw
+     it and a reload lost it. It now writes the arc_applications row the
+     office reads. */
+  async function submit() {
+    if (sending) return;
     if (!type) return setError("Pick the kind of project.");
     if (!detail.trim())
       return setError("Describe the project — materials, colors and placement help the committee say yes faster.");
-    const ref = `ARC-${Math.floor(1000 + Math.random() * 8999)}`;
-    const app: ResArcApp = {
-      id: s.uid("arc"),
-      ref,
-      title: type,
-      detail: `Submitted ${s.stamp()}${contractor.trim() ? ` · ${contractor.trim()}` : ""}${start ? ` · starting ${start}` : ""}`,
-      status: "Awaiting review",
-      ok: false,
-    };
-    s.setArcApps((prev) => [app, ...prev]);
-    setSubmitted(ref);
+    setSending(true);
+    setError("");
+    const res = await createArcApplication({ type, detail, contractor, start });
+    setSending(false);
+    if (!res.ok) return setError(res.error);
+    s.setArcApps((prev) => [res.app, ...prev]);
+    setSubmitted(res.app.ref);
     setOpen(false);
-    setError(""); setType(""); setDetail(""); setContractor(""); setStart("");
+    setType(""); setDetail(""); setContractor(""); setStart("");
   }
 
   return (
