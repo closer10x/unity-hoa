@@ -703,3 +703,117 @@ export function PhotoSlot({
     </div>
   );
 }
+
+/**
+ * A real image picker: preview, replace, remove. Photo is optional — the
+ * parent decides whether a missing file blocks the save.
+ *
+ * Not wrapped in Field (a `<label>`): Replace/Remove would otherwise also
+ * open the file dialog.
+ */
+export function PhotoPicker({
+  label,
+  hint,
+  file,
+  onChange,
+  size = 112,
+}: {
+  label: string;
+  hint?: string;
+  file: File | null;
+  onChange: (file: File | null) => void;
+  size?: number;
+}) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!file) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  return (
+    <div>
+      <span className="mb-[7px] block text-[13px] font-semibold text-body">{label}</span>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          onChange(e.target.files?.[0] ?? null);
+          e.target.value = "";
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="flex items-end overflow-hidden rounded-xl border border-line bg-tint text-left"
+        style={{
+          width: size,
+          height: size,
+          padding: preview ? 0 : 8,
+        }}
+      >
+        {preview ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={preview}
+            alt=""
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        ) : (
+          <span className="rounded bg-white/80 px-2 py-1 text-[11px] font-bold tracking-[0.06em] text-muted uppercase">
+            {file ? "Replace photo" : "Add a photo"}
+          </span>
+        )}
+      </button>
+      {file ? (
+        <span className="mt-1.5 flex flex-wrap items-center gap-x-3">
+          <TextButton onClick={() => inputRef.current?.click()}>Replace</TextButton>
+          <TextButton tone="muted" onClick={() => onChange(null)}>Remove</TextButton>
+        </span>
+      ) : null}
+      {hint ? <span className="mt-1.5 block text-[13px] text-faint">{hint}</span> : null}
+    </div>
+  );
+}
+
+/** Thumbnail that opens the full image. Used on pet, vehicle and request rows. */
+export function RecordPhoto({
+  href,
+  alt,
+  size = 48,
+}: {
+  href: string;
+  alt: string;
+  size?: number;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      title={`${alt} — open full size`}
+      style={{ display: "block", lineHeight: 0, flex: "0 0 auto" }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={href}
+        alt={alt}
+        style={{
+          width: size,
+          height: size,
+          objectFit: "cover",
+          borderRadius: 8,
+          border: `1px solid ${color.hairlineSoft}`,
+        }}
+      />
+    </a>
+  );
+}

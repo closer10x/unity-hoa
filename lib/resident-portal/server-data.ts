@@ -6,7 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
   Announcement, ChatMsg, ComplianceNotice, DocItem, EventItem, GuestPass,
-  LedgerLine, MaintReq, MaintStatus, NotifyPrefs, PaymentRecord, Property,
+  LedgerLine, MaintReq, MaintStatus, NotifyPrefs, PaymentRecord, Pet, Property,
   ResArcApp, Reservation, Thread, Vehicle,
 } from "./types";
 import { DEFAULT_NOTIFY } from "./types";
@@ -39,6 +39,8 @@ export type ResidentData = {
   /** Gate passes still live, and the vehicles on file. */
   guestPasses: GuestPass[];
   vehicles: Vehicle[];
+  /** Pets registered to this household. */
+  pets: Pet[];
   /** Some communities prohibit leasing; hides lease registration. */
   leasesAllowed: boolean;
   /** Communities without gates hide the gate-code card. */
@@ -77,6 +79,7 @@ const EMPTY: ResidentData = {
   threads: [],
   guestPasses: [],
   vehicles: [],
+  pets: [],
   leasesAllowed: true,
   gateCodesAllowed: true,
   guestPassesAllowed: true,
@@ -384,15 +387,28 @@ export async function loadResidentData(user: {
 
   const requests = await safe([] as MaintReq[], async () => {
     if (!email) return [];
-    const { data, error } = await db
+    let rows: Record<string, unknown>[] | null = null;
+    const first = await db
       .from("work_orders")
-      .select("id, work_order_number, title, location, status, created_at")
+      .select("id, work_order_number, title, location, status, created_at, photo_path")
       .ilike("reported_by_email", email)
       .order("created_at", { ascending: false })
       .limit(40);
-    if (error) throw error;
-    return (data ?? []).map((r) => {
+    if (first.error) {
+      const retry = await db
+        .from("work_orders")
+        .select("id, work_order_number, title, location, status, created_at")
+        .ilike("reported_by_email", email)
+        .order("created_at", { ascending: false })
+        .limit(40);
+      if (retry.error) throw retry.error;
+      rows = (retry.data ?? []) as Record<string, unknown>[];
+    } else {
+      rows = (first.data ?? []) as Record<string, unknown>[];
+    }
+    return rows.map((r) => {
       const status = toMaintStatus((r.status as string) ?? "open");
+      const photoPath = typeof r.photo_path === "string" && r.photo_path ? r.photo_path : null;
       return {
         id: r.id as string,
         ref: (r.work_order_number as string) ?? "",
@@ -405,6 +421,7 @@ export async function loadResidentData(user: {
           .join(" · "),
         status,
         open: status !== "Closed",
+        photoPath,
       };
     });
   });
@@ -748,18 +765,61 @@ export async function loadResidentData(user: {
   });
 
   const vehicles = await safe([] as Vehicle[], async () => {
-    const { data, error } = await db
+    let rows: Record<string, unknown>[] | null = null;
+    const first = await db
       .from("resident_vehicles")
-      .select("id, description, plate, tag_status")
+      .select("id, description, plate, tag_status, photo_path")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(20);
-    if (error) throw error;
-    return (data ?? []).map((r) => ({
+    if (first.error) {
+      const retry = await db
+        .from("resident_vehicles")
+        .select("id, description, plate, tag_status")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (retry.error) throw retry.error;
+      rows = (retry.data ?? []) as Record<string, unknown>[];
+    } else {
+      rows = (first.data ?? []) as Record<string, unknown>[];
+    }
+    return rows.map((r) => ({
       id: r.id as string,
       label: [r.description as string, r.plate as string].filter(Boolean).join(" · "),
       tag: (r.tag_status as string) === "issued" ? "Issued" : "Pending",
+      photoPath: typeof r.photo_path === "string" && r.photo_path ? r.photo_path : null,
     }));
+  });
+
+  const pets = await safe([] as Pet[], async () => {
+    const { data, error } = await db
+      .from("resident_pets")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(40);
+    if (error) throw error;
+    return (data ?? []).map((r) => {
+      const detail = (typeof r.detail === "string" && r.detail.trim())
+        ? r.detail.trim()
+        : [
+            r.pet_type as string | null,
+            r.breed as string | null,
+            r.weight_lb ? `${r.weight_lb} lb` : "",
+            r.color as string | null,
+            r.rabies_tag ? `rabies tag ${r.rabies_tag}` : "",
+            r.vet ? `vet: ${r.vet}` : "",
+          ].filter(Boolean).join(" · ");
+      return {
+        id: r.id as string,
+        name: (r.name as string) ?? "",
+        detail,
+        status: (r.status as string) || "Registered",
+        ok: r.ok !== false,
+        photoPath: typeof r.photo_path === "string" && r.photo_path ? r.photo_path : null,
+      };
+    });
   });
 
   return {
@@ -778,6 +838,7 @@ export async function loadResidentData(user: {
     threads,
     guestPasses,
     vehicles,
+    pets,
     ...policy,
   };
 }

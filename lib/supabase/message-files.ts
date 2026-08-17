@@ -1,12 +1,19 @@
 /**
- * Files attached to resident conversations.
+ * Files in the private resident-message-files bucket.
  *
- * The bucket is private, so the only way in is a route that checks the
- * session first and hands back a short-lived signed URL. Paths are
- * `<userId>/<threadId>/<name>` — the convention the iOS app already writes,
- * kept so the two clients read each other's attachments rather than each
- * inventing a layout.
+ * Messages land at `<userId>/<threadId>/<name>`. Pets, vehicles and
+ * maintenance photos use the same first folder (the owner's auth uid) so
+ * existing storage RLS covers them: `<userId>/pets|vehicles|work-orders/<name>`.
+ * The only way to read a private object is a route that checks the session
+ * and hands back a short-lived signed URL.
  */
+
+export const RECORD_PHOTO_KINDS = ["pets", "vehicles", "work-orders"] as const;
+export type RecordPhotoKind = (typeof RECORD_PHOTO_KINDS)[number];
+
+export function isRecordPhotoKind(value: string): value is RecordPhotoKind {
+  return (RECORD_PHOTO_KINDS as readonly string[]).includes(value);
+}
 
 export const MESSAGE_FILES_BUCKET = "resident-message-files";
 
@@ -40,4 +47,9 @@ export function isImageAttachment(path: string): boolean {
 /** Where the browser fetches it. One route, both portals. */
 export function attachmentUrl(messageId: string, download = false): string {
   return `/api/messages/${messageId}/attachment${download ? "?download=1" : ""}`;
+}
+
+/** Signed-URL door for a pet, vehicle or work-order photo. */
+export function recordPhotoUrl(kind: RecordPhotoKind, id: string): string {
+  return `/api/resident-photos/${kind}/${id}`;
 }

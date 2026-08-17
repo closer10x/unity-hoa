@@ -7,6 +7,7 @@ import { localDayIso } from "@/lib/admin-portal/day";
 import { buildActionMenu, useSearchFilter, useStore } from "@/lib/admin-portal/store";
 import { color, font, pad } from "@/lib/admin-portal/tokens";
 import type { PendingConfirm, Staff, WorkOrder, WorkStatus } from "@/lib/admin-portal/types";
+import { recordPhotoUrl } from "@/lib/supabase/message-files";
 import {
   assignWorkOrder, createWorkOrder, setWorkOrderStatus, updateWorkOrder,
 } from "@/lib/admin-portal/work-actions";
@@ -128,6 +129,30 @@ function CrewOnDuty({ crew }: { crew: CrewDay[] }) {
 /* Head and rows share one definition — see AGENTS.md on why a table's
    columns cannot be allowed to drift from its head. */
 const WORK_COLS = "116px minmax(200px, 1.7fr) minmax(140px, 1fr) 120px minmax(180px, auto)";
+
+/** Thumbnail on the job cell — paired with the title so a sixth column does not wrap the actions. */
+function JobPhoto({ id, alt, size = 40 }: { id: string; alt: string; size?: number }) {
+  const href = recordPhotoUrl("work-orders", id);
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      title={`${alt} — open full size`}
+      style={{ display: "block", lineHeight: 0, flex: "0 0 auto" }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={href}
+        alt={alt}
+        style={{
+          width: size, height: size, objectFit: "cover",
+          borderRadius: 8, border: `1px solid ${color.hairlineSoft}`,
+        }}
+      />
+    </a>
+  );
+}
 
 export default function WorkOrders() {
   const s = useStore();
@@ -305,7 +330,10 @@ export default function WorkOrders() {
             <React.Fragment key={w.id}>
               <TableRow cols={WORK_COLS}>
                 <Mono size={13} style={{ color: color.neutral }}>{w.ref}</Mono>
-                <CellStack top={w.title} sub={w.detail} />
+                <span style={{ display: "flex", gap: 10, alignItems: "center", minWidth: 0 }}>
+                  {w.photoPath ? <JobPhoto id={w.id} alt={w.title} /> : null}
+                  <CellStack top={w.title} sub={w.detail} />
+                </span>
                 <CellStack
                   top={w.assignee}
                   sub={w.assignee === "Unassigned" ? "unassigned" : isStaff(w.assignee) ? "in-house" : "vendor"}
@@ -340,6 +368,14 @@ export default function WorkOrders() {
                       </Field>
                       <Field label="Due date"><DateInput value={ef.dueAt} onChange={(v: string) => setEf({ ...ef, dueAt: v })} /></Field>
                     </FieldGrid>
+                    {w.photoPath ? (
+                      <div>
+                        <span style={{ display: "block", fontSize: 14, color: color.inkSecondary, marginBottom: 8 }}>
+                          Resident photo
+                        </span>
+                        <JobPhoto id={w.id} alt={w.title} size={160} />
+                      </div>
+                    ) : null}
                     <Field label="Add to the description" hint="Appended detail for whoever picks the job up">
                       <Area value={ef.detail} onChange={(v) => setEf({ ...ef, detail: v })} rows={2} placeholder="Anything the tech should know" />
                     </Field>

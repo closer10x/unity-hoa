@@ -125,6 +125,7 @@ export type ResidentInitialData = Partial<{
   threads: Thread[];
   guestPasses: GuestPass[];
   vehicles: Vehicle[];
+  pets: Pet[];
   leasesAllowed: boolean;
   gateCodesAllowed: boolean;
   guestPassesAllowed: boolean;
@@ -168,7 +169,7 @@ export function StoreProvider({
       ? [{ id: "owner", name: residentName, role: "Owner of record", contact: residentEmail, locked: true }]
       : [],
   );
-  const [pets, setPets] = useState<Pet[]>([]);
+  const [pets, setPets] = useState<Pet[]>(initialData?.pets ?? []);
   const [leases, setLeases] = useState<Lease[]>([]);
   const [notify, setNotify] = useState<NotifyPrefs>(initialData?.notify ?? DEFAULT_NOTIFY);
   const [autopay, setAutopay] = useState(false);

@@ -979,6 +979,7 @@ export async function loadPortalData(): Promise<PortalData> {
     dueAt: w.due_at ?? null,
     priority: w.priority ?? null,
     status: toWorkStatus(w.status ?? "open"),
+    photoPath: typeof w.photo_path === "string" && w.photo_path ? w.photo_path : null,
   }));
 
   const docs: Doc[] = (docsRes.data ?? []).map((d) => ({
