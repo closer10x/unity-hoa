@@ -28,15 +28,22 @@ const font = {
 };
 
 /**
- * The last step of an invite: the link signed them in, and here they choose
- * the password they'll use from now on. Without this an invited household
- * member has an account they can only ever re-enter by email link.
+ * The last step of two journeys: an invite, and a password reset. Either way
+ * the link signed them in, and here they choose the password they'll use from
+ * now on. Without this an invited household member has an account they can
+ * only ever re-enter by email link — and somebody who forgot their password
+ * lands on the dashboard still not knowing it.
+ *
+ * `flow=reset` only changes the wording. Somebody told to "finish signing up"
+ * when they asked to reset a password reasonably wonders whose account they
+ * are about to take over.
  */
 export default async function SetPasswordPage({ searchParams }: PageProps) {
   const sp =
     searchParams instanceof Promise ? await searchParams : searchParams ?? {};
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const error = one(sp.error);
+  const isReset = one(sp.flow) === "reset";
   const next = normalizePortalNext(one(sp.next) || "/portal");
 
   if (!isSupabaseAuthConfigured()) {
@@ -104,7 +111,7 @@ export default async function SetPasswordPage({ searchParams }: PageProps) {
               color: "oklch(0.56 0.015 150)",
             }}
           >
-            Finish signing up
+            {isReset ? "Password reset" : "Finish signing up"}
           </span>
           <h1
             style={{
@@ -114,12 +121,14 @@ export default async function SetPasswordPage({ searchParams }: PageProps) {
               letterSpacing: "-0.024em",
             }}
           >
-            Choose your password
+            {isReset ? "Choose a new password" : "Choose your password"}
           </h1>
           <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: "oklch(0.52 0.012 150)" }}>
             You&rsquo;re signed in as{" "}
-            <span style={{ fontFamily: font.mono, fontSize: 14 }}>{user.email}</span>. Pick
-            a password and you&rsquo;ll use it to sign in from now on.
+            <span style={{ fontFamily: font.mono, fontSize: 14 }}>{user.email}</span>.{" "}
+            {isReset
+              ? "Pick a new one and the old password stops working straight away."
+              : "Pick a password and you’ll use it to sign in from now on."}
           </p>
         </div>
 

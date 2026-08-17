@@ -60,21 +60,28 @@ export async function GET(request: NextRequest) {
   }
 
   /* An invited account has no password yet — the link is the only way in —
-     and a staff resend mints a recovery token for exactly the same purpose.
-     Either way, send them to choose a password before the destination,
-     carrying the cookies the exchange just set so the page finds the session.
+     and a resend or a "forgot password" mints a recovery token for the same
+     purpose. Either way, send them to choose a password before the
+     destination, carrying the cookies the exchange just set so the page finds
+     the session.
 
-     Resident recovery is not listed: those links come through /auth/callback
-     and land on the account screen, and rerouting them here would change a
-     flow that already works. */
+     Recovery counts for residents too. It used to be admin-only, on the
+     grounds that resident resets came through /auth/callback and that flow
+     worked; it did not. GoTrue's action link returns its tokens in the URL
+     fragment, which a server route never sees, so every resident reset ended
+     at "link expired or is invalid" — the same dead end this route exists to
+     avoid. */
   const needsPassword =
-    type === "invite" || type === "signup" || (!isPortal && type === "recovery");
+    type === "invite" || type === "signup" || type === "recovery";
   if (needsPassword) {
     const setPasswordPath = isPortal
       ? "/portal/set-password"
       : "/admin/set-password";
+    const params = new URLSearchParams({ next: redirectTarget });
+    // Fixed string, never the caller's: this only picks the wording.
+    if (searchParams.get("flow") === "reset") params.set("flow", "reset");
     const setPassword = NextResponse.redirect(
-      `${origin}${setPasswordPath}?next=${encodeURIComponent(redirectTarget)}`,
+      `${origin}${setPasswordPath}?${params.toString()}`,
     );
     response.cookies.getAll().forEach((c) => setPassword.cookies.set(c));
     return setPassword;

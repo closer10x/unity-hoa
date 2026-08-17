@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 
 import { recordAuthEvent } from "@/lib/auth/auth-events";
 import { normalizeAdminNext } from "@/lib/admin/normalize-admin-next";
+import { emailLinksAreLocal } from "@/lib/email/link-base-url";
+import { buildConfirmUrl } from "@/lib/email/set-password-link";
 import { sendPasswordResetViaResend } from "@/lib/email/send-password-reset";
 import { requireServiceSupabase } from "@/lib/supabase/service";
 import { isSupabaseAuthConfigured } from "@/lib/supabase/keys";
@@ -110,40 +112,54 @@ export async function requestPasswordReset(formData: FormData) {
     redirect("/admin/login?error=missing_email");
   }
 
-  const origin =
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3001";
+  /* The host the recipient clicks from, not the one this process runs on —
+     built from NEXT_PUBLIC_SITE_URL this was localhost in production, which
+     is a dead link in every inbox it reached. */
+  if (emailLinksAreLocal()) {
+    redirect("/admin/login?error=reset_unavailable");
+  }
 
   /* The link is generated with the service key and delivered through Resend:
      Supabase's own mailer is rate-limited to a couple of messages an hour and
      rejects addresses it cannot verify, so resets went nowhere. */
+  let delivery: "sent" | "failed" = "sent";
   try {
     const service = requireServiceSupabase();
+    /* token_hash through /auth/confirm, not GoTrue's action_link: the action
+       link hands its tokens back in the URL fragment, which a server route
+       never sees, so the reset died at "link expired or is invalid". */
     const { data, error } = await service.auth.admin.generateLink({
       type: "recovery",
       email,
-      options: { redirectTo: `${origin}/auth/callback?next=/admin/profile` },
     });
-    const link = data?.properties?.action_link;
-    if (!error && link) {
+    const hashed = data?.properties?.hashed_token;
+    const link = error || !hashed ? null : buildConfirmUrl(hashed, "recovery", "admin", "reset");
+    if (link) {
       const name =
         (data.user?.user_metadata?.display_name as string | undefined)?.trim() || "";
-      await sendPasswordResetViaResend({
+      const sent = await sendPasswordResetViaResend({
         name,
         email,
         resetUrl: link,
         portalLabel: "admin portal",
       });
+      // A refused send says nothing about whether the account exists, so it
+      // is safe to report — and useless to hide.
+      if ("error" in sent) delivery = "failed";
     }
   } catch {
-    // Never disclose whether the address matched an account.
+    delivery = "failed";
   }
 
   await recordAuthEvent({
     event: "password_reset_requested",
     email,
-    // Always true: we never reveal whether the address matched an account.
-    succeeded: true,
+    succeeded: delivery === "sent",
+    failureReason: delivery === "failed" ? "Reset email could not be sent" : undefined,
   });
 
+  if (delivery === "failed") {
+    redirect("/admin/login?error=reset_failed");
+  }
   redirect("/admin/login?notice=reset_sent");
 }

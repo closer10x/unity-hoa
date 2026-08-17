@@ -30,12 +30,17 @@ export function buildConfirmUrl(
   tokenHash: string,
   type: "invite" | "recovery",
   area: PortalArea,
+  /* "reset" when the recipient asked to replace a password they still have,
+     as opposed to claiming an account for the first time. It only changes
+     what the set-password screen says. */
+  flow?: "reset",
 ): string {
   const params = new URLSearchParams({
     token_hash: tokenHash,
     type,
     next: NEXT[area],
   });
+  if (flow) params.set("flow", flow);
   return `${getEmailBaseUrl()}/auth/confirm?${params.toString()}`;
 }
 
@@ -52,6 +57,7 @@ export async function mintSetPasswordUrl(
   service: ServiceClient,
   email: string,
   area: PortalArea,
+  flow?: "reset",
 ): Promise<string | null> {
   const { data, error } = await service.auth.admin.generateLink({
     type: "recovery",
@@ -59,5 +65,5 @@ export async function mintSetPasswordUrl(
   });
   const hashedToken = data?.properties?.hashed_token;
   if (error || !hashedToken) return null;
-  return buildConfirmUrl(hashedToken, "recovery", area);
+  return buildConfirmUrl(hashedToken, "recovery", area, flow);
 }

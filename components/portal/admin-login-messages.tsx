@@ -22,6 +22,13 @@ const ERROR_COPY: Record<string, string> = {
   auth: "Sign-in link expired or is invalid. Try again.",
   link_expired:
     "That invitation link has already been used or has expired. Ask the office to resend your invitation.",
+  /* Delivery failed. That says nothing about whether the account exists, so
+     reporting it leaks nothing — and hiding it left staff waiting on an
+     email the provider never accepted. */
+  reset_failed:
+    "We could not send the reset email just now. Try again in a minute, or ask another administrator to reset it for you.",
+  reset_unavailable:
+    "Password resets are unavailable on this environment — the link would point at a local address. Set EMAIL_LINK_BASE_URL.",
 };
 
 const NOTICE_COPY: Record<string, string> = {

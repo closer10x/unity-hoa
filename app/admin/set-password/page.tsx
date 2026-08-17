@@ -38,6 +38,9 @@ export default async function AdminSetPasswordPage({ searchParams }: PageProps) 
     searchParams instanceof Promise ? await searchParams : searchParams ?? {};
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const error = one(sp.error);
+  /* Wording only: telling somebody who asked to reset a password to "finish
+     signing up" reads as though they are claiming a different account. */
+  const isReset = one(sp.flow) === "reset";
   const next = normalizeAdminNext(one(sp.next) || "/admin");
 
   if (!isSupabaseAuthConfigured()) {
@@ -115,12 +118,14 @@ export default async function AdminSetPasswordPage({ searchParams }: PageProps) 
               letterSpacing: "-0.024em",
             }}
           >
-            Choose your password
+            {isReset ? "Choose a new password" : "Choose your password"}
           </h1>
           <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: "oklch(0.52 0.012 150)" }}>
             You&rsquo;re signed in as{" "}
-            <span style={{ fontFamily: font.mono, fontSize: 14 }}>{user.email}</span>. Pick
-            a password and you&rsquo;ll use it to sign in from now on.
+            <span style={{ fontFamily: font.mono, fontSize: 14 }}>{user.email}</span>.{" "}
+            {isReset
+              ? "Pick a new one and the old password stops working straight away."
+              : "Pick a password and you’ll use it to sign in from now on."}
           </p>
         </div>
 

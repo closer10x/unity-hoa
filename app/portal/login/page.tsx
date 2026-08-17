@@ -24,6 +24,15 @@ const ERROR_COPY: Record<string, string> = {
     "We couldn't load your account. Check your connection and try again.",
   missing: "Enter your email and password.",
   missing_email: "Enter the email address for the reset link.",
+  link_expired:
+    "That link has already been used or has expired. Ask for a new one below.",
+  /* Delivery failed — which says nothing about whether the account exists, so
+     saying so plainly leaks nothing and saves a resident waiting on an email
+     that was never accepted. */
+  reset_failed:
+    "We couldn't send the reset email just now. Try again in a minute, or call the office on 713-208-3539.",
+  reset_unavailable:
+    "Password resets aren't available on this environment — the link would point at a local address. Contact the office.",
 };
 
 const NOTICE_COPY: Record<string, string> = {
