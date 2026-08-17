@@ -41,6 +41,19 @@ export interface CaseNote { author: string; time: string; text: string; }
 export interface ArcApp {
   id: string; ref: string; title: string; owner: string; submitted: string;
   due: string; status: ArcStatus; decisionNote?: string; thread: ThreadMsg[];
+  /** Plans in resident-message-files; opened through the signed-URL route. */
+  attachmentPaths?: string[];
+}
+
+/** A resident-filed concern. Becomes a violation only after an inspector confirms it. */
+export interface ConcernReport {
+  id: string;
+  date: string;
+  title: string;
+  detail: string;
+  anonymous: boolean;
+  status: string;
+  photoPath?: string | null;
 }
 export type ArcStatus =
   | "Awaiting decision" | "Approved" | "Approved with conditions"

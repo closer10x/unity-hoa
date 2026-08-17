@@ -2,9 +2,11 @@
 
 import React, { useState } from "react";
 
+import { uploadResidentPhoto } from "@/lib/messages/upload-attachment";
 import { createArcApplication } from "@/lib/resident-portal/request-actions";
 import { useResident, useSearchFilter } from "@/lib/resident-portal/store";
 import type { ResArcApp } from "@/lib/resident-portal/types";
+import { attachmentName, recordPhotoUrl } from "@/lib/supabase/message-files";
 import {
   AddDrawer, Area, Card, DateInput, DropZone, Empty, ErrorLine, Field,
   FieldGrid, FilterBar, Input, Mono, Primary, Row, RowMain, Select,
@@ -30,6 +32,7 @@ export default function Architectural() {
   const [detail, setDetail] = useState("");
   const [contractor, setContractor] = useState("");
   const [start, setStart] = useState("");
+  const [plans, setPlans] = useState<File[]>([]);
   const [submitted, setSubmitted] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -49,13 +52,19 @@ export default function Architectural() {
       return setError("Describe the project — materials, colors and placement help the committee say yes faster.");
     setSending(true);
     setError("");
-    const res = await createArcApplication({ type, detail, contractor, start });
+    /* A failed upload must not block the application — save what landed. */
+    const attachmentPaths: string[] = [];
+    for (const file of plans) {
+      const up = await uploadResidentPhoto(file, "arc");
+      if (up.ok) attachmentPaths.push(up.path);
+    }
+    const res = await createArcApplication({ type, detail, contractor, start, attachmentPaths });
     setSending(false);
     if (!res.ok) return setError(res.error);
     s.setArcApps((prev) => [res.app, ...prev]);
     setSubmitted(res.app.ref);
     setOpen(false);
-    setType(""); setDetail(""); setContractor(""); setStart("");
+    setType(""); setDetail(""); setContractor(""); setStart(""); setPlans([]);
   }
 
   return (
@@ -77,7 +86,7 @@ export default function Architectural() {
         <AddDrawer
           open={open}
           onOpen={() => { setOpen(true); setError(""); setSubmitted(""); }}
-          onCancel={() => { setOpen(false); setError(""); }}
+          onCancel={() => { setOpen(false); setError(""); setPlans([]); }}
           openLabel="Start an application"
           title="Start an application"
           note="Plans, drawings and neighbor consent attach below."
@@ -99,9 +108,11 @@ export default function Architectural() {
             <Area value={detail} onChange={setDetail} rows={3}
               placeholder="Dimensions, materials, colors, and where on the lot it goes." />
           </Field>
-          <DropZone>Drag plans, drawings or neighbor consent here — or click to browse</DropZone>
+          <DropZone multiple files={plans} onFiles={setPlans}>
+            Drag plans, drawings or neighbor consent here — or click to browse
+          </DropZone>
           {error ? <ErrorLine>{error}</ErrorLine> : null}
-          <Primary onClick={submit} style={{ justifySelf: "start" }}>Submit application</Primary>
+          <Primary onClick={submit} style={{ justifySelf: "start" }}>{sending ? "Submitting…" : "Submit application"}</Primary>
         </AddDrawer>
 
         <FilterBar query={query} onQuery={setQuery} placeholder="Search your applications…"
@@ -117,12 +128,37 @@ export default function Architectural() {
           visible.map((a) => (
             <Row key={a.id}>
               <Mono size={13} style={{ color: color.neutral }}>{a.ref}</Mono>
-              <RowMain label={a.title} detail={a.detail} />
+              <span className="min-w-0 flex-[1_1_220px]">
+                <RowMain label={a.title} detail={a.detail} />
+                <PlanLinks id={a.id} paths={a.attachmentPaths ?? []} />
+              </span>
               <Status tone={a.ok ? "positive" : "attention"}>{a.status}</Status>
             </Row>
           ))
         )}
       </Card>
     </>
+  );
+}
+
+function PlanLinks({ id, paths }: { id: string; paths: string[] }) {
+  if (paths.length === 0) return null;
+  return (
+    <span className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      {paths.length > 1 ? (
+        <span className="text-[13px] text-faint">{paths.length} files</span>
+      ) : null}
+      {paths.map((p, i) => (
+        <a
+          key={`${p}-${i}`}
+          href={recordPhotoUrl("arc", id, i)}
+          target="_blank"
+          rel="noreferrer"
+          className="text-[13px] font-semibold text-moss hover:text-ink"
+        >
+          {attachmentName(p)}
+        </a>
+      ))}
+    </span>
   );
 }

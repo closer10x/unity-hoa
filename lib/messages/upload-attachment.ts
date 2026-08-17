@@ -37,13 +37,14 @@ export async function uploadMessageAttachment(
 }
 
 /**
- * A photo on a pet, a car or a maintenance request. Same bucket and size
- * ceiling as a message attachment; a different folder so the phone and the
- * website agree on where each kind of picture lives.
+ * A photo on a pet, a car, a maintenance request or a concern, or a plan
+ * on an architectural application. Same bucket and size ceiling as a
+ * message attachment; a different folder so the phone and the website
+ * agree on where each kind of file lives.
  */
 export async function uploadResidentPhoto(
   file: File,
-  kind: "pets" | "vehicles" | "work-orders",
+  kind: "pets" | "vehicles" | "work-orders" | "arc" | "compliance",
 ): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
   if (file.size > MAX_ATTACHMENT_BYTES) {
     return {
@@ -60,11 +61,11 @@ export async function uploadResidentPhoto(
     const res = await fetch("/api/resident-photos", { method: "POST", body: form });
     const data = (await res.json()) as { path?: string; error?: string };
     if (!res.ok || !data.path) {
-      return { ok: false, error: data.error ?? "The photo could not be uploaded." };
+      return { ok: false, error: data.error ?? "The file could not be uploaded." };
     }
     return { ok: true, path: data.path };
   } catch {
-    return { ok: false, error: "The photo could not be uploaded. Check your connection." };
+    return { ok: false, error: "The file could not be uploaded. Check your connection." };
   }
 }
 

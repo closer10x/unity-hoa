@@ -3,7 +3,9 @@ import { NextResponse } from "next/server";
 import {
   MAX_ATTACHMENT_BYTES,
   MESSAGE_FILES_BUCKET,
+  isAllowedArcFile,
   isImageAttachment,
+  isRecordDocumentKind,
   isRecordPhotoKind,
 } from "@/lib/supabase/message-files";
 import { isSupabaseAuthConfigured } from "@/lib/supabase/keys";
@@ -11,13 +13,15 @@ import { requireServiceSupabase } from "@/lib/supabase/service";
 import { createSupabaseServerClient } from "@/lib/supabase/server-user";
 
 /**
- * Puts a pet, vehicle or work-order photo in the same private bucket
- * messages use. The path is `{userId}/{kind}/{uuid}-{name}` — the layout
- * the iPhone already writes — so both clients read the same shelf.
+ * Puts a pet, vehicle, work-order or compliance photo — or an ARC plan —
+ * in the same private bucket messages use. The path is
+ * `{userId}/{kind}/{uuid}-{name}` — the layout the iPhone already writes —
+ * so both clients read the same shelf.
  *
  * The row that points at the path is written separately. An orphan is the
- * accepted cost: a photo chosen and then abandoned sits unreferenced, which
- * is the right way round because the alternative is a pet with no file.
+ * accepted cost: a file chosen and then abandoned sits unreferenced, which
+ * is the right way round because the alternative is an application with
+ * no file.
  */
 export async function POST(req: Request) {
   if (!isSupabaseAuthConfigured()) {
@@ -54,11 +58,19 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  if (!file.type.startsWith("image/") && !isImageAttachment(file.name)) {
+  if (isRecordDocumentKind(kind)) {
+    if (!isAllowedArcFile(file)) {
+      return NextResponse.json(
+        { error: "Use a PDF, an image, or a common document (Word, Excel, drawing)." },
+        { status: 400 },
+      );
+    }
+  } else if (!file.type.startsWith("image/") && !isImageAttachment(file.name)) {
     return NextResponse.json({ error: "Use a JPEG, PNG, WebP or HEIC image." }, { status: 400 });
   }
 
-  const safeName = file.name.replaceAll(/[^\w.\-]+/g, "_").slice(-80) || "photo.jpg";
+  const safeName = file.name.replaceAll(/[^\w.\-]+/g, "_").slice(-80)
+    || (isRecordDocumentKind(kind) ? "attachment" : "photo.jpg");
   const path = `${user.id}/${kind}/${crypto.randomUUID()}-${safeName}`;
 
   const service = requireServiceSupabase();

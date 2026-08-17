@@ -71,6 +71,8 @@ export type ResArcApp = {
   detail: string;
   status: string;
   ok: boolean;
+  /** Storage paths; the list opens each through the signed-URL route. */
+  attachmentPaths?: string[];
 };
 
 export type Reservation = {

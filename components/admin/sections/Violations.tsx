@@ -6,11 +6,12 @@ import {
   addViolationNote, createViolation, recordViolationMailing, setViolationStatus,
 } from "@/lib/admin-portal/compliance-actions";
 import { buildActionMenu, useSearchFilter, useStore } from "@/lib/admin-portal/store";
-import { color, pad, radius, rowGrid } from "@/lib/admin-portal/tokens";
+import { color, font, pad, radius, rowGrid } from "@/lib/admin-portal/tokens";
 import type { PendingConfirm, Violation, ViolationStatus } from "@/lib/admin-portal/types";
+import { recordPhotoUrl } from "@/lib/supabase/message-files";
 import { usePrimaryAction } from "../SectionHead";
 import { Tag, TableRow, TableHead, Scroller, CellStack,
-  ActionSelect, AddDrawer, Area, Card, ConfirmBar, DateInput, DropZone, Empty,
+  ActionSelect, AddDrawer, Area, Card, CardHead, ConfirmBar, DateInput, DropZone, Empty,
   ErrorLine, Eyebrow, Field, FieldGrid, FilterBar, Input, Mono, Pill,
   Primary, Row, RowMain, Select, Status, TextButton,
 } from "../ui";
@@ -81,6 +82,44 @@ export default function Violations() {
 
   return (
     <>
+      <Card>
+        <CardHead
+          title="Resident reports"
+          meta="Filed from the portal. A report becomes a violation only after an inspector confirms it."
+        >
+          <Mono size={13} style={{ color: color.neutral }}>
+            {s.concerns.length} on file
+          </Mono>
+        </CardHead>
+        {s.concerns.length === 0 ? (
+          <Empty>No reports yet. Residents file these from Compliance — a report becomes a violation only after an inspector confirms it.</Empty>
+        ) : s.concerns.map((c) => (
+          <Row key={c.id}>
+            <Mono size={13} style={{ color: color.neutral }}>{c.date}</Mono>
+            <span>
+              <RowMain label={c.title} detail={c.detail} />
+              {c.photoPath ? (
+                <a
+                  href={recordPhotoUrl("compliance", c.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: "inline-block", marginTop: 8,
+                    fontFamily: font.mono, fontSize: 12,
+                    border: `1px solid ${color.borderInput}`, borderRadius: 6,
+                    padding: "5px 9px", color: "oklch(0.44 0.045 155)",
+                    textDecoration: "none", background: color.surface,
+                  }}
+                >
+                  Open photo
+                </a>
+              ) : null}
+            </span>
+            <Status tone="attention">{c.status}</Status>
+          </Row>
+        ))}
+      </Card>
+
       <Card>
         <AddDrawer
           ownOpener={false}

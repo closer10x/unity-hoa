@@ -430,23 +430,43 @@ export async function loadResidentData(user: {
 
   const arcApps = await safe([] as ResArcApp[], async () => {
     if (!name && !streetLine) return [];
-    let q = db
+    let rows: Record<string, unknown>[] | null = null;
+    const first = await db
       .from("arc_applications")
-      .select("id, reference, title, submitted_on, due_on, status, decision_note")
+      .select("id, reference, title, submitted_on, due_on, status, decision_note, attachment_paths")
+      .or(
+        name && streetLine
+          ? `owner_name.ilike.%${name}%,address.ilike.%${streetLine}%`
+          : name
+            ? `owner_name.ilike.%${name}%`
+            : `address.ilike.%${streetLine}%`,
+      )
       .order("submitted_on", { ascending: false })
       .limit(40);
-    if (name && streetLine) {
-      q = q.or(`owner_name.ilike.%${name}%,address.ilike.%${streetLine}%`);
-    } else if (name) {
-      q = q.ilike("owner_name", `%${name}%`);
+    if (first.error) {
+      const retry = await db
+        .from("arc_applications")
+        .select("id, reference, title, submitted_on, due_on, status, decision_note")
+        .or(
+          name && streetLine
+            ? `owner_name.ilike.%${name}%,address.ilike.%${streetLine}%`
+            : name
+              ? `owner_name.ilike.%${name}%`
+              : `address.ilike.%${streetLine}%`,
+        )
+        .order("submitted_on", { ascending: false })
+        .limit(40);
+      if (retry.error) throw retry.error;
+      rows = (retry.data ?? []) as Record<string, unknown>[];
     } else {
-      q = q.ilike("address", `%${streetLine}%`);
+      rows = (first.data ?? []) as Record<string, unknown>[];
     }
-    const { data, error } = await q;
-    if (error) throw error;
-    return (data ?? []).map((r) => {
+    return rows.map((r) => {
       const status = (r.status as string) ?? "Awaiting decision";
       const ok = /approved|completed/i.test(status);
+      const paths = Array.isArray(r.attachment_paths)
+        ? (r.attachment_paths as unknown[]).filter((p): p is string => typeof p === "string" && p.length > 0)
+        : [];
       return {
         id: r.id as string,
         ref: (r.reference as string) ?? "",
@@ -460,6 +480,7 @@ export async function loadResidentData(user: {
           .join(" · "),
         status,
         ok,
+        attachmentPaths: paths,
       };
     });
   });

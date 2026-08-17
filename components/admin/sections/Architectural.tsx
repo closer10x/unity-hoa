@@ -4,8 +4,9 @@ import React, { useState } from "react";
 import { ARC_STEPS } from "@/lib/admin-portal/actions";
 import { addArcMessage, setArcStatus } from "@/lib/admin-portal/compliance-actions";
 import { buildActionMenu, useStore } from "@/lib/admin-portal/store";
-import { color, pad, radius } from "@/lib/admin-portal/tokens";
+import { color, font, pad, radius } from "@/lib/admin-portal/tokens";
 import type { ArcStatus, PendingConfirm } from "@/lib/admin-portal/types";
+import { attachmentName, isImageAttachment, recordPhotoUrl } from "@/lib/supabase/message-files";
 import {
   ActionSelect, Area, Card, Chip, ConfirmBar, Empty, ErrorLine, Eyebrow, Mono,
   Primary, Status,
@@ -53,6 +54,30 @@ export default function Architectural() {
 
               {a.decisionNote ? (
                 <p style={{ fontSize: 14, color: color.positive, marginBottom: 14 }}>{a.decisionNote}</p>
+              ) : null}
+
+              {(a.attachmentPaths ?? []).length > 0 ? (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14, alignItems: "center" }}>
+                  <span style={{ fontFamily: font.mono, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: color.inkQuaternary }}>
+                    {(a.attachmentPaths ?? []).length === 1 ? "1 file" : `${(a.attachmentPaths ?? []).length} files`}
+                  </span>
+                  {(a.attachmentPaths ?? []).map((p, i) => (
+                    <a
+                      key={`${p}-${i}`}
+                      href={recordPhotoUrl("arc", a.id, i)}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        fontFamily: font.mono, fontSize: 12,
+                        border: `1px solid ${color.borderInput}`, borderRadius: 6,
+                        padding: "5px 9px", color: "oklch(0.44 0.045 155)",
+                        textDecoration: "none", background: color.surface,
+                      }}
+                    >
+                      {isImageAttachment(p) ? attachmentName(p) : `${attachmentName(p)} — open`}
+                    </a>
+                  ))}
+                </div>
               ) : null}
 
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: threadOpen ? 18 : 0 }}>
