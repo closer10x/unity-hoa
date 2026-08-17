@@ -301,6 +301,34 @@ function ResidentInbox() {
 
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "stretch" }}>
         <div style={{ flex: "1 1 260px", minWidth: 0, borderRight: `1px solid ${color.hairlineSoft}` }}>
+          {/* Built to CardHead's shape on purpose — same padding, same 44px
+              title row, same meta line beneath — so this column's title sits
+              on the open thread's title and the first conversation sits on
+              the first message. CardHead centres its title against whatever
+              controls sit beside it, so a header carrying a status pill and a
+              button holds its title 9px lower than one that carries nothing;
+              matching the row height is what puts the two back on a line. */}
+          <div style={{
+            padding: `18px ${pad.card}`, borderBottom: `1px solid ${color.hairlineSoft}`,
+            display: "grid", gap: 3,
+          }}>
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              gap: 16, minHeight: 44,
+            }}>
+              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>Conversations</h2>
+              <Mono size={12} style={{ color: color.inkQuaternary }}>
+                {visible.length}
+                {visible.length === s.residentThreads.length ? "" : ` of ${s.residentThreads.length}`}
+              </Mono>
+            </div>
+            {/* Not the awaiting-reply count — the card's own head says that
+                two inches above, and a screen that states the same fact twice
+                reads as two facts. */}
+            <span style={{ fontSize: 13.5, lineHeight: 1.5, color: color.inkTertiary }}>
+              Newest first
+            </span>
+          </div>
           {visible.length === 0 ? (
             <Empty>
               {s.residentThreads.length === 0
@@ -322,8 +350,15 @@ function ResidentInbox() {
                     display: "grid", gap: 3, width: "100%", textAlign: "left", font: "inherit",
                     border: "none", borderBottom: `1px solid ${color.hairlineSoft}`,
                     borderLeft: `3px solid ${t.awaitingReply ? "oklch(0.55 0.06 155)" : "transparent"}`,
-                    background: active ? "oklch(0.96 0.012 148)" : color.surface,
-                    padding: "14px 16px", cursor: "pointer",
+                    background: active ? color.accentTint : color.surface,
+                    /* pad.card, matching the head above and the conversation
+                       beside it — a row indented to its own number put every
+                       line in this column out of step with the rest. The 3px
+                       unread rule is subtracted so text does not shift when a
+                       thread is answered. */
+                    padding: `14px ${pad.card}`,
+                    paddingLeft: `calc(${pad.card} - 3px)`,
+                    cursor: "pointer",
                   }}
                 >
                   <span style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
@@ -353,7 +388,15 @@ function ResidentInbox() {
                   </TextButton>
                 </span>
               </CardHead>
-              <div style={{ padding: pad.card, display: "grid", gap: 14 }}>
+              {/* The conversation itself is sunken; the head above and the
+                  composer below stay on the card's own white, so the two
+                  panes share one header band and one footer band and only
+                  the talking is set back. */}
+              <div style={{
+                padding: pad.card, display: "grid", gap: 14,
+                background: color.surfaceSunken,
+                borderBottom: `1px solid ${color.hairlineSoft}`,
+              }}>
                 {thread.messages.map((m) => (
                   <div key={m.id} style={{ display: "grid", gap: 4, justifyItems: m.fromStaff ? "end" : "start" }}>
                     <span style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
@@ -370,8 +413,12 @@ function ResidentInbox() {
                     <div
                       style={{
                         maxWidth: "min(520px, 100%)",
-                        background: m.fromStaff ? color.accentTint : color.surfaceSunken,
-                        border: `1px solid ${m.fromStaff ? color.accentTintBorder : "oklch(0.92 0.008 140)"}`,
+                        /* On the sunken ground the resident's own words are
+                           the white card and the office's are the sage one —
+                           the two sides are told apart by fill, not by a
+                           hairline that reads as a box. */
+                        background: m.fromStaff ? color.accentTint : color.surface,
+                        border: `1px solid ${m.fromStaff ? color.accentTintBorder : color.hairlineSoft}`,
                         borderRadius: radius.xl, padding: "12px 16px",
                         fontSize: 15, lineHeight: 1.55,
                       }}
@@ -464,7 +511,7 @@ function ResidentInbox() {
                   </div>
                 ))}
               </div>
-              <div style={{ padding: pad.card, borderTop: `1px solid ${color.hairlineSoft}`, display: "grid", gap: 10 }}>
+              <div style={{ padding: pad.card, display: "grid", gap: 10 }}>
                 <Area value={reply} onChange={setReply} rows={2} placeholder={`Reply to ${thread.resident}…`} />
                 {error ? <ErrorLine>{error}</ErrorLine> : null}
                 <Primary onClick={send} style={{ justifySelf: "start", padding: "10px 22px" }}>
