@@ -21,7 +21,12 @@ function useSectionCounts(): Record<string, number> {
        one the office has already answered is not waiting on anybody, and a
        badge that stays lit after you have dealt with it stops being read. */
     comms: s.residentThreads.filter((t) => t.awaitingReply).length,
-  }), [s.invoices, s.residentThreads]);
+    /* Came in and nobody has picked it up. Both halves matter: a job still
+       New but already assigned has someone on it, and one assigned long ago
+       is not waiting on the office either. Assigning it clears the badge,
+       which is the point — the badge counts the decision nobody has made. */
+    work: s.work.filter((w) => w.status === "New" && !w.assigneeId).length,
+  }), [s.invoices, s.residentThreads, s.work]);
 }
 
 /** The count itself: Apple's red pill, so it reads as "needs you". */
