@@ -35,6 +35,18 @@ type CreateKind = (typeof CREATE_KINDS)[number]["id"];
 
 const AMENITIES = ["Great Hall", "Pool cabana 1", "Pool cabana 2", "Clubhouse Annex", "Tennis court"];
 
+/** Arrow up — the send mark, drawn in the same line style as the nav. */
+function SendMark({ size = 17 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden focusable={false} style={{ flex: "0 0 auto" }}>
+      <path d="M12 19V6" />
+      <path d="M6 12l6-6 6 6" />
+    </svg>
+  );
+}
+
 /** Two-pane resident inbox: threads left, conversation + reply right. */
 function ResidentInbox() {
   const s = useStore();
@@ -524,11 +536,48 @@ function ResidentInbox() {
                 ))}
               </div>
               <div style={{ padding: pad.card, display: "grid", gap: 10 }}>
-                <Area value={reply} onChange={setReply} rows={2} placeholder={`Reply to ${thread.resident}…`} />
+                {/* Send sits in the box, at the end of the line being typed,
+                    the way every messaging app puts it. The button carries no
+                    label, so it carries an aria-label instead — and it is
+                    disabled while empty rather than hidden, because a control
+                    that vanishes reads as a bug when you are looking for it. */}
+                <div style={{ position: "relative" }}>
+                  <Area
+                    value={reply}
+                    onChange={setReply}
+                    rows={2}
+                    placeholder={`Reply to ${thread.resident}…`}
+                    style={{ paddingRight: 56 }}
+                    onKeyDown={(e) => {
+                      /* Enter alone breaks the line — a reply to a resident is
+                         often more than one. Cmd/Ctrl+Enter sends. */
+                      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                        e.preventDefault();
+                        void send();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={send}
+                    disabled={sending || !reply.trim()}
+                    aria-label={sending ? "Sending reply" : "Send reply"}
+                    title="Send reply (⌘↵)"
+                    style={{
+                      position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+                      width: 34, height: 34, borderRadius: radius.pill,
+                      display: "grid", placeItems: "center",
+                      border: "none", padding: 0,
+                      background: reply.trim() && !sending ? color.ink : color.hairline,
+                      color: color.surface,
+                      cursor: reply.trim() && !sending ? "pointer" : "default",
+                      transition: "background 120ms ease",
+                    }}
+                  >
+                    <SendMark />
+                  </button>
+                </div>
                 {error ? <ErrorLine>{error}</ErrorLine> : null}
-                <Primary onClick={send} style={{ justifySelf: "start", padding: "10px 22px" }}>
-                  {sending ? "Sending…" : "Send reply"}
-                </Primary>
                 <span style={{ fontFamily: font.mono, fontSize: 11, color: color.inkQuaternary }}>
                   Replies appear in the resident&rsquo;s portal immediately and flag their Messages badge.
                 </span>

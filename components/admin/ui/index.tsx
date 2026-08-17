@@ -506,8 +506,27 @@ export function DateInput({ value, onChange }: { value: string; onChange: (v: st
   );
 }
 
-export function Area({ value, onChange, placeholder, rows = 3 }: { value: string; onChange: (v: string) => void; placeholder?: string; rows?: number }) {
-  return <textarea value={value} rows={rows} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, lineHeight: 1.55, resize: "vertical" }} />;
+export function Area({
+  value, onChange, placeholder, rows = 3, style, onKeyDown,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  rows?: number;
+  /** For a composer that parks a control inside the box — pad the side it sits on. */
+  style?: React.CSSProperties;
+  onKeyDown?: React.KeyboardEventHandler<HTMLTextAreaElement>;
+}) {
+  return (
+    <textarea
+      value={value}
+      rows={rows}
+      placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={onKeyDown}
+      style={{ ...inputStyle, lineHeight: 1.55, resize: "vertical", ...style }}
+    />
+  );
 }
 
 export function Select({ value, onChange, options, placeholder }: { value: string; onChange: (v: string) => void; options: { id: string; label: string }[]; placeholder?: string }) {

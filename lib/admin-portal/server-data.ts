@@ -1228,6 +1228,20 @@ export async function loadPortalData(): Promise<PortalData> {
  * Resident conversations for the Communications section. Tolerates the
  * tables not existing yet — the card simply shows no threads.
  */
+/**
+ * The conversations on their own, for the inbox's poll.
+ *
+ * The whole portal payload is four hundred lots, every invoice and the audit
+ * trail; re-reading all of it every few seconds to notice one new message
+ * would be absurd. This is the two tables the inbox actually shows.
+ */
+export async function loadResidentThreadsOnly(
+  db: SupabaseClient,
+): Promise<ResidentThread[]> {
+  const { data } = await db.from("profiles").select("*");
+  return loadResidentThreads(db, (data ?? []) as ProfileRow[]);
+}
+
 async function loadResidentThreads(
   db: SupabaseClient,
   profiles: ProfileRow[],

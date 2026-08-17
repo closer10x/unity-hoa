@@ -17,7 +17,11 @@ function useSectionCounts(): Record<string, number> {
     accounting: s.invoices.filter(
       (i) => i.status === "draft" || i.status === "sent",
     ).length,
-  }), [s.invoices]);
+    /* A resident spoke last on an open thread. Not the count of open threads:
+       one the office has already answered is not waiting on anybody, and a
+       badge that stays lit after you have dealt with it stops being read. */
+    comms: s.residentThreads.filter((t) => t.awaitingReply).length,
+  }), [s.invoices, s.residentThreads]);
 }
 
 /** The count itself: Apple's red pill, so it reads as "needs you". */

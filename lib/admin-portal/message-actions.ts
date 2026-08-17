@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { requireAdminUser } from "@/lib/auth/require-admin";
 import { requireServiceSupabase } from "@/lib/supabase/service";
 
-import type { ResidentThreadMsg } from "./types";
+import { loadResidentThreadsOnly } from "./server-data";
+import type { ResidentThread, ResidentThreadMsg } from "./types";
 
 /**
  * Staff replies into resident conversations. A reply reopens the thread,
@@ -35,6 +36,25 @@ function stampTime(iso: string): string {
   const ampm = h >= 12 ? "PM" : "AM";
   h = h % 12 || 12;
   return `${months[d.getMonth()]} ${d.getDate()}, ${h}:${String(d.getMinutes()).padStart(2, "0")} ${ampm}`;
+}
+
+/**
+ * The current conversations, for the inbox's poll.
+ *
+ * A resident writing in is the one thing in this portal that arrives without
+ * the office doing anything, so it is the one screen that has to notice on
+ * its own. Read-only and cheap: two tables, no revalidate, no audit entry —
+ * looking is not an action.
+ */
+export async function fetchResidentThreads(): Promise<
+  { ok: true; threads: ResidentThread[] } | Fail
+> {
+  try {
+    const { db } = await officeContext();
+    return { ok: true, threads: await loadResidentThreadsOnly(db) };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Could not refresh." };
+  }
 }
 
 export async function replyToResidentThread(input: {
