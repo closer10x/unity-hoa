@@ -173,7 +173,7 @@ No media queries. Layout is intrinsic (\`clamp()\`, \`auto-fit\`, \`flex-wrap\`)
 
 **Nav groups**
 
-- *Resident Portal:* Your home (Overview, Payments) · Requests (Maintenance, Architectural, Compliance) · Neighborhood (Amenities, Access & guests, Community) · Inbox & records (Messages, Documents, Account)
+- *Resident Portal:* Your home (Overview, Payments) · Requests (Maintenance, Architectural, Compliance) · Neighborhood (Amenities, Access & guests, Community) · Inbox & records (Messages, Documents, Account Settings)
 - *Admin Portal:* Today (Dashboard, Calendar) · Money (Accounting, Legal & liens) · Property (Work orders, Architectural, Violations, Bookings, Vendors) · People (Owners, Communications, Board & meetings) · Office (Documents, Communities, Team)
 
 On mobile the calendar month grid switches from titled event pills to colored 9px dots (the full list sits below the grid), and day cells shrink to \`min-height: clamp(72px, 13vw, 108px)\`.
@@ -249,7 +249,7 @@ Governing documents (CC&Rs, bylaws, rules), financials, meeting minutes, and the
 
 Two-pane threaded messaging with management: thread list on the left, conversation on the right. Own messages are right-aligned with an \`accent-tint\` bubble; management messages are left-aligned on \`surface-sunken\`. Attachments render as bordered mono chips. Composer at the bottom.
 
-### 11. Account
+### 11. Account Settings
 
 - **Contact information** — email, mobile, mailing address (structured, with "Same as property").
 - **Notification preferences** — a matrix of notice types × delivery channel (Email / Text) as toggle chips. On narrow screens this becomes a wrapping flex row so the label never collapses.

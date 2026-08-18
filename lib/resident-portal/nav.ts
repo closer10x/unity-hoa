@@ -24,5 +24,5 @@ export const NAV: NavItem[] = [
   { id: "community", label: "Community", group: "Neighborhood" },
   { id: "messages", label: "Messages", group: "Inbox & records" },
   { id: "documents", label: "Documents", group: "Inbox & records" },
-  { id: "account", label: "Account", group: "Inbox & records" },
+  { id: "account", label: "Account Settings", group: "Inbox & records" },
 ];

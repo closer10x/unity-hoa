@@ -207,7 +207,7 @@ export default async function SetPasswordPage({ searchParams }: PageProps) {
         </form>
 
         <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: "oklch(0.56 0.015 150)" }}>
-          You can change it later under Account &rarr; Security.
+          You can change it later under Account Settings &rarr; Security.
         </p>
       </main>
     </div>

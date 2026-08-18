@@ -44,5 +44,5 @@ export const SECTION_COPY: Record<string, { title: string; sub: string }> = {
   community: { title: "Community", sub: "Events, notices and what the board is deciding" },
   messages: { title: "Messages", sub: "Your conversations with the office" },
   documents: { title: "Documents", sub: "Governing documents, budgets and minutes" },
-  account: { title: "Account", sub: "Your details, household, notifications and sign-in" },
+  account: { title: "Account Settings", sub: "Your details, household, notifications and sign-in" },
 };
