@@ -50,6 +50,7 @@ export function SiteFooter() {
           links={[
             { href: "/contact", label: "Contact" },
             { href: "/events", label: "Events" },
+            { href: "/privacy", label: "Privacy" },
           ]}
         />
       </div>
