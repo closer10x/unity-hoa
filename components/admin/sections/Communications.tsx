@@ -347,8 +347,28 @@ function ResidentInbox() {
         ))}
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "stretch" }}>
-        <div style={{ flex: "1 1 260px", minWidth: 0, borderRight: `1px solid ${color.hairlineSoft}` }}>
+      {/* Bounded, so picking a conversation scrolls that pane instead of
+          growing the card and pushing the whole page down. Each side keeps
+          its own scrollbar: the list below its head, the conversation
+          between the head and the composer.
+
+          Only above the breakpoint. Stacked on a phone these become two
+          short windows one above the other, which is worse than the page
+          simply being long. */}
+      <div style={{
+        display: "flex", flexWrap: "wrap", alignItems: "stretch",
+        ...(s.isMobile ? {} : { height: "clamp(440px, 66vh, 780px)" }),
+      }}>
+        <div style={{
+          flex: "1 1 260px", minWidth: 0, borderRight: `1px solid ${color.hairlineSoft}`,
+          display: "grid", gridTemplateRows: "auto 1fr", minHeight: 0,
+          /* Take the container's height, not the content's. With flex-wrap the
+             line sizes to its tallest item, so without this both panes grow to
+             their full content and simply overflow the bounded box — and
+             nothing scrolls. Resolves to auto on a phone, where the container
+             has no fixed height. */
+          height: "100%",
+        }}>
           {/* Built to CardHead's shape on purpose — same padding, same 44px
               title row, same meta line beneath — so this column's title sits
               on the open thread's title and the first conversation sits on
@@ -377,6 +397,7 @@ function ResidentInbox() {
               Newest first
             </span>
           </div>
+          <div style={{ minHeight: 0, overflowY: "auto" }}>
           {visible.length === 0 ? (
             <Empty>
               {s.residentThreads.length === 0
@@ -421,9 +442,17 @@ function ResidentInbox() {
               );
             })
           )}
+          </div>
         </div>
 
-        <div style={{ flex: "2 1 340px", minWidth: 0, display: "grid", alignContent: "start" }}>
+        <div style={{
+          flex: "2 1 340px", minWidth: 0, display: "grid", minHeight: 0,
+          /* Head and composer take what they need; the conversation takes the
+             rest and scrolls inside it. */
+          gridTemplateRows: thread ? "auto 1fr auto" : "1fr",
+          alignContent: thread ? "stretch" : "start",
+          height: "100%",
+        }}>
           {!thread ? (
             <Empty>Select a conversation.</Empty>
           ) : (
@@ -444,6 +473,9 @@ function ResidentInbox() {
                 padding: pad.card, display: "grid", gap: 14,
                 background: color.surfaceSunken,
                 borderBottom: `1px solid ${color.hairlineSoft}`,
+                /* Scrolls on its own, between the head and the composer, so a
+                   long conversation never moves the page around it. */
+                minHeight: 0, overflowY: "auto", alignContent: "start",
               }}>
                 {thread.messages.map((m) => (
                   <div key={m.id} style={{ display: "grid", gap: 4, justifyItems: m.fromStaff ? "end" : "start" }}>
