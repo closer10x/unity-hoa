@@ -7,7 +7,7 @@ import { MOBILE_BREAKPOINT } from "./tokens";
 import type {
   BillingEntity,
   MetricTone,
-  AddressSuggestion, ArcApp, AuditEntry, BankAccount, Booking, CalEvent, Community, ConcernReport, Delinquent, Director, Doc, Fee, Invoice, LedgerEntry, LegalCase, Meeting, Owner, Payment, PendingConfirm, Portfolio, ResidentSignup, ResidentThread, SignInEvent, Staff, StaffRole, Vendor, Violation, WorkOrder,
+  AddressSuggestion, ArcApp, AuditEntry, BankAccount, Booking, CalEvent, Community, ConcernReport, Delinquent, Director, Doc, Fee, FineNotice, Invoice, LedgerEntry, LegalCase, Meeting, Owner, Payment, PendingConfirm, Portfolio, ResidentSignup, ResidentThread, SignInEvent, Staff, StaffRole, Vendor, Violation, WorkOrder,
 } from "./types";
 
 /**
@@ -57,6 +57,9 @@ interface Store {
   setWork: React.Dispatch<React.SetStateAction<WorkOrder[]>>;
   violations: Violation[];
   setViolations: React.Dispatch<React.SetStateAction<Violation[]>>;
+  /** Fine notices issued out of the violation files. */
+  fineNotices: FineNotice[];
+  setFineNotices: React.Dispatch<React.SetStateAction<FineNotice[]>>;
   concerns: ConcernReport[];
   arcApps: ArcApp[];
   setArcApps: React.Dispatch<React.SetStateAction<ArcApp[]>>;
@@ -177,6 +180,7 @@ export function StoreProvider({
     addressBook: AddressSuggestion[];
     signIns: SignInEvent[];
     violations: Violation[];
+    fineNotices: FineNotice[];
     concerns: ConcernReport[];
     arcApps: ArcApp[];
     bookings: Booking[];
@@ -212,6 +216,7 @@ export function StoreProvider({
   const [delinquents, setDelinquents] = useState<Delinquent[]>([]);
   const [work, setWork] = useState<WorkOrder[]>(initialData?.work ?? []);
   const [violations, setViolations] = useState<Violation[]>(initialData?.violations ?? []);
+  const [fineNotices, setFineNotices] = useState<FineNotice[]>(initialData?.fineNotices ?? []);
   const concerns = initialData?.concerns ?? [];
   const [arcApps, setArcApps] = useState<ArcApp[]>(initialData?.arcApps ?? []);
   const [bookings, setBookings] = useState<Booking[]>(initialData?.bookings ?? []);
@@ -277,7 +282,8 @@ export function StoreProvider({
     view, setView, scope, setScope, scopeLabel, scopeCommunityIds,
     isMobile: vw < MOBILE_BREAKPOINT, navOpen, setNavOpen,
     owners, addOwner, setOwners, payments, delinquents, setDelinquents,
-    work, setWork, violations, setViolations, concerns, arcApps, setArcApps,
+    work, setWork, violations, setViolations, fineNotices, setFineNotices,
+    concerns, arcApps, setArcApps,
     bookings, setBookings, meetings, setMeetings, directors, setDirectors,
     legalCases, setLegalCases, vendors, setVendors, docs, setDocs,
     communities, setCommunities, portfolios, setPortfolios, staff, setStaff,

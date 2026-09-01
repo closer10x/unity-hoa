@@ -2,12 +2,14 @@ import "server-only";
 
 import { getEmailBaseUrl } from "@/lib/email/link-base-url";
 import { createServiceClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { loadFineNotices } from "./fine-actions";
 import { loadInvoiceMemos, loadInvoices } from "./invoice-actions";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
   BillingEntity,
+  FineNotice,
   MetricTone,
   AddressSuggestion,
   SignInEvent,
@@ -70,6 +72,8 @@ export type PortalData = {
   /** The companies the office keeps books for. */
   entities: BillingEntity[];
   violations: Violation[];
+  /** Fine notices issued out of the violation files. */
+  fineNotices: FineNotice[];
   concerns: ConcernReport[];
   arcApps: ArcApp[];
   bookings: Booking[];
@@ -105,6 +109,7 @@ const EMPTY: PortalData = {
   payments: [],
   communities: [],
   violations: [],
+  fineNotices: [],
   concerns: [],
   arcApps: [],
   bookings: [],
@@ -1021,7 +1026,7 @@ export async function loadPortalData(): Promise<PortalData> {
 
   /* These four are independent of one another and of everything computed
      below, so they go out together rather than in series. */
-  const [staff, rest, signIns, residentThreads, invoices, invoiceMemos, signups] =
+  const [staff, rest, signIns, residentThreads, invoices, invoiceMemos, signups, fineNotices] =
     await Promise.all([
       loadStaff(db, { employees: empRes.data ?? undefined, profiles: profiles }),
       loadRemainingDomains(db),
@@ -1030,6 +1035,7 @@ export async function loadPortalData(): Promise<PortalData> {
       loadInvoices(db),
       loadInvoiceMemos(db),
       loadPendingSignups(db, lots),
+      loadFineNotices(db),
     ]);
 
   const calendar: CalEvent[] = (eventsRes.data ?? []).map((e) => ({
@@ -1106,6 +1112,7 @@ export async function loadPortalData(): Promise<PortalData> {
       streetNo,
       street,
       unit: l.lot_number ?? "",
+      block: l.block ?? "",
       city: l.city ?? "",
       state: l.state ?? "Texas",
       zip: l.zip ?? "",
@@ -1230,6 +1237,7 @@ export async function loadPortalData(): Promise<PortalData> {
     payments,
     communities,
     ...rest,
+    fineNotices,
     invoices,
     invoiceMemos,
     signIns,

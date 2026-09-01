@@ -22,7 +22,11 @@ import {
 } from "../ui";
 
 const INCOME_CATEGORIES = [
-  "HOA fees", "Late fees", "Amenity income", "Interest income", "Other income",
+  /* Fines are levied under the deed restrictions, so they are the
+     association's income and never the management company's. The posted fine
+     schedule lives here, which is what lets a fine notice quote an amount the
+     board adopted rather than one somebody typed. */
+  "HOA fees", "Fines", "Late fees", "Amenity income", "Interest income", "Other income",
 ];
 const EXPENSE_CATEGORIES = [
   "Landscaping", "Utilities", "Insurance", "Repairs & maintenance", "Management",

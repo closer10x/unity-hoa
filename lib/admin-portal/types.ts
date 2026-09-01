@@ -38,6 +38,71 @@ export interface Mailing {
 }
 export interface CaseNote { author: string; time: string; text: string; }
 
+/**
+ * A fine notice as issued: the letter's every sentence, frozen at the moment
+ * it went out, plus the invoice it raised.
+ *
+ * There is no paid flag here on purpose. What is owed lives on the invoice —
+ * a notice carrying its own would be a second set of books beside the first.
+ */
+export interface FineNotice {
+  id: string;
+  reference: string;
+  violationId: string | null;
+  lotId: string | null;
+  /** The bill this notice raised. Payment state is read from that invoice. */
+  invoiceId: string | null;
+  community: string;
+  address: string;
+  lotNumber: string;
+  block: string;
+  recipient: string;
+  recipientEmail: string;
+  /** The recipient's mailing address, copied from the roster at issue time. */
+  recipientAddress: string;
+  delivery: string;
+  /** 1st / 2nd / 3rd / Final — suggested from prior notices at this address. */
+  level: string;
+  /** ISO dates: the letter prints them long-form, the row prints the label. */
+  noticeDate: string;
+  noticeDateLabel: string;
+  inspectionDate: string;
+  inspector: string;
+  cureDate: string;
+  observed: string;
+  section: string;
+  frequency: string;
+  total: string;
+  totalCents: number;
+  continuingCents: number | null;
+  continuingUnit: string;
+  adminFeePct: number | null;
+  payDays: number | null;
+  disputeDays: number | null;
+  remitTo: string;
+  payLink: string;
+  copiesTo: string;
+  /** Fines are the association's revenue, never the management company's. */
+  entity: EntityKey;
+  status: FineNoticeStatus;
+  sentOn: string | null;
+  createdBy: string;
+  items: FineNoticeItem[];
+}
+
+export type FineNoticeStatus =
+  | "Drafted" | "Sent" | "Cured" | "Escalated" | "Waived";
+
+/** One violation charged on a notice — a row in the letter's fine table. */
+export interface FineNoticeItem {
+  id: string;
+  observedOn: string;
+  description: string;
+  level: string;
+  amount: string;
+  amountCents: number;
+}
+
 export interface ArcApp {
   id: string; ref: string; title: string; owner: string; submitted: string;
   due: string; status: ArcStatus; decisionNote?: string; thread: ThreadMsg[];
@@ -307,6 +372,8 @@ export interface AddressSuggestion {
   streetNo: string;
   street: string;
   unit: string;
+  /** Platted block, for documents that have to identify the lot legally. */
+  block: string;
   city: string;
   state: string;
   zip: string;

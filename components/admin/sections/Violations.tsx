@@ -10,6 +10,7 @@ import { color, font, pad, radius, rowGrid } from "@/lib/admin-portal/tokens";
 import type { PendingConfirm, Violation, ViolationStatus } from "@/lib/admin-portal/types";
 import { recordPhotoUrl } from "@/lib/supabase/message-files";
 import { usePrimaryAction } from "../SectionHead";
+import { FineNoticesCard, type FineSeed } from "./FineNotices";
 import { Tag, TableRow, TableHead, Scroller, CellStack,
   ActionSelect, AddDrawer, Area, Card, CardHead, ConfirmBar, DateInput, DropZone, Empty,
   ErrorLine, Eyebrow, Field, FieldGrid, FilterBar, Input, Mono, Pill,
@@ -39,6 +40,13 @@ export default function Violations() {
   const [filter, setFilter] = useState("All");
   const [pending, setPending] = useState<PendingConfirm | null>(null);
   const [fileOpen, setFileOpen] = useState("");
+  /* The fine composer lives in the card below, seeded from whichever case
+     file opened it — the address, inspector and inspection date are already
+     on the case, and retyping them is how a letter ends up on the wrong lot. */
+  const [fineOpen, setFineOpen] = useState(false);
+  const [fineSeed, setFineSeed] = useState<FineSeed | undefined>(undefined);
+  const fineCardRef = React.useRef<HTMLDivElement>(null);
+
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [mailDrafts, setMailDrafts] = useState<Record<string, { kind: string; method: string; sent: string; tracking: string }>>({});
 
@@ -60,6 +68,23 @@ export default function Violations() {
     s.violations, query, ["title", "detail", "status"],
     (v) => filter === "All" ? true : filter === "Open" ? v.status !== "Resolved" : v.status === filter,
   );
+
+  function draftFine(v: Violation) {
+    setFineSeed({
+      violationId: v.id,
+      address: v.detail.split(" \u00B7 ")[0],
+      violationType: v.title,
+      inspector: s.staff.find((p) => p.role === "Inspector" && p.active)?.name ?? "",
+      observed: v.notes[v.notes.length - 1]?.text ?? "",
+    });
+    setFineOpen(true);
+    /* The composer is one card down; jumping to it beats leaving the office
+       wondering whether the button did anything. */
+    window.setTimeout(
+      () => fineCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      60,
+    );
+  }
 
   function patch(id: string, next: Partial<Violation>) {
     s.setViolations((prev) => prev.map((v) => v.id === id ? { ...v, ...next } : v));
@@ -270,6 +295,35 @@ export default function Violations() {
                   </div>
 
                   <div style={{ display: "grid", gap: 10 }}>
+                    <Eyebrow>Fines on this case</Eyebrow>
+                    <div style={{ background: color.surface, border: `1px solid ${color.hairlineSoft}`, borderRadius: radius.md, overflow: "hidden" }}>
+                      {s.fineNotices.filter((f) => f.violationId === v.id).length === 0 ? (
+                        <div style={{ padding: 14, fontSize: 14, color: color.inkTertiary }}>
+                          No fine assessed on this case.
+                        </div>
+                      ) : s.fineNotices.filter((f) => f.violationId === v.id).map((f) => (
+                        <div key={f.id} style={{ ...rowGrid, padding: "11px 14px", borderBottom: `1px solid ${color.hairlineSoft}`, gap: "4px 16px" }}>
+                          <Mono size={12} style={{ color: color.ink }}>{f.reference}</Mono>
+                          <span style={{ fontSize: 14 }}>{f.level}</span>
+                          <Mono size={12} style={{ color: color.inkQuaternary }}>{f.noticeDateLabel}</Mono>
+                          <Mono size={12} style={{ color: color.ink }}>{f.total}</Mono>
+                          <Mono size={12} style={{ color: f.status === "Waived" ? color.inkQuaternary : f.status === "Drafted" ? color.attention : color.inkSecondary }}>
+                            {f.status}
+                          </Mono>
+                        </div>
+                      ))}
+                    </div>
+                    <Pill style={{ justifySelf: "start" }} onClick={() => draftFine(v)}>
+                      Draft a fine notice
+                    </Pill>
+                    <span style={{ fontSize: 13, color: color.inkQuaternary }}>
+                      The letter comes through with this case&rsquo;s address, inspector and inspection
+                      date already filled in. Drafting bills nobody &mdash; recording the notice as sent
+                      is what charges the home.
+                    </span>
+                  </div>
+
+                  <div style={{ display: "grid", gap: 10 }}>
                     <Eyebrow>Activity log</Eyebrow>
                     <div style={{ background: color.surface, border: `1px solid ${color.hairlineSoft}`, borderRadius: radius.md, overflow: "hidden" }}>
                       {[...v.activity].reverse().map((a) => (
@@ -323,6 +377,15 @@ export default function Violations() {
         </Scroller>
         )}
       </Card>
+
+      <div ref={fineCardRef}>
+        <FineNoticesCard
+          openDraft={fineOpen}
+          seed={fineSeed}
+          onOpenDraft={() => { setFineSeed(undefined); setFineOpen(true); }}
+          onCloseDraft={() => { setFineOpen(false); setFineSeed(undefined); }}
+        />
+      </div>
     </>
   );
 }

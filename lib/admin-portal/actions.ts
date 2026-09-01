@@ -1,6 +1,6 @@
 import type {
-  ActionStep, ArcStatus, BookingStatus, LegalStage, MeetingStatus,
-  OnboardStage, ViolationStatus, WorkStatus,
+  ActionStep, ArcStatus, BookingStatus, FineNoticeStatus, LegalStage,
+  MeetingStatus, OnboardStage, ViolationStatus, WorkStatus,
 } from "./types";
 
 /**
@@ -20,6 +20,20 @@ export const VIOLATION_STEPS: ActionStep<ViolationStatus>[] = [
     confirm: "Are you sure this is completed? Marking {name} resolved closes the file, drops any pending fine and notifies the owner." },
   { id: "Reported", label: "Reopen as reported", confirmLabel: "Reopen",
     confirm: "Reopen {name}? The file goes back to reported and the notice ladder starts over." },
+];
+
+/**
+ * A sent fine notice, from here on. "Sent" is absent on purpose: recording a
+ * notice as sent is what raises the bill, so it has its own form rather than
+ * a one-line confirmation. Paid is absent too — that is the invoice's to say.
+ */
+export const FINE_STEPS: ActionStep<FineNoticeStatus>[] = [
+  { id: "Cured", label: "Mark the violation corrected", confirmLabel: "Mark corrected",
+    confirm: "Record that {name} was corrected? The fine stays owed — correcting a violation does not waive it unless the association agrees in writing." },
+  { id: "Escalated", label: "Escalate to the board", confirmLabel: "Escalate it",
+    confirm: "Escalate {name} to the board? The fine stands and the case goes to a hearing." },
+  { id: "Waived", label: "Waive the fine", confirmLabel: "Yes, waive it",
+    confirm: "Waive {name}? The invoice behind it is voided, so the household stops being billed. Say why — the reason stays on the record." },
 ];
 
 export const WORK_STEPS: ActionStep<WorkStatus>[] = [
