@@ -110,32 +110,38 @@ export function fineNoticeHtml(
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  @page { size: letter; margin: 0.75in 0.8in; }
+  /* A business-letter margin that leaves room for the whole notice on one
+     page. Anything tighter starts to read as a flyer. */
+  @page { size: letter; margin: 0.6in 0.75in; }
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  body { font: 11pt/1.5 'Instrument Sans', system-ui, sans-serif; color: ${C.ink};
-         margin: 0; background: #EEF0E8; }
+  body { font: 10pt/1.36 'Instrument Sans', 'Segoe UI', Helvetica, Arial, sans-serif;
+         color: ${C.ink}; margin: 0; background: #EEF0E8; }
   .sheet { background: #fff; max-width: 7in; margin: 0 auto 26px; padding: 0.7in 0.75in 0.6in;
            box-shadow: 0 2px 14px rgba(0,0,0,.13); }
-  p { margin: 0 0 10pt; }
-  .meta { font-size: 9.5pt; color: ${C.muted}; }
+  p { margin: 0 0 7.5pt; }
+  .meta { font-size: 9pt; color: ${C.muted}; }
   .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
   .gap { color: #A03B27; font-style: italic; }
-  header img { width: 2.4in; display: block; }
-  .rule { border-bottom: 1.5pt solid ${C.olive}; margin: 8pt 0 14pt; }
-  .rule-thin { border-bottom: .75pt solid ${C.line}; margin: 14pt 0 8pt; }
+  header img { width: 2.15in; display: block; }
+  .rule { border-bottom: 1.5pt solid ${C.olive}; margin: 7pt 0 11pt; }
+  .rule-thin { border-bottom: .75pt solid ${C.line}; margin: 11pt 0 7pt; }
   .re { font-weight: 700; margin-bottom: 3pt; letter-spacing: .01em; }
-  table { width: 100%; border-collapse: collapse; margin: 12pt 0 13pt; font-size: 10pt; }
-  th { background: ${C.olive}; color: #fff; text-align: left; padding: 6pt 8pt; font-weight: 600;
+  table { width: 100%; border-collapse: collapse; margin: 9pt 0 10pt; font-size: 9.5pt; }
+  th { background: ${C.olive}; color: #fff; text-align: left; padding: 5pt 7pt; font-weight: 600;
        font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 8.5pt;
        letter-spacing: .08em; text-transform: uppercase; }
-  td { padding: 6pt 8pt; border: .5pt solid ${C.line}; vertical-align: top; }
+  td { padding: 4.5pt 7pt; border: .5pt solid ${C.line}; vertical-align: top; }
   .num { text-align: right; font-family: 'IBM Plex Mono', ui-monospace, monospace; white-space: nowrap; }
   tr.total td { background: ${C.tint}; font-weight: 700; }
-  ul { margin: 0 0 10pt; padding-left: 16pt; }
-  li { margin-bottom: 3pt; }
-  .sig { margin-top: 26pt; }
+  /* A long notice legitimately runs to a second page. What it must never do
+     is split the fine table down the middle or leave the signature stranded
+     on a page by itself — both read as a letter that went out unchecked. */
+  table, .closing { page-break-inside: avoid; break-inside: avoid; }
+  ul { margin: 0 0 7.5pt; padding-left: 15pt; }
+  li { margin-bottom: 1.5pt; }
+  .sig { margin-top: 20pt; }
   .sig b { display: block; }
-  footer { text-align: center; font-size: 8pt; color: ${C.muted}; margin-top: 20pt; }
+  footer { text-align: center; font-size: 8pt; color: ${C.muted}; margin-top: 14pt; }
   h2 { font-size: 13pt; color: ${C.olive}; margin: 0 0 4pt; }
   .exhibit { display: grid; grid-template-columns: 1fr 1fr; gap: 14pt 16pt; margin-top: 14pt; }
   .frame { border: .75pt solid ${C.line}; background: #F5F6F2; height: 2.5in;
@@ -162,7 +168,12 @@ export function fineNoticeHtml(
 
   <p style="margin-bottom:3pt"><b>${escapeHtml(notice.recipient)}</b></p>
   <p class="meta">${[
-    notice.recipientAddress ? escapeHtml(notice.recipientAddress.replace(/\n/g, " &bull; ")) : null,
+    /* Escape first, then join the lines: inserting the separator entity
+       before escaping turns its ampersand into "&amp;bull;" and prints the
+       markup at the recipient. */
+    notice.recipientAddress
+      ? notice.recipientAddress.split("\n").map(escapeHtml).filter(Boolean).join(" &bull; ")
+      : null,
     notice.recipientEmail ? escapeHtml(notice.recipientEmail) : null,
     `Sent by ${escapeHtml(notice.delivery.toLowerCase())}`,
   ].filter(Boolean).join(" &bull; ")}</p>
@@ -214,7 +225,8 @@ export function fineNoticeHtml(
   }
   Correcting the violation does not waive the fine unless the Association agrees in writing.</p>
 
-  <p style="margin-top:18pt">Sincerely,</p>
+  <div class="closing">
+  <p style="margin-top:13pt">Sincerely,</p>
   <div class="sig">
     <b>${escapeHtml(opts.signer)}</b>
     <span class="meta">${MANAGER.name}, on behalf of ${escapeHtml(association)}</span><br>
@@ -228,6 +240,7 @@ export function fineNoticeHtml(
     }${notice.copiesTo ? ` &nbsp;&nbsp; cc: ${escapeHtml(notice.copiesTo)}` : ""}
   </p>
   <footer>${MANAGER.name} &bull; ${MANAGER.phone} &bull; ${MANAGER.email}</footer>
+  </div>
 </div>
 
 ${photos.length === 0 ? "" : `<div class="sheet">
